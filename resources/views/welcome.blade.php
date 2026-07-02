@@ -64,7 +64,7 @@
             .meta-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-bottom:1px solid #cbd5e1;padding-bottom:10px;text-align:center}
             .meta-row p{margin:0}.meta-label{color:#334155;font-size:10px}.meta-value{margin-top:6px;font-size:15px}
             .label-footer{display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:auto;font-size:9px;text-align:center}
-            .section{padding:56px 0;border-bottom:1px solid var(--line)}
+            .section{padding:56px 0;border-bottom:1px solid var(--line);scroll-margin-top:90px}
             .section-soft{background:var(--soft)}
             .section-title{max-width:720px}
             .section-title h2{margin:8px 0 0;font-size:clamp(30px,3.2vw,44px);line-height:1.05;font-weight:950;text-wrap:balance}
