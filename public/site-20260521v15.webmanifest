@@ -1,0 +1,25 @@
+{
+    "name": "Tus Envios",
+    "short_name": "Tus Envios",
+    "description": "Etiquetas, guias y control de envios para emprendimientos.",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#f3f4f6",
+    "theme_color": "#022a8c",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/android-chrome-192x192.png?v=20260521v15",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/android-chrome-512x512.png?v=20260521v15",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

@@ -1,0 +1,69 @@
+.label-sheet {
+    background: #fff;
+    color: #050505;
+    display: grid;
+    font-family: "Inter", Arial, Helvetica, sans-serif;
+    gap: 1.25mm;
+    height: 150mm;
+    overflow: hidden;
+    padding: 4mm;
+    text-transform: uppercase;
+    width: 100mm;
+}
+.label-sheet p, .label-sheet strong, .label-sheet span { margin: 0; }
+.label-classic { grid-template-rows: 32mm 8mm 22mm 43mm 12mm 10mm 6mm; }
+.label-modern { grid-template-rows: 32mm 8mm 48mm 12mm 22mm 10mm 6mm; }
+.label-advance { grid-template-rows: 22mm 32mm 8mm 48mm 12mm 10mm 6mm; }
+.label-top { align-items: center; display: grid; gap: 3.5mm; grid-template-columns: 36mm minmax(0, 1fr); justify-content: center; margin: 0 auto; max-width: 86mm; min-width: 0; text-align: left; }
+.label-logo { align-items: center; background: transparent; color: #050505; display: flex; font-size: 14px; font-weight: 900; height: 30mm; justify-content: center; overflow: hidden; padding: 0; width: 36mm; }
+.label-logo img { display: block; max-height: 30mm; max-width: 36mm; object-fit: contain; }
+.label-sender { align-content: center; display: grid; font-size: 8.2px; font-weight: 900; gap: .5mm; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.label-company { font-size: 15px; font-weight: 900; line-height: 1.02; }
+.label-message { font-size: 8px; font-weight: 900; }
+.label-socials { align-items: center; border-bottom: 1px solid #d4d4d8; display: flex; flex-wrap: nowrap; gap: 0 1.2mm; justify-content: center; min-width: 0; overflow: hidden; padding: .4mm 1mm; text-align: center; }
+.label-socials span { align-items: center; display: inline-flex; font-size: 6px; font-weight: 900; gap: .5mm; line-height: 1; }
+.label-socials i {
+    align-items: center;
+    border-radius: 999px;
+    color: #fff;
+    display: inline-flex;
+    font-size: 0;
+    font-style: normal;
+    font-weight: 900;
+    height: 3.2mm;
+    justify-content: center;
+    width: 3.2mm;
+}
+.label-socials i svg {
+    display: block;
+    height: 2.2mm;
+    width: 2.2mm;
+}
+.label-socials i.whatsapp,
+.label-socials i.wa { background: #25d366; }
+.label-socials i.instagram,
+.label-socials i.ig { background: radial-gradient(circle at 30% 110%, #fdf497 0 18%, #fd5949 42%, #d6249f 62%, #285aeb 100%); }
+.label-socials i.facebook,
+.label-socials i.fb { background: #1877f2; }
+.label-socials i.tiktok,
+.label-socials i.tk { background: #050505; }
+.label-barcode { border-bottom: 1.1px solid #111; display: grid; grid-template-rows: auto 1fr; padding: .6mm 0 1mm; text-align: center; }
+.label-guide { font-size: 11px; font-weight: 900; letter-spacing: .1px; }
+.label-code { align-items: center; display: flex; justify-content: center; overflow: hidden; padding: 0 3mm; }
+.label-code svg { display: block; height: 14mm; width: 100%; }
+.label-recipient-row { border-bottom: 1px solid #d4d4d8; display: grid; gap: 2.5mm; grid-template-columns: minmax(0, 1fr) 23mm; min-width: 0; overflow: hidden; padding: 1mm; }
+.label-modern .label-recipient-row, .label-advance .label-recipient-row { grid-template-columns: minmax(0, 1fr) 28mm; }
+.label-recipient { align-content: center; display: grid; gap: .85mm; min-width: 0; overflow: hidden; }
+.label-recipient span, .label-notes span, .label-metas span { color: #52525b; display: block; font-size: 7px; font-weight: 900; letter-spacing: .14px; }
+.label-recipient strong { display: block; font-size: 12px; font-weight: 900; line-height: 1.08; overflow-wrap: anywhere; }
+.label-recipient .big { font-size: 16px; }
+.label-qr { align-items: center; display: flex; justify-content: center; }
+.qr-svg { display: block; height: 22mm; width: 22mm; }
+.label-modern .qr-svg, .label-advance .qr-svg { height: 27mm; width: 27mm; }
+.label-notes { border-bottom: 1px solid #d4d4d8; display: grid; grid-template-rows: auto 1fr; min-width: 0; overflow: hidden; padding: 1mm; }
+.label-notes strong { align-self: center; display: block; font-size: 11px; font-weight: 900; line-height: 1.12; overflow-wrap: anywhere; }
+.label-metas { display: grid; gap: 3mm; grid-template-columns: 1fr 1fr 1fr; }
+.label-metas div { border-bottom: 1px solid #d4d4d8; display: grid; grid-template-rows: auto 1fr; min-width: 0; text-align: center; }
+.label-metas span { padding-top: .4mm; font-size: 8px; }
+.label-metas strong { align-items: center; display: flex; font-size: 12px; font-weight: 900; justify-content: center; overflow-wrap: anywhere; }
+.label-footer { align-items: end; display: grid; gap: 2mm; grid-template-columns: 1fr 1fr 1fr; font-size: 6.2px; font-weight: 900; text-align: center; }

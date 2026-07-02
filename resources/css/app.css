@@ -1,0 +1,194 @@
+@import url("https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none !important;
+}
+
+html {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    overscroll-behavior-y: none;
+}
+
+input,
+select,
+textarea,
+button {
+    font-size: 16px;
+}
+
+/* Compacta paneles y tarjetas operativas sin tocar cada vista una por una. */
+[class~="bg-white"][class~="border-gray-200"][class~="shadow-sm"][class~="p-5"] {
+    padding: 1rem;
+}
+
+[class~="bg-white"][class~="border-gray-200"][class~="shadow-sm"][class~="p-4"] {
+    padding: 0.875rem;
+}
+
+[class~="bg-white"][class~="border-gray-200"][class~="shadow-sm"][class~="rounded-lg"],
+[class~="bg-white"][class~="border-gray-200"][class~="rounded-lg"] {
+    border-radius: 0.375rem;
+}
+
+[class~="bg-white"][class~="border-gray-200"] [class~="text-3xl"] {
+    font-size: 1.5rem;
+    line-height: 2rem;
+}
+
+[class~="bg-white"][class~="border-gray-200"] [class~="text-2xl"] {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+}
+
+[class~="bg-white"][class~="border-gray-200"] [class~="mt-2"] {
+    margin-top: 0.375rem;
+}
+
+section[class~="bg-white"] > [class~="border-b"][class~="p-5"],
+[class~="bg-white"][class~="border-gray-200"] > [class~="border-b"][class~="p-5"] {
+    padding: 1rem;
+}
+
+table th[class~="px-5"] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+table th[class~="py-3"] {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+}
+
+table td[class~="px-5"] {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+table td[class~="py-4"] {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+    [class~="xl:grid-cols-4"] {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+[class~="py-8"] {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+@media (max-width: 767px) {
+    [class~="py-8"] {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    table {
+        white-space: nowrap;
+    }
+
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+    }
+
+    button,
+    a[class*="px-4"][class*="py-2"],
+    a[class*="px-5"][class*="py-3"] {
+        min-height: 44px;
+    }
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea {
+    font-family: var(--te-font-family);
+}
+
+:root {
+    --te-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.dark {
+    --te-bg: #111827;
+    --te-surface: #1f2937;
+    --te-border: #374151;
+    --te-text: #f9fafb;
+    --te-text-muted: #9ca3af;
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea {
+    font-family: var(--te-font-family) !important;
+}
+
+.dark .bg-white { background-color: var(--te-surface) !important; }
+.dark .bg-gray-50 { background-color: var(--te-bg) !important; }
+.dark .bg-gray-100 { background-color: var(--te-bg) !important; }
+.dark .border-gray-200 { border-color: var(--te-border) !important; }
+.dark .border-gray-300 { border-color: var(--te-border) !important; }
+.dark .text-gray-500 { color: var(--te-text-muted) !important; }
+.dark .text-gray-600 { color: var(--te-text-muted) !important; }
+.dark .text-gray-700 { color: var(--te-text) !important; }
+.dark .text-gray-900 { color: var(--te-text) !important; }
+.dark .text-gray-950 { color: var(--te-text) !important; }
+.dark aside { background-color: var(--te-surface) !important; border-color: var(--te-border) !important; }
+.dark table thead { background-color: var(--te-bg) !important; }
+.dark input, .dark select, .dark textarea { background-color: var(--te-bg) !important; border-color: var(--te-border) !important; color: var(--te-text) !important; }
+.dark .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0,0,0,.4) !important; }
+.dark .bg-blue-50 { background-color: #1e3a5f !important; }
+.dark .bg-blue-100 { background-color: #1e3a5f !important; }
+.dark .bg-emerald-50 { background-color: #064e3b !important; }
+.dark .bg-emerald-100 { background-color: #064e3b !important; }
+.dark .bg-red-50 { background-color: #450a0a !important; }
+.dark .bg-red-100 { background-color: #450a0a !important; }
+.dark .bg-amber-50 { background-color: #451a03 !important; }
+.dark .bg-amber-100 { background-color: #451a03 !important; }
+.dark .bg-indigo-50 { background-color: #1e1b4b !important; }
+.dark .text-blue-700 { color: #93c5fd !important; }
+.dark .text-blue-800 { color: #60a5fa !important; }
+.dark .text-emerald-700 { color: #6ee7b7 !important; }
+.dark .text-emerald-800 { color: #34d399 !important; }
+.dark .text-red-700 { color: #fca5a5 !important; }
+.dark .text-red-800 { color: #f87171 !important; }
+.dark .text-amber-700 { color: #fcd34d !important; }
+.dark .text-amber-800 { color: #fbbf24 !important; }
+.dark .border-red-200 { border-color: #7f1d1d !important; }
+.dark .border-amber-200 { border-color: #78350f !important; }
+.dark .border-emerald-200 { border-color: #064e3b !important; }
+.dark .border-blue-200 { border-color: #1e3a5f !important; }
+.dark .bg-gray-200 { background-color: #1e293b !important; }
+.dark .text-gray-400 { color: #64748b !important; }
+.dark .text-gray-300 { color: #94a3b8 !important; }
+.dark svg.text-gray-400 { color: #64748b !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #1e293b !important; }
+.dark .hover\:bg-gray-50:hover { background-color: #1e293b !important; }
+.dark .ring-1 { --tw-ring-color: var(--te-border) !important; }
+.dark .divide-gray-200 > * { border-color: var(--te-border) !important; }
+.dark .divide-gray-100 > * { border-color: #1e293b !important; }
+.dark .border-b { border-color: var(--te-border) !important; }
+.dark .border-t { border-color: var(--te-border) !important; }
+.dark .border-l { border-color: var(--te-border) !important; }
+.dark .border-r { border-color: var(--te-border) !important; }
+.dark .from-gray-50 { --tw-gradient-from: var(--te-bg) !important; }
+.dark .to-gray-100 { --tw-gradient-to: var(--te-surface) !important; }
+.dark .configuration-card,
+.dark .configuration-save-card { background-color: var(--te-surface) !important; border-color: var(--te-border) !important; }
+.dark .store-logo-preview { background-color: var(--te-bg) !important; border-color: var(--te-border) !important; }
