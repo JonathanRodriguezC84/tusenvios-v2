@@ -4,6 +4,7 @@ use App\Http\Controllers\FrequentRecipientController;
 use App\Http\Controllers\BrandSettingController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DailyTaskController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\InventoryProductController;
 use App\Http\Controllers\InventoryReportController;
@@ -41,6 +42,8 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware(['auth', 'active.user'])->group(function () {
+    Route::get('/daily-tasks', DailyTaskController::class)->name('daily-tasks.index');
+
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
         Route::get('/clients', [AdminDashboardController::class, 'clients'])->name('clients');
@@ -117,6 +120,9 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/shipments/export/pdf', [ShipmentController::class, 'exportPdf'])->name('shipments.export.pdf');
     Route::get('/shipments/create', [ShipmentController::class, 'create'])->name('shipments.create');
     Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
+    Route::get('/shipments/bulk-print', fn () => redirect()
+        ->route('shipments.index', ['status' => 'created'])
+        ->with('status', 'Selecciona las guias que quieres imprimir.'))->name('shipments.bulk-print.fallback');
     Route::match(['post', 'patch'], '/shipments/bulk-print', [ShipmentController::class, 'bulkPrint'])->name('shipments.bulk-print');
     Route::patch('/shipments/bulk-status', [ShipmentController::class, 'bulkUpdateStatus'])->name('shipments.bulk-status');
     Route::get('/shipments/{shipment}/print', [ShipmentController::class, 'print'])->name('shipments.print');

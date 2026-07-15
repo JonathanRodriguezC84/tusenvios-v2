@@ -132,10 +132,21 @@
                         <a href="#preguntas">Preguntas</a>
                         <a href="{{ route('tracking.index') }}">Rastrear guia</a>
                     </div>
-                    @guest
+                    @auth
+                        <form method="POST" action="{{ route('logout') }}" style="margin:0">
+                            @csrf
+                            <input type="hidden" name="redirect_to" value="/login">
+                            <button type="submit" class="btn btn-secondary">Ingresar</button>
+                        </form>
+                        <form method="POST" action="{{ route('logout') }}" style="margin:0">
+                            @csrf
+                            <input type="hidden" name="redirect_to" value="/register">
+                            <button type="submit" class="btn btn-primary">Crear cuenta</button>
+                        </form>
+                    @else
                         <a href="{{ route('login') }}" class="btn btn-secondary">Ingresar</a>
                         <a href="{{ route('register') }}" class="btn btn-primary">Crear cuenta</a>
-                    @endguest
+                    @endauth
                 </nav>
             </div>
         </header>

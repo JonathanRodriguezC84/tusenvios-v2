@@ -11,7 +11,12 @@ class QuickProduct extends Model
         'affiliated_company_id',
         'name',
         'package_type',
+        'price',
         'status',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
     ];
 
     public function tenant()

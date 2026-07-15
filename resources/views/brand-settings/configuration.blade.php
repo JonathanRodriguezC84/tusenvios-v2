@@ -318,6 +318,21 @@
                             </label>
                         </div>
                     </section>
+
+                    @if ($brandOwner instanceof \App\Models\Tenant)
+                        <section class="configuration-card rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+                            <p class="text-xs font-semibold uppercase text-gray-500">Modulos</p>
+                            <h3 class="mt-1 text-lg font-black text-gray-950">Funciones opcionales</h3>
+
+                            <label class="mt-4 flex items-start gap-3 text-sm font-semibold text-gray-700">
+                                <input type="checkbox" name="daily_tasks_enabled" value="1" class="settings-checkbox mt-0.5 rounded border-gray-300 text-blue-700 focus:ring-blue-700" @checked(old('daily_tasks_enabled', $brandOwner->daily_tasks_enabled))>
+                                <span>
+                                    Tareas Diarias
+                                    <span class="block text-xs font-normal text-gray-500">Activa el panel de tareas diarias (resumen de pendientes y sugerencias) en el menu.</span>
+                                </span>
+                            </label>
+                        </section>
+                    @endif
                 </div>
 
                 <div class="configuration-column">

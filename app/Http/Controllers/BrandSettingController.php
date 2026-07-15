@@ -59,7 +59,14 @@ class BrandSettingController extends Controller
             'logo' => ['nullable', 'image', Rule::dimensions()->maxWidth(1600)->maxHeight(1600), 'max:2048'],
             'remove_logo' => ['nullable', 'boolean'],
             'notify_low_stock' => ['nullable', 'boolean'],
+            'daily_tasks_enabled' => ['nullable', 'boolean'],
         ]);
+
+        if ($brandOwner instanceof \App\Models\Tenant) {
+            $validated['daily_tasks_enabled'] = $request->boolean('daily_tasks_enabled');
+        } else {
+            unset($validated['daily_tasks_enabled']);
+        }
 
         if ($request->boolean('remove_logo') && $brandOwner->logo_path) {
             Storage::disk('public')->delete($brandOwner->logo_path);

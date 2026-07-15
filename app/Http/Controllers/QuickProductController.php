@@ -40,7 +40,10 @@ class QuickProductController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'package_type' => ['required', 'in:package,document,merchandise'],
+            'price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
+
+        $validated['price'] = $validated['price'] ?? 0;
 
         $product = QuickProduct::query()->create(array_merge($validated, $this->ownerKeys(), [
             'status' => 'active',
@@ -64,8 +67,11 @@ class QuickProductController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'package_type' => ['required', 'in:package,document,merchandise'],
+            'price' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'status' => ['required', 'in:active,paused'],
         ]);
+
+        $validated['price'] = $validated['price'] ?? 0;
 
         $quickProduct->update($validated);
 

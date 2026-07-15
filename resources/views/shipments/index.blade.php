@@ -22,6 +22,10 @@
     if (!empty($filters['search'])) $activeFilters->push(['label' => 'Buscar: "'.$filters['search'].'"', 'route' => route('shipments.index', array_merge(request()->except(['search', 'page']), ['search' => '']))]);
     if (!empty($filters['status'])) $activeFilters->push(['label' => $statusLabels[$filters['status']] ?? $filters['status'], 'route' => route('shipments.index', array_merge(request()->except(['status', 'page']), ['status' => '']))]);
     if (!empty($filters['date'])) $activeFilters->push(['label' => 'Fecha: '.\Carbon\Carbon::parse($filters['date'])->format('d/m/Y'), 'route' => route('shipments.index', array_merge(request()->except(['date', 'page']), ['date' => '']))]);
+
+    $isPrintQueue = ($filters['status'] ?? '') === 'created';
+    $visibleCreatedCount = $shipments->getCollection()->where('status', 'created')->count();
+    $visibleCreatedValue = $shipments->getCollection()->where('status', 'created')->sum('collection_value');
 @endphp
 
 <x-app-layout>
@@ -58,6 +62,68 @@
             </form>
         </div>
 
+        <nav class="mt-3 shrink-0 overflow-x-auto" aria-label="Accesos rapidos por estado">
+            <div class="flex min-w-max gap-2">
+                @foreach ($shipmentSummary['shortcuts'] as $shortcut)
+                    @php
+                        $shortcutTone = match ($shortcut['tone']) {
+                            'red' => $shortcut['active'] ? 'border-red-300 bg-red-700 text-white' : 'border-red-200 bg-white text-red-800 hover:bg-red-50',
+                            'amber' => $shortcut['active'] ? 'border-amber-300 bg-amber-600 text-white' : 'border-amber-200 bg-white text-amber-800 hover:bg-amber-50',
+                            'emerald' => $shortcut['active'] ? 'border-emerald-300 bg-emerald-700 text-white' : 'border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50',
+                            'blue' => $shortcut['active'] ? 'border-blue-300 bg-blue-700 text-white' : 'border-blue-200 bg-white text-blue-800 hover:bg-blue-50',
+                            default => $shortcut['active'] ? 'border-gray-300 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50',
+                        };
+                    @endphp
+                    <a href="{{ $shortcut['route'] }}" class="group flex w-44 shrink-0 items-center justify-between gap-3 rounded-xl border px-3 py-2 shadow-sm transition {{ $shortcutTone }}" @if($shortcut['active']) aria-current="page" @endif>
+                        <span class="min-w-0">
+                            <span class="block truncate text-sm font-black">{{ $shortcut['label'] }}</span>
+                            <span class="block truncate text-xs font-semibold {{ $shortcut['active'] ? 'text-white/80' : 'text-gray-500 group-hover:text-gray-700' }}">{{ $shortcut['description'] }}</span>
+                        </span>
+                        <span class="rounded-full px-2 py-0.5 text-xs font-black {{ $shortcut['active'] ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-800' }}">{{ $shortcut['count'] }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </nav>
+
+        <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4 shrink-0">
+            <a href="{{ $shipmentSummary['primary']['route'] }}" class="rounded-xl border {{ $shipmentSummary['primary']['tone'] === 'red' ? 'border-red-200 bg-red-50' : ($shipmentSummary['primary']['tone'] === 'emerald' ? 'border-emerald-200 bg-emerald-50' : 'border-blue-200 bg-blue-50') }} p-4 shadow-sm hover:shadow-md">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wider {{ $shipmentSummary['primary']['tone'] === 'red' ? 'text-red-700' : ($shipmentSummary['primary']['tone'] === 'emerald' ? 'text-emerald-700' : 'text-blue-700') }}">Accion recomendada</p>
+                        <h3 class="mt-1 text-base font-black {{ $shipmentSummary['primary']['tone'] === 'red' ? 'text-red-950' : ($shipmentSummary['primary']['tone'] === 'emerald' ? 'text-emerald-950' : 'text-blue-950') }}">{{ $shipmentSummary['primary']['label'] }}</h3>
+                    </div>
+                    <span class="rounded-full bg-white px-2 py-0.5 text-xs font-black {{ $shipmentSummary['primary']['tone'] === 'red' ? 'text-red-700' : ($shipmentSummary['primary']['tone'] === 'emerald' ? 'text-emerald-700' : 'text-blue-700') }}">Ver</span>
+                </div>
+                <p class="mt-2 text-sm font-semibold {{ $shipmentSummary['primary']['tone'] === 'red' ? 'text-red-800' : ($shipmentSummary['primary']['tone'] === 'emerald' ? 'text-emerald-800' : 'text-blue-800') }}">{{ $shipmentSummary['primary']['description'] }}</p>
+            </a>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Guias activas</p>
+                <div class="mt-2 flex items-end justify-between gap-3">
+                    <p class="text-3xl font-black text-gray-950">{{ $shipmentSummary['active'] }}</p>
+                    <p class="text-right text-xs font-bold text-gray-500">{{ $shipmentSummary['total'] }} en el filtro</p>
+                </div>
+                <div class="mt-3 h-2 rounded-full bg-gray-100">
+                    <div class="h-2 rounded-full bg-blue-700" style="width: {{ $shipmentSummary['total'] > 0 ? min(100, round(($shipmentSummary['active'] / $shipmentSummary['total']) * 100)) : 0 }}%"></div>
+                </div>
+            </div>
+
+            <a href="{{ $shipmentSummary['attentionRoute'] }}" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:border-red-200 hover:bg-red-50">
+                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Novedades</p>
+                <div class="mt-2 flex items-end justify-between gap-3">
+                    <p class="text-3xl font-black {{ $shipmentSummary['attention'] > 0 ? 'text-red-700' : 'text-gray-950' }}">{{ $shipmentSummary['attention'] }}</p>
+                    <p class="text-right text-xs font-bold text-gray-500">Por resolver</p>
+                </div>
+                <p class="mt-3 text-xs font-semibold text-gray-600">{{ $shipmentSummary['attention'] > 0 ? 'Prioriza llamadas o reprogramacion.' : 'Sin novedades abiertas en este filtro.' }}</p>
+            </a>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Recaudo por vigilar</p>
+                <p class="mt-2 text-2xl font-black text-gray-950">${{ number_format($shipmentSummary['collectionOpen'], 0, ',', '.') }}</p>
+                <p class="mt-3 text-xs font-semibold text-gray-600">{{ $shipmentSummary['delivered'] }} entregada(s) en este filtro.</p>
+            </div>
+        </div>
+
         @if ($activeFilters->isNotEmpty())
             <div class="mt-2 flex flex-wrap gap-1.5 shrink-0">
                 @foreach ($activeFilters as $chip)
@@ -67,6 +133,40 @@
                     </a>
                 @endforeach
             </div>
+        @endif
+
+        @if ($isPrintQueue && $shipments->count() > 0)
+            <section class="mt-3 shrink-0 rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                    <div class="min-w-0">
+                        <span class="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black uppercase tracking-wider text-blue-800">Centro de impresion</span>
+                        <h2 class="mt-2 text-lg font-black text-blue-950">Prepara las etiquetas de esta pagina en un solo paso</h2>
+                        <p class="mt-1 max-w-3xl text-sm font-semibold text-blue-800">
+                            Hay {{ $visibleCreatedCount }} guia(s) listas para imprimir en esta vista, con ${{ number_format($visibleCreatedValue, 0, ',', '.') }} en recaudo por preparar.
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-2 sm:flex-row xl:justify-end">
+                        <button type="button" onclick="selectCreatedShipments()" class="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-black text-blue-800 shadow-sm hover:bg-blue-100">Seleccionar visibles</button>
+                        <button type="button" onclick="submitBulkPrint()" class="inline-flex items-center justify-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-black text-white shadow-sm hover:bg-blue-800">Imprimir lote</button>
+                        <a href="{{ route('shipments.index', ['status' => 'printed']) }}" class="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-black text-blue-800 shadow-sm hover:bg-blue-100">Ver impresas</a>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-3 md:grid-cols-3">
+                    <div class="rounded-lg border border-blue-100 bg-white p-3">
+                        <p class="text-xs font-black uppercase tracking-wider text-blue-700">1. Selecciona</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-700">Marca las guias visibles o usa seleccion rapida.</p>
+                    </div>
+                    <div class="rounded-lg border border-blue-100 bg-white p-3">
+                        <p class="text-xs font-black uppercase tracking-wider text-blue-700">2. Imprime</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-700">Se abre una sola ventana con las etiquetas del lote.</p>
+                    </div>
+                    <div class="rounded-lg border border-blue-100 bg-white p-3">
+                        <p class="text-xs font-black uppercase tracking-wider text-blue-700">3. Prepara</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-700">Despues de imprimir, las guias pasan a estado impresa.</p>
+                    </div>
+                </div>
+            </section>
         @endif
 
         {{-- Barra de acciones --}}
@@ -102,7 +202,7 @@
                         </select>
                         <button type="button" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white hover:bg-blue-800 shadow-sm" onclick="submitBulkStatus()">Aplicar</button>
                     </form>
-                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm" onclick="var ids=[]; document.querySelectorAll('.shipment-checkbox:checked').forEach(c=>ids.push(c.value)); if(ids.length===0){alert('Selecciona al menos una guia.');return} var f=document.getElementById('bulk-print-form'); ids.forEach(id=>{var i=document.createElement('input'); i.type='hidden'; i.name='shipment_ids[]'; i.value=id; f.appendChild(i)}); f.submit();">Imprimir seleccionadas</button>
+                    <button type="button" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm" onclick="submitBulkPrint()">Imprimir seleccionadas</button>
                 @endif
             </div>
         </div>
@@ -114,7 +214,7 @@
             <style>
                 .sh-list-header, .sh-list-row {
                     display: grid;
-                    grid-template-columns: 32px minmax(90px,0.9fr) minmax(120px,1.5fr) minmax(70px,0.7fr) minmax(85px,0.85fr) minmax(75px,0.7fr) minmax(65px,0.6fr) 66px;
+                    grid-template-columns: 32px minmax(90px,0.9fr) minmax(120px,1.5fr) minmax(70px,0.7fr) minmax(85px,0.85fr) minmax(75px,0.7fr) minmax(65px,0.6fr) 138px;
                     align-items: center;
                     gap: 6px;
                 }
@@ -157,15 +257,22 @@
                     @foreach ($shipments as $shipment)
                         @php
                             $city = $shipment->recipient_city ?: ($shipment->recipient_locality ?: ($shipment->zone ?: '—'));
+                            $trackingUrl = route('tracking.show', $shipment->guide_number);
                             $bar = $statusBarColor[$shipment->status] ?? 'bg-gray-400';
                             $units = !empty($shipment->inventory_snapshot) ? collect($shipment->inventory_snapshot)->sum(fn ($i) => (int) ($i['quantity'] ?? 0)) : 0;
                             $barMap = ['bg-gray-400' => '#9ca3af', 'bg-gray-500' => '#6b7280', 'bg-amber-500' => '#f59e0b', 'bg-indigo-500' => '#6366f1', 'bg-blue-500' => '#3b82f6', 'bg-emerald-500' => '#10b981', 'bg-red-500' => '#ef4444', 'bg-purple-500' => '#a855f7', 'bg-orange-500' => '#f97316'];
                             $barColor = $barMap[$bar] ?? '#9ca3af';
+                            $recipientFirstName = trim($shipment->recipient_name) ?: 'cliente';
+                            $customerMessage = implode(' ', [
+                                "Hola {$recipientFirstName}, te compartimos el seguimiento de tu envio {$shipment->guide_number}.",
+                                'Estado actual: '.($statusLabels[$shipment->status] ?? $shipment->status).'.',
+                                'Puedes revisarlo aqui: '.$trackingUrl,
+                            ]);
                         @endphp
                         {{-- Desktop --}}
                         <div class="sh-list-row sh-desktop-row" style="border-left:3px solid {{ $barColor }}">
                             <div class="sh-list-cell">
-                                <input type="checkbox" value="{{ $shipment->id }}" class="shipment-checkbox rounded border-gray-300 text-blue-700 w-4 h-4 shrink-0 aspect-square">
+                                <input type="checkbox" value="{{ $shipment->id }}" data-shipment-status="{{ $shipment->status }}" class="shipment-checkbox rounded border-gray-300 text-blue-700 w-4 h-4 shrink-0 aspect-square">
                             </div>
                             <div class="sh-list-cell">
                                 <p class="text-sm font-semibold text-gray-950 font-mono truncate">{{ $shipment->guide_number }}</p>
@@ -192,6 +299,12 @@
                                 <p class="text-xs text-gray-400">{{ $shipment->created_at->format('H:i') }}</p>
                             </div>
                             <div class="sh-list-cell" style="gap:3px">
+                                <button type="button" data-customer-message="{{ $customerMessage }}" onclick="copyCustomerMessage(this)" title="Copiar mensaje al cliente" class="flex items-center justify-center rounded-md border border-blue-200 bg-blue-50 w-8 h-8 text-blue-700 hover:bg-blue-100 hover:text-blue-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-5 4v-4Z" /></svg>
+                                </button>
+                                <button type="button" data-tracking-url="{{ $trackingUrl }}" onclick="copyTrackingLink(this)" title="Copiar seguimiento" class="flex items-center justify-center rounded-md border border-gray-300 bg-white w-8 h-8 text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.19 8.688a4.5 4.5 0 0 1 6.364 6.364l-1.768 1.768a4.5 4.5 0 0 1-6.364 0m1.06-9.192a4.5 4.5 0 0 0-6.364 0L4.35 9.396a4.5 4.5 0 0 0 6.364 6.364" /></svg>
+                                </button>
                                 <a href="{{ route('shipments.print', $shipment) }}" onclick="event.preventDefault(); window.open(this.href, 'print{{ $shipment->id }}', 'width=800,height=600,scrollbars=yes,resizable=yes')" title="Imprimir" class="flex items-center justify-center rounded-md border border-gray-300 bg-white w-8 h-8 text-gray-500 hover:bg-gray-50 hover:text-gray-700">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2m2 4h6a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2zm8-12V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4h10z" /></svg>
                                 </a>
@@ -203,7 +316,7 @@
                         {{-- Mobile --}}
                         <div class="sh-list-row sh-mobile-row" style="border-left:3px solid {{ $barColor }}">
                             <div class="sh-list-cell">
-                                <input type="checkbox" value="{{ $shipment->id }}" class="shipment-checkbox rounded border-gray-300 text-blue-700 w-4 h-4 shrink-0 aspect-square">
+                                <input type="checkbox" value="{{ $shipment->id }}" data-shipment-status="{{ $shipment->status }}" class="shipment-checkbox rounded border-gray-300 text-blue-700 w-4 h-4 shrink-0 aspect-square">
                             </div>
                             <div class="sh-list-cell" style="flex-direction:column;align-items:stretch;gap:4px;flex:1">
                                 <div class="flex items-center justify-between">
@@ -233,7 +346,15 @@
                                         <p class="text-gray-400">{{ $shipment->created_at->format('H:i') }}</p>
                                     </div>
                                 </div>
-                                <div class="flex gap-2 mt-1">
+                                <div class="grid grid-cols-2 gap-2 mt-1 sm:grid-cols-4">
+                                    <button type="button" data-customer-message="{{ $customerMessage }}" onclick="copyCustomerMessage(this)" class="flex items-center justify-center gap-1 rounded border border-blue-200 bg-blue-50 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-5 4v-4Z" /></svg>
+                                        Mensaje
+                                    </button>
+                                    <button type="button" data-tracking-url="{{ $trackingUrl }}" onclick="copyTrackingLink(this)" class="flex-1 flex items-center justify-center gap-1 rounded border border-gray-300 bg-white py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.19 8.688a4.5 4.5 0 0 1 6.364 6.364l-1.768 1.768a4.5 4.5 0 0 1-6.364 0m1.06-9.192a4.5 4.5 0 0 0-6.364 0L4.35 9.396a4.5 4.5 0 0 0 6.364 6.364" /></svg>
+                                        Seguimiento
+                                    </button>
                                     <a href="{{ route('shipments.print', $shipment) }}" onclick="event.preventDefault(); window.open(this.href, 'print{{ $shipment->id }}', 'width=800,height=600,scrollbars=yes,resizable=yes')" class="flex-1 flex items-center justify-center gap-1 rounded border border-gray-300 bg-white py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2m2 4h6a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2zm8-12V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4h10z" /></svg>
                                         Imprimir
@@ -276,11 +397,7 @@
                 return;
             }
 
-            const ids = [];
-            const seen = new Set();
-            document.querySelectorAll('.shipment-checkbox:checked').forEach(c => {
-                if (!seen.has(c.value)) { seen.add(c.value); ids.push(c.value); }
-            });
+            const ids = selectedShipmentIds();
             if (ids.length === 0) {
                 alert('Selecciona al menos una guia.');
                 return;
@@ -300,11 +417,89 @@
             document.getElementById('bulk-status-form').submit();
         }
 
+        function selectedShipmentIds() {
+            const ids = [];
+            const seen = new Set();
+            document.querySelectorAll('.shipment-checkbox:checked').forEach(c => {
+                if (!seen.has(c.value)) {
+                    seen.add(c.value);
+                    ids.push(c.value);
+                }
+            });
+            return ids;
+        }
+
+        function submitBulkPrint() {
+            const ids = selectedShipmentIds();
+            if (ids.length === 0) {
+                alert('Selecciona al menos una guia.');
+                return;
+            }
+
+            const form = document.getElementById('bulk-print-form');
+            form.querySelectorAll('input[name="shipment_ids[]"]').forEach(input => input.remove());
+            ids.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'shipment_ids[]';
+                input.value = id;
+                form.appendChild(input);
+            });
+            form.submit();
+        }
+
+        function selectCreatedShipments() {
+            document.querySelectorAll('.shipment-checkbox').forEach(checkbox => {
+                checkbox.checked = checkbox.dataset.shipmentStatus === 'created';
+            });
+            updateSelectionLabel();
+        }
+
         function updateSelectionLabel() {
-            const ids = new Set();
-            document.querySelectorAll('.shipment-checkbox:checked').forEach(c => ids.add(c.value));
+            const ids = selectedShipmentIds();
             const label = document.getElementById('selection-label');
-            label.textContent = ids.size > 0 ? 'Guias seleccionadas ' + ids.size : 'Todo';
+            label.textContent = ids.length > 0 ? 'Guias seleccionadas ' + ids.length : 'Todo';
+        }
+
+        function copyTextToClipboard(text) {
+            if (!text) return Promise.resolve();
+
+            return navigator.clipboard
+                ? navigator.clipboard.writeText(text)
+                : new Promise((resolve) => {
+                    const input = document.createElement('textarea');
+                    input.value = text;
+                    input.setAttribute('readonly', 'readonly');
+                    input.style.position = 'fixed';
+                    input.style.opacity = '0';
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(input);
+                    resolve();
+                });
+        }
+
+        function showCopiedState(button, label = 'Copiado') {
+            copyTextToClipboard(button.dataset.trackingUrl || button.dataset.customerMessage || '').then(() => {
+                const original = button.innerHTML;
+                button.innerHTML = '<span class="text-xs font-bold">' + label + '</span>';
+                button.disabled = true;
+                setTimeout(() => {
+                    button.innerHTML = original;
+                    button.disabled = false;
+                }, 1600);
+            });
+        }
+
+        function copyTrackingLink(button) {
+            if (!button.dataset.trackingUrl) return;
+            showCopiedState(button, 'Copiado');
+        }
+
+        function copyCustomerMessage(button) {
+            if (!button.dataset.customerMessage) return;
+            showCopiedState(button, 'Mensaje copiado');
         }
 
         document.querySelectorAll('.shipment-checkbox').forEach(cb => {

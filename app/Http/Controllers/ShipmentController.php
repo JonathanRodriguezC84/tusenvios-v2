@@ -37,6 +37,7 @@ class ShipmentController extends Controller
             ->latest()
             ->paginate(15)
             ->withQueryString();
+        $shipmentSummary = $this->shipmentSummaryForFilters($filters);
         $couriers = User::query()
             ->where('role', 'courier')
             ->where('status', 'active')
@@ -45,7 +46,7 @@ class ShipmentController extends Controller
             ->get();
         $deliveryZones = $this->deliveryZonesForTenant(Auth::user()->tenant);
 
-        return view('shipments.index', compact('shipments', 'filters', 'couriers', 'deliveryZones'));
+        return view('shipments.index', compact('shipments', 'filters', 'shipmentSummary', 'couriers', 'deliveryZones'));
     }
 
     public function export(Request $request)
@@ -200,7 +201,141 @@ class ShipmentController extends Controller
             ->when($filters['date'] ?? null, fn ($query, $date) => $query->whereDate('created_at', $date));
     }
 
-    public function create()
+    private function shipmentSummaryForFilters(array $filters): array
+    {
+        $base = $this->filteredShipments($filters);
+
+        $countFor = fn (array $statuses) => (clone $base)->whereIn('status', $statuses)->count();
+        $valueFor = fn (array $statuses) => (float) ((clone $base)
+            ->whereIn('status', $statuses)
+            ->selectRaw('COALESCE(SUM(collection_value), 0) as total')
+            ->value('total') ?? 0);
+
+        $attentionStatuses = ['failed_delivery', 'rescheduled', 'return_pending'];
+        $activeStatuses = ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled', 'return_pending'];
+
+        $total = (clone $base)->count();
+        $attention = $countFor($attentionStatuses);
+        $failedDelivery = $countFor(['failed_delivery']);
+        $rescheduled = $countFor(['rescheduled']);
+        $returnPending = $countFor(['return_pending']);
+        $pendingPrint = $countFor(['created']);
+        $active = $countFor($activeStatuses);
+        $delivered = $countFor(['delivered']);
+        $collectionOpen = $valueFor(['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled', 'return_pending']);
+
+        $primary = match (true) {
+            $attention > 0 => [
+                'label' => 'Resolver novedades',
+                'description' => "{$attention} guia(s) necesitan una decision.",
+                'route' => route('shipments.index', array_merge(request()->except(['page', 'status']), [
+                    'status' => $failedDelivery > 0 ? 'failed_delivery' : ($rescheduled > 0 ? 'rescheduled' : 'return_pending'),
+                ])),
+                'tone' => 'red',
+            ],
+            $pendingPrint > 0 => [
+                'label' => 'Imprimir pendientes',
+                'description' => "{$pendingPrint} guia(s) creadas esperan etiqueta.",
+                'route' => route('shipments.index', array_merge(request()->except(['page', 'status']), ['status' => 'created'])),
+                'tone' => 'blue',
+            ],
+            $active > 0 => [
+                'label' => 'Seguir guias activas',
+                'description' => "{$active} guia(s) siguen en operacion.",
+                'route' => route('shipments.index', request()->except('page')),
+                'tone' => 'blue',
+            ],
+            default => [
+                'label' => 'Operacion despejada',
+                'description' => $total > 0 ? 'No hay pendientes criticos en este filtro.' : 'Aun no hay guias en este filtro.',
+                'route' => route('shipments.index', request()->except('page')),
+                'tone' => 'emerald',
+            ],
+        };
+
+        return [
+            'total' => $total,
+            'attention' => $attention,
+            'attentionRoute' => route('shipments.index', array_merge(request()->except(['page', 'status']), [
+                'status' => $failedDelivery > 0 ? 'failed_delivery' : ($rescheduled > 0 ? 'rescheduled' : 'return_pending'),
+            ])),
+            'pendingPrint' => $pendingPrint,
+            'active' => $active,
+            'delivered' => $delivered,
+            'collectionOpen' => $collectionOpen,
+            'primary' => $primary,
+            'shortcuts' => $this->shipmentStatusShortcuts($filters),
+        ];
+    }
+
+    private function shipmentStatusShortcuts(array $filters): array
+    {
+        $baseFilters = collect($filters)->except('status')->all();
+        $base = $this->filteredShipments($baseFilters);
+        $countFor = fn (array $statuses) => (clone $base)->whereIn('status', $statuses)->count();
+        $currentStatus = request('status');
+
+        $shortcuts = [
+            [
+                'label' => 'Todas',
+                'description' => 'Vista completa',
+                'status' => null,
+                'count' => (clone $base)->count(),
+                'tone' => 'gray',
+            ],
+            [
+                'label' => 'Por imprimir',
+                'description' => 'Etiquetas pendientes',
+                'status' => 'created',
+                'count' => $countFor(['created']),
+                'tone' => 'blue',
+            ],
+            [
+                'label' => 'Preparacion',
+                'description' => 'Bodega y alistamiento',
+                'status' => 'printed',
+                'count' => $countFor(['printed', 'in_warehouse', 'in_sorting', 'assigned']),
+                'tone' => 'amber',
+            ],
+            [
+                'label' => 'En camino',
+                'description' => 'Rutas abiertas',
+                'status' => 'on_route',
+                'count' => $countFor(['on_route']),
+                'tone' => 'blue',
+            ],
+            [
+                'label' => 'Novedades',
+                'description' => 'Necesitan accion',
+                'status' => 'failed_delivery',
+                'count' => $countFor(['failed_delivery', 'rescheduled', 'return_pending']),
+                'tone' => 'red',
+            ],
+            [
+                'label' => 'Entregadas',
+                'description' => 'Cerradas con exito',
+                'status' => 'delivered',
+                'count' => $countFor(['delivered']),
+                'tone' => 'emerald',
+            ],
+        ];
+
+        return collect($shortcuts)
+            ->map(function (array $shortcut) use ($currentStatus) {
+                $routeParams = request()->except(['page', 'status']);
+                if ($shortcut['status']) {
+                    $routeParams['status'] = $shortcut['status'];
+                }
+
+                return array_merge($shortcut, [
+                    'route' => route('shipments.index', $routeParams),
+                    'active' => $shortcut['status'] === null ? blank($currentStatus) : $currentStatus === $shortcut['status'],
+                ]);
+            })
+            ->all();
+    }
+
+    public function create(Request $request)
     {
         abort_unless(Auth::user()->canCreateShipments(), 403);
 
@@ -221,11 +356,31 @@ class ShipmentController extends Controller
         ['presets' => $senderPresets, 'companyDefaults' => $companySenderPresetKeys] = $this->senderPresetData($tenant, $companies);
         $quickProducts = $this->quickProductsForUser();
         $inventoryProducts = $this->inventoryProductsForUser();
+        $prefillRecipient = null;
+        $prefillQuickProduct = null;
+
+        if ($request->filled('recipient')) {
+            $prefillRecipient = FrequentRecipient::query()
+                ->whereKey($request->integer('recipient'))
+                ->when(! Auth::user()->isSuperAdmin(), fn ($query) => $query->where(function ($query) {
+                    $user = Auth::user();
+                    $query->where('tenant_id', $user->tenant_id);
+                    if ($user->affiliated_company_id) {
+                        $query->orWhere('affiliated_company_id', $user->affiliated_company_id);
+                    }
+                }))
+                ->first();
+        }
+
+        if ($request->filled('quick_product')) {
+            $prefillQuickProduct = $quickProducts
+                ->firstWhere('id', $request->integer('quick_product'));
+        }
 
         $useInventory = Auth::user()->canUseInventory();
         $planCode = $useInventory ? 'fundador' : 'emprende';
 
-        return view('shipments.create', compact('companies', 'departments', 'deliveryZones', 'deliveryZoneSuggestions', 'companyTerms', 'senderPresets', 'companySenderPresetKeys', 'quickProducts', 'inventoryProducts', 'useInventory', 'planCode'));
+        return view('shipments.create', compact('companies', 'departments', 'deliveryZones', 'deliveryZoneSuggestions', 'companyTerms', 'senderPresets', 'companySenderPresetKeys', 'quickProducts', 'inventoryProducts', 'useInventory', 'planCode', 'prefillRecipient', 'prefillQuickProduct'));
     }
 
     public function store(Request $request)
@@ -763,7 +918,7 @@ private function normalizeShipmentText(array $validated): array
 
         return $validated;
     }
-    public function show(Shipment $shipment)
+    public function show(Request $request, Shipment $shipment)
     {
         abort_unless($shipment->isVisibleTo(Auth::user()), 403);
 
@@ -785,8 +940,10 @@ private function normalizeShipmentText(array $validated): array
             ->get();
 $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
         $printFormats = $this->printFormats();
+        $isDailyMode = $request->boolean('daily');
+        $dailyPendingCount = $isDailyMode ? $this->dailyPendingShipmentQuery(Auth::user())->count() : 0;
 
-        return view('shipments.show', compact('shipment', 'couriers', 'nextStatuses', 'printFormats'));
+        return view('shipments.show', compact('shipment', 'couriers', 'nextStatuses', 'printFormats', 'isDailyMode', 'dailyPendingCount'));
     }
 
     public function edit(Shipment $shipment)
@@ -1234,6 +1391,7 @@ private function printFormats(): array
         $validated = $request->validate([
             'status' => ['required', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'daily_mode' => ['nullable', 'boolean'],
         ]);
 
         if (! $shipment->canTransitionTo($validated['status'])) {
@@ -1273,7 +1431,67 @@ private function printFormats(): array
             }
         }
 
+        if ($request->boolean('daily_mode')) {
+            $nextShipment = $this->nextDailyPendingShipment(Auth::user(), $shipment->id);
+
+            if ($nextShipment) {
+                return redirect()
+                    ->route('shipments.show', ['shipment' => $nextShipment, 'daily' => 1])
+                    ->with('status', 'Estado actualizado. Continuamos con la siguiente guia pendiente.');
+            }
+
+            return redirect()
+                ->route('daily-tasks.index')
+                ->with('status', 'Estado actualizado. Ya no quedan guias pendientes en tu jornada.');
+        }
+
         return back()->with('status', 'Estado actualizado correctamente.');
+    }
+
+    private function dailyPendingShipmentQuery(User $user)
+    {
+        $priorityStatuses = [
+            'failed_delivery',
+            'rescheduled',
+            'return_pending',
+            'created',
+            'printed',
+            'in_warehouse',
+            'in_sorting',
+            'assigned',
+            'on_route',
+        ];
+
+        return Shipment::query()
+            ->visibleTo($user)
+            ->whereIn('status', $priorityStatuses);
+    }
+
+    private function nextDailyPendingShipment(User $user, ?int $excludeShipmentId = null): ?Shipment
+    {
+        $priorityGroups = [
+            ['failed_delivery', 'rescheduled', 'return_pending'],
+            ['created'],
+            ['printed', 'in_warehouse', 'in_sorting', 'assigned'],
+            ['on_route'],
+            ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled', 'return_pending'],
+        ];
+
+        foreach ($priorityGroups as $index => $statuses) {
+            $shipment = Shipment::query()
+                ->visibleTo($user)
+                ->whereIn('status', $statuses)
+                ->when($excludeShipmentId, fn ($query) => $query->whereKeyNot($excludeShipmentId))
+                ->when($index === 4, fn ($query) => $query->where('updated_at', '<=', now()->subDay()))
+                ->latest('updated_at')
+                ->first();
+
+            if ($shipment) {
+                return $shipment;
+            }
+        }
+
+        return null;
     }
 
     public function cancel(Request $request, Shipment $shipment)

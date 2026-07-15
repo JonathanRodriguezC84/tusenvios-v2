@@ -35,7 +35,7 @@
     };
 ?>
 
-<?php if (! $__env->hasRenderedOnce('98d1ea70-4192-49d2-b935-28ee71199837')): $__env->markAsRenderedOnce('98d1ea70-4192-49d2-b935-28ee71199837'); ?>
+<?php if (! $__env->hasRenderedOnce('6351c511-438d-47f2-9d75-e133b2503719')): $__env->markAsRenderedOnce('6351c511-438d-47f2-9d75-e133b2503719'); ?>
     <?php
         $blocksDir = resource_path('views/brand-settings/partials');
         if (! file_exists($blocksDir.'/label-blocks-top.blade.php')) {

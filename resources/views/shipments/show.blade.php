@@ -68,8 +68,8 @@
                 <a href="{{ route('shipments.print', $shipment) }}" onclick="event.preventDefault(); window.open(this.href, 'print{{ $shipment->id }}', 'width=800,height=600,scrollbars=yes,resizable=yes')" class="inline-flex items-center justify-center rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-800">
                     Imprimir
                 </a>
-                <a href="{{ route('shipments.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
-                    Mis guias
+                <a href="{{ $isDailyMode ? route('daily-tasks.index') : route('shipments.index') }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+                    {{ $isDailyMode ? 'Tareas diarias' : 'Mis guias' }}
                 </a>
             </div>
         </div>
@@ -78,6 +78,23 @@
     <div class="py-6 sm:py-8">
         <div class="mx-auto grid max-w-6xl gap-5 px-4 sm:px-6 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div class="grid gap-5">
+                @if ($isDailyMode)
+                    <section class="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-wider text-blue-700">Jornada activa</p>
+                                <h3 class="mt-1 text-base font-black text-blue-950">Actualiza esta guia y pasamos a la siguiente automaticamente</h3>
+                                <p class="mt-1 text-sm font-semibold text-blue-800">
+                                    Quedan {{ max(1, $dailyPendingCount) }} guia(s) pendiente(s) en Tareas Diarias.
+                                </p>
+                            </div>
+                            <a href="{{ route('daily-tasks.index') }}" class="inline-flex items-center justify-center rounded-md border border-blue-200 bg-white px-4 py-2 text-sm font-black text-blue-800 shadow-sm hover:bg-blue-100">
+                                Ver jornada
+                            </a>
+                        </div>
+                    </section>
+                @endif
+
                 <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
@@ -294,6 +311,9 @@
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="{{ $nextStatus }}">
+                                    @if ($isDailyMode)
+                                        <input type="hidden" name="daily_mode" value="1">
+                                    @endif
                                     <button class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
                                         Marcar como {{ strtolower($statusLabels[$nextStatus] ?? $nextStatus) }}
                                     </button>

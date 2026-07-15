@@ -30,6 +30,7 @@ class Tenant extends Model
 'label_template',
         'default_print_format',
         'notify_low_stock',
+        'daily_tasks_enabled',
         'api_token',
         'webhook_url',
         'webhook_events',

@@ -30,6 +30,12 @@
     text-align: center;
 }
 
+.qp-btn-lg {
+    min-height: 2.35rem;
+    padding-inline: 0.8rem;
+    font-size: 0.82rem;
+}
+
 .qp-btn-primary {
     border: 1px solid var(--qp-color, #022a8c);
     background: var(--qp-color, #022a8c);
@@ -42,10 +48,68 @@
     color: var(--qp-color, #022a8c);
 }
 
+.qp-action-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid var(--qp-color-border, #e5e7eb);
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, #ffffff 0%, var(--qp-color-tint, #f3f6ff) 100%);
+    padding: 1rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.qp-action-panel__cta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.qp-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.75rem;
+}
+
+.qp-product-card {
+    min-height: 8.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.65rem;
+    background: #ffffff;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.qp-product-card:hover {
+    border-color: var(--qp-color-border, #bfdbfe);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+}
+
+.qp-icon-btn {
+    width: 2rem;
+    min-width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.4rem;
+    border: 1px solid var(--qp-color-border, #e5e7eb);
+    background: #ffffff;
+    color: var(--qp-color, #022a8c);
+}
+
+.qp-icon-btn:hover {
+    background: var(--qp-color-tint, #eff6ff);
+}
+
 .qp-head,
 .qp-row {
     display: grid;
-    grid-template-columns: 1fr 120px 110px 170px;
+    grid-template-columns: 1fr 120px 120px 110px 170px;
     align-items: center;
     gap: 10px;
 }
@@ -64,6 +128,19 @@
 }
 
 @media (max-width: 1023px) {
+    .qp-action-panel {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .qp-action-panel__cta {
+        justify-content: stretch;
+    }
+
+    .qp-action-panel__cta .qp-btn {
+        flex: 1 1 10rem;
+    }
+
     .qp-head {
         display: none;
     }

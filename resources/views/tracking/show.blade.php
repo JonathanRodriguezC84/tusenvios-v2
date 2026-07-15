@@ -28,6 +28,11 @@
     }
     $brandName = $brandOwner?->name ?? 'Tus Envios';
     $brandLogo = $brandOwner?->logo_path ? \Illuminate\Support\Facades\Storage::url($brandOwner->logo_path) : asset('images/logotusenvios.png') . '?v=20260521';
+    $brandMessage = $brandData['message'] ?? 'Gracias por tu compra.';
+    $brandWhatsapp = preg_replace('/\D+/', '', (string) ($brandData['whatsapp'] ?? $brandData['phone'] ?? ''));
+    $trackingUrl = route('tracking.show', $shipment->guide_number);
+    $whatsappText = rawurlencode("Hola, necesito ayuda con mi envio {$shipment->guide_number}. {$trackingUrl}");
+    $whatsappUrl = $brandWhatsapp ? "https://wa.me/{$brandWhatsapp}?text={$whatsappText}" : null;
 
     $eventsByStatus = $shipment->events->groupBy('status');
 
@@ -120,6 +125,33 @@
             </div>
         </section>
 
+        <section class="mt-6 grid gap-4 lg:grid-cols-[1fr_0.8fr]">
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="flex items-start gap-4">
+                    <img src="{{ $brandLogo }}" alt="{{ $brandName }}" class="h-14 w-14 rounded-lg border border-gray-200 bg-white object-contain p-1">
+                    <div class="min-w-0">
+                        <p class="text-xs font-black uppercase tracking-wider text-gray-500">Vendido por</p>
+                        <h2 class="mt-1 text-lg font-black text-gray-950">{{ $brandName }}</h2>
+                        <p class="mt-1 text-sm font-semibold text-gray-600">{{ $brandMessage }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Necesitas ayuda?</p>
+                <p class="mt-1 text-sm font-semibold text-gray-600">Ten a la mano tu numero de guia para que podamos ayudarte mas rapido.</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    @if($whatsappUrl)
+                        <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-black text-white shadow-sm" style="background: {{ $brandColor }}">
+                            Escribir por WhatsApp
+                        </a>
+                    @endif
+                    <button onclick="copyTrackingUrl(this, '{{ $trackingUrl }}', 'Enlace copiado', 'Copiar enlace')" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm hover:bg-gray-50">
+                        Copiar enlace
+                    </button>
+                </div>
+            </div>
+        </section>
+
         {{-- Progress bar --}}
         <section class="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="text-xs font-black uppercase tracking-wider text-gray-500">Progreso del envio</h2>
@@ -201,7 +233,7 @@
                     <p class="font-bold text-gray-950">Compartir seguimiento</p>
                     <p class="text-sm text-gray-500">Envia el enlace a tu cliente para que vea el estado.</p>
                 </div>
-                <button onclick="navigator.clipboard.writeText(window.location.href); this.textContent='Copiado!'; setTimeout(()=>this.textContent='Copiar enlace', 2000)" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+                <button onclick="copyTrackingUrl(this, '{{ $trackingUrl }}', 'Copiado!', 'Copiar enlace')" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
                     Copiar enlace
                 </button>
             </div>
@@ -213,5 +245,28 @@
             Powered by <a href="https://tusenvios.com.co" class="font-semibold text-blue-700 hover:underline">Tus Envios</a>
         </div>
     </footer>
+    <script>
+        function copyTrackingUrl(button, url, copiedText, originalText) {
+            const copy = navigator.clipboard
+                ? navigator.clipboard.writeText(url)
+                : new Promise((resolve) => {
+                    const input = document.createElement('textarea');
+                    input.value = url;
+                    input.setAttribute('readonly', 'readonly');
+                    input.style.position = 'fixed';
+                    input.style.opacity = '0';
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(input);
+                    resolve();
+                });
+
+            copy.then(() => {
+                button.textContent = copiedText;
+                setTimeout(() => button.textContent = originalText, 2000);
+            });
+        }
+    </script>
 </body>
 </html>
