@@ -344,7 +344,7 @@ class DashboardController extends Controller
         $months = [];
         for ($i = 2; $i >= 0; $i--) {
             $date = now()->subMonths($i);
-            $months[] = ['label' => $date->locale('es')->isoFormat('MMM'), 'year' => $date->format('Y'), 'start' => $date->startOfMonth(), 'end' => $date->endOfMonth()];
+            $months[] = ['label' => $date->locale('es')->isoFormat('MMM'), 'year' => $date->format('Y'), 'start' => (clone $date)->startOfMonth(), 'end' => (clone $date)->endOfMonth()];
         }
 
         $max = 0;
