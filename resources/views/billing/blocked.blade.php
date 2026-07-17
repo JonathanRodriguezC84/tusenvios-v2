@@ -4,24 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Activa tu plan - Tus Envios</title>
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-            <style id="te-force-inter-font">
-            :root {
-                --te-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            }
-
-            html,
-            body,
-            body *,
-            button,
-            input,
-            select,
-            textarea {
-                font-family: var(--te-font-family) !important;
-            }
-        </style>
     </head>
     <body class="font-sans antialiased">
         @php

@@ -8,13 +8,11 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Tus Envios">
         <title>Tus Envios | Guias y etiquetas para emprendimientos</title>
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap" rel="stylesheet" />
         <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css']); ?>
         <style>
             :root{--brand-blue:#022a8c;--brand-blue-dark:#011f69;--brand-orange:#ff7a00;--ink:#07111f;--muted:#5f6b7a;--line:#dbe2ea;--soft:#f4f7fb}
             *{box-sizing:border-box}
-            body{margin:0;background:#fff;color:var(--ink);font-family:"Inter",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+            body{margin:0;background:#fff;color:var(--ink)}
             a{color:inherit;text-decoration:none}
             .site-header{position:sticky;top:0;z-index:20;border-bottom:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}
             .container{width:min(1180px,calc(100% - 32px));margin:0 auto}
@@ -112,10 +110,6 @@
             @media(min-width:981px){.cta-inner>div{max-width:780px}}
             @media(max-width:980px){.nav-links{display:none}.hero-grid,.faq-grid{grid-template-columns:1fr}.product-showcase{order:-1}.benefits-grid,.trust-row{grid-template-columns:repeat(2,minmax(0,1fr))}.audience-grid,.plans-grid,.steps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
             @media(max-width:640px){.container{width:min(100% - 24px,1180px)}.header-inner{align-items:center}.logo img{width:132px}.nav{gap:8px}.nav .btn-secondary{display:none}.btn{min-height:42px;padding:0 13px;font-size:13px}.hero-grid{gap:24px;padding:28px 0 36px}.showcase-card{padding:12px}.label-demo{padding:11px;gap:8px}.label-head{grid-template-columns:88px 1fr;gap:8px}.label-logo img{width:86px}.label-company{font-size:14px}.label-company small{font-size:7px}.guide-number{font-size:13px}.barcode{height:46px}.recipient-block{grid-template-columns:1fr 62px;gap:8px;padding:6px 0 9px}.recipient-name,.recipient-address{font-size:14px}.recipient-small,.meta-value{font-size:10px}.qr{width:58px;height:58px}.label-observations{font-size:9px}.social-line,.label-field,.meta-label,.label-footer{font-size:7px}.social-icon{width:14px;height:14px;font-size:6px}.proof-row,.benefits-grid,.audience-grid,.plans-grid,.steps-grid,.trust-row{grid-template-columns:1fr}.hero-actions,.cta-inner,.footer-inner{align-items:stretch;flex-direction:column}.hero-actions .btn,.cta-inner .btn{width:100%}.section{padding:40px 0}.plan{min-height:0}.site-header .header-inner{display:flex;align-items:center;justify-content:space-between;gap:8px}.site-header .logo{min-width:0;flex:1 1 auto}.site-header .logo img{width:clamp(104px,34vw,132px);max-width:100%;height:auto}.site-header .nav{display:flex;flex:0 0 auto;align-items:center;gap:6px}.site-header .nav .btn-secondary{display:inline-flex!important}.site-header .nav .btn{min-height:38px;border-radius:7px;padding:0 10px;font-size:12px;line-height:1;white-space:nowrap}.site-header .nav .btn-primary{padding-left:11px;padding-right:11px}}@media(max-width:380px){.site-header .logo img{width:96px}.site-header .nav .btn{padding-left:8px;padding-right:8px;font-size:11px}}
-        </style>
-        <style id="te-force-inter-font">
-            :root{--te-font-family:"Inter",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-            html,body,body *,button,input,select,textarea{font-family:var(--te-font-family)!important}
         </style>
         <link rel="icon" href="/favicon.ico?v=20260521v15" sizes="any">
     </head>

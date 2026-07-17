@@ -35,7 +35,7 @@
     };
 ?>
 
-<?php if (! $__env->hasRenderedOnce('6351c511-438d-47f2-9d75-e133b2503719')): $__env->markAsRenderedOnce('6351c511-438d-47f2-9d75-e133b2503719'); ?>
+<?php if (! $__env->hasRenderedOnce('a535e8aa-cf7b-49ec-a198-bdcf4470a0a4')): $__env->markAsRenderedOnce('a535e8aa-cf7b-49ec-a198-bdcf4470a0a4'); ?>
     <?php
         $blocksDir = resource_path('views/brand-settings/partials');
         if (! file_exists($blocksDir.'/label-blocks-top.blade.php')) {

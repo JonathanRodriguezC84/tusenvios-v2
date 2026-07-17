@@ -6,8 +6,6 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})();</script>
         <title>@yield('title', 'Admin') - Tus Envios</title>
-<link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <style>
             .admin-shell { min-height: 100vh; background: #f3f4f6; color: #0f172a; }
@@ -42,9 +40,12 @@
             .admin-title-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 0.5rem; background: #eff6ff; color: #1d4ed8; flex: 0 0 2.25rem; }
             .admin-title-icon svg { width: 1.15rem; height: 1.15rem; }
             @media (min-width: 1024px) {
-                .admin-shell { display: grid; grid-template-columns: 12rem minmax(0,1fr); }
-                .admin-sidebar { min-height: 100vh; position: sticky; top: 0; }
-                .admin-content { padding: 0.75rem; }
+                html, body { height: 100dvh; overflow: hidden; }
+                .admin-shell { display: grid; grid-template-columns: 12rem minmax(0,1fr); height: 100dvh; }
+                .admin-sidebar { min-height: 100vh; position: sticky; top: 0; overflow-y: auto; }
+                main.min-w-0 { display: flex; flex-direction: column; height: 100dvh; min-height: 0; }
+                main.min-w-0 > header { flex-shrink: 0; }
+                .admin-content { padding: 0.75rem; flex: 1; min-height: 0; overflow-y: auto; }
             }
             .dark .admin-shell { background: #0f172a; color: #e2e8f0; }
             .dark .admin-sidebar { background: #1e293b; color: #cbd5e1; border-color: #334155; }
@@ -80,21 +81,6 @@
             .dark .hover\:bg-gray-50:hover { background: #1e293b !important; }
             .dark .border-t { border-color: #334155; }
             .dark .border-b { border-color: #334155; }
-        </style>
-            <style id="te-force-inter-font">
-            :root {
-                --te-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            }
-
-            html,
-            body,
-            body *,
-            button,
-            input,
-            select,
-            textarea {
-                font-family: var(--te-font-family) !important;
-            }
         </style>
             <link rel="icon" href="/favicon.ico?v=20260521v15" sizes="any">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260521v15">

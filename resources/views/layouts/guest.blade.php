@@ -10,25 +10,7 @@
         <meta name="apple-mobile-web-app-title" content="Tus Envios">
 
         <title>{{ config('app.name', 'Tus Envios') }}</title>
-<link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap" rel="stylesheet" />
-
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-            <style id="te-force-inter-font">
-            :root {
-                --te-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            }
-
-            html,
-            body,
-            body *,
-            button,
-            input,
-            select,
-            textarea {
-                font-family: var(--te-font-family) !important;
-            }
-        </style>
             <link rel="icon" href="/favicon.ico?v=20260521v15" sizes="any">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260521v15">
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260521v15">

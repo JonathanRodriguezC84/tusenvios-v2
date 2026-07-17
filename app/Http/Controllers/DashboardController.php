@@ -7,7 +7,6 @@ use App\Models\InventoryProduct;
 use App\Models\QuickProduct;
 use App\Models\Shipment;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -20,23 +19,16 @@ class DashboardController extends Controller
 
         $metrics = $this->buildMetrics($user, $from, $to);
         $onboarding = $this->onboardingFor($user);
-        $professionalScore = $this->professionalScore($user);
 
         $chartShipmentsByDay = $this->chartShipmentsByDay($user, $from, $to);
-        $chartStatusDistribution = $this->chartStatusDistribution($user, $from, $to);
+        $chartStatusDistribution = $this->chartStatusDistribution($user);
         $chartTopProducts = $this->chartTopProducts($user, $from, $to);
-        $productSuggestions = $this->productSuggestions($user, $chartTopProducts);
         $chartRevenueByDay = $this->chartRevenueByDay($user, $from, $to);
         $chartMonthlyTrend = $this->chartMonthlyTrend($user);
         $deliveryRate = $this->deliveryRate($user, $from, $to);
-        $operationHealth = $this->operationHealth($user, $metrics, $deliveryRate);
-        $smartActions = $this->smartActions($user, $metrics, $operationHealth);
-        $workdaySummary = $this->workdaySummary($metrics, $operationHealth);
-        $todayPriority = $this->todayPriority($user, $metrics, $operationHealth);
+        $operationHealth = ['stale' => $this->staleShipmentsCount($user)];
         $moneySummary = $this->moneySummary($user, $metrics, $from, $to);
-        $growthActions = $this->growthActions($user, $metrics, $professionalScore, $productSuggestions, $deliveryRate);
         $inventoryAlerts = $this->inventoryAlerts($user);
-        $recentAudit = $this->recentAudit($user);
 
         $alerts = array_filter([
             $metrics['issues'] > 0 ? [
@@ -75,12 +67,11 @@ class DashboardController extends Controller
             'range' => $range,
             'label' => $this->rangeLabel($from, $to, $range),
         ];
-        $dashboardReportText = $this->dashboardReportText($dateRange, $metrics, $todayPriority, $moneySummary, $operationHealth, $deliveryRate);
 
         return view('dashboard', compact(
-            'metrics', 'onboarding', 'professionalScore', 'alerts', 'trialGuideCounter', 'dateRange',
-            'chartShipmentsByDay', 'chartStatusDistribution', 'chartTopProducts', 'productSuggestions', 'chartRevenueByDay',
-            'chartMonthlyTrend', 'deliveryRate', 'operationHealth', 'smartActions', 'workdaySummary', 'todayPriority', 'moneySummary', 'dashboardReportText', 'growthActions', 'inventoryAlerts', 'recentAudit'
+            'metrics', 'onboarding', 'alerts', 'trialGuideCounter', 'dateRange',
+            'chartShipmentsByDay', 'chartStatusDistribution', 'chartTopProducts', 'chartRevenueByDay',
+            'chartMonthlyTrend', 'deliveryRate', 'operationHealth', 'moneySummary', 'inventoryAlerts'
         ));
     }
 
@@ -188,16 +179,21 @@ class DashboardController extends Controller
         return ['days' => $data, 'max' => $max ?: 1];
     }
 
-    private function chartStatusDistribution($user, $from = null, $to = null): array
+    private function chartStatusDistribution($user): array
     {
-        $statuses = ['created', 'printed', 'in_warehouse', 'on_route', 'delivered', 'failed_delivery', 'cancelled'];
+        $statuses = ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'delivered', 'failed_delivery', 'rescheduled', 'return_pending', 'returned', 'cancelled'];
         $labels = [
             'created' => ['label' => 'Por imprimir', 'color' => '#6b7280'],
             'printed' => ['label' => 'Impresa', 'color' => '#9ca3af'],
             'in_warehouse' => ['label' => 'En bodega', 'color' => '#f59e0b'],
+            'in_sorting' => ['label' => 'En clasificacion', 'color' => '#fb923c'],
+            'assigned' => ['label' => 'Asignada', 'color' => '#6366f1'],
             'on_route' => ['label' => 'En camino', 'color' => '#3b82f6'],
             'delivered' => ['label' => 'Entregadas', 'color' => '#10b981'],
             'failed_delivery' => ['label' => 'Novedad', 'color' => '#ef4444'],
+            'rescheduled' => ['label' => 'Reprogramada', 'color' => '#eab308'],
+            'return_pending' => ['label' => 'Por devolver', 'color' => '#fb7185'],
+            'returned' => ['label' => 'Devuelta', 'color' => '#a78bfa'],
             'cancelled' => ['label' => 'Canceladas', 'color' => '#d1d5db'],
         ];
 
@@ -205,9 +201,7 @@ class DashboardController extends Controller
         $items = [];
 
         foreach ($statuses as $status) {
-            $count = Shipment::query()->visibleTo($user)->where('status', $status)
-                ->when($from && $to, fn ($q) => $q->whereBetween('created_at', [$from, $to]))
-                ->count();
+            $count = Shipment::query()->visibleTo($user)->where('status', $status)->count();
             $items[$status] = $count;
             $total += $count;
         }
@@ -216,7 +210,7 @@ class DashboardController extends Controller
         $segments = [];
         $angle = 0;
 
-        $order = ['delivered', 'on_route', 'in_warehouse', 'created', 'printed', 'failed_delivery', 'cancelled'];
+        $order = ['delivered', 'on_route', 'assigned', 'in_warehouse', 'in_sorting', 'created', 'printed', 'failed_delivery', 'rescheduled', 'return_pending', 'returned', 'cancelled'];
 
         foreach ($order as $status) {
             $pct = round(($items[$status] / $total) * 100, 1);
@@ -286,58 +280,6 @@ class DashboardController extends Controller
         return $result;
     }
 
-    private function productSuggestions($user, array $topProducts): array
-    {
-        if ($user->canUseInventory() || empty($topProducts)) {
-            return ['show' => false, 'items' => [], 'ready_count' => 0, 'repeated_count' => 0];
-        }
-
-        $existing = QuickProduct::query()
-            ->when(
-                $user->role === 'affiliate' && $user->affiliated_company_id,
-                fn ($q) => $q->where('affiliated_company_id', $user->affiliated_company_id),
-                fn ($q) => $q->where('tenant_id', $user->tenant_id)->whereNull('affiliated_company_id')
-            )
-            ->pluck('name')
-            ->map(fn ($name) => $this->normalizeProductName((string) $name))
-            ->filter()
-            ->values()
-            ->all();
-
-        $repeatedProducts = collect($topProducts)
-            ->filter(fn (array $product) => ($product['count'] ?? 0) >= 2);
-
-        $items = collect($topProducts)
-            ->filter(fn (array $product) => ($product['count'] ?? 0) >= 2)
-            ->reject(fn (array $product) => in_array($this->normalizeProductName((string) $product['name']), $existing, true))
-            ->take(3)
-            ->map(fn (array $product) => [
-                'name' => $product['name'],
-                'count' => $product['count'],
-                'route' => route('quick-products.index', [
-                    'name' => $product['name'],
-                    'package_type' => 'merchandise',
-                ]),
-            ])
-            ->values()
-            ->all();
-
-        return [
-            'show' => count($items) > 0 || $repeatedProducts->isNotEmpty(),
-            'items' => $items,
-            'ready_count' => $repeatedProducts->count() - count($items),
-            'repeated_count' => $repeatedProducts->count(),
-        ];
-    }
-
-    private function normalizeProductName(string $name): string
-    {
-        $name = trim(strtolower($name));
-        $name = preg_replace('/\s+/', ' ', $name);
-
-        return $name ?: '';
-    }
-
     private function chartRevenueByDay($user, $from = null, $to = null): array
     {
         $from = $from ?? today()->subDays(6);
@@ -402,201 +344,13 @@ class DashboardController extends Controller
         return ['total' => $total, 'delivered' => $delivered, 'rate' => $rate];
     }
 
-    private function operationHealth($user, array $metrics, array $deliveryRate): array
+    private function staleShipmentsCount($user): int
     {
-        $stale = Shipment::query()
+        return Shipment::query()
             ->visibleTo($user)
             ->whereIn('status', ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled', 'return_pending'])
             ->where('updated_at', '<=', now()->subDay())
             ->count();
-
-        $active = Shipment::query()
-            ->visibleTo($user)
-            ->whereIn('status', ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled', 'return_pending'])
-            ->count();
-
-        $riskPoints = ($metrics['issues'] * 18) + ($metrics['return_pending'] * 14) + ($stale * 10) + ($metrics['pending_print'] * 4);
-        $score = max(0, min(100, 100 - $riskPoints));
-
-        if ($active === 0 && $metrics['shipments_today'] === 0) {
-            $score = 96;
-        }
-
-        $tone = $score >= 85 ? 'emerald' : ($score >= 65 ? 'blue' : ($score >= 45 ? 'amber' : 'red'));
-        $label = $score >= 85 ? 'Operacion sana' : ($score >= 65 ? 'Buen ritmo' : ($score >= 45 ? 'Requiere atencion' : 'Prioridad alta'));
-
-        return [
-            'score' => $score,
-            'label' => $label,
-            'tone' => $tone,
-            'active' => $active,
-            'stale' => $stale,
-            'pendingWork' => $metrics['pending_print'] + $metrics['warehouse'] + $metrics['issues'] + $metrics['return_pending'],
-            'deliveryRate' => $deliveryRate['rate'],
-        ];
-    }
-
-    private function smartActions($user, array $metrics, array $operationHealth): array
-    {
-        return array_values(array_filter([
-            $metrics['issues'] > 0 ? [
-                'label' => 'Resolver novedades',
-                'description' => "{$metrics['issues']} guia(s) necesitan confirmacion o reprogramacion.",
-                'route' => route('daily-tasks.index'),
-                'tone' => 'red',
-            ] : null,
-            $metrics['pending_print'] > 0 ? [
-                'label' => 'Imprimir pendientes',
-                'description' => "{$metrics['pending_print']} guia(s) creadas todavia no tienen etiqueta.",
-                'route' => route('daily-tasks.index'),
-                'tone' => 'blue',
-            ] : null,
-            $operationHealth['stale'] > 0 ? [
-                'label' => 'Revisar guias quietas',
-                'description' => "{$operationHealth['stale']} guia(s) llevan mas de 24 horas sin movimiento.",
-                'route' => route('daily-tasks.index'),
-                'tone' => 'amber',
-            ] : null,
-            $user->canCreateShipments() ? [
-                'label' => 'Crear nueva guia',
-                'description' => 'Registra el proximo envio y manten el flujo andando.',
-                'route' => route('shipments.create'),
-                'tone' => 'emerald',
-            ] : null,
-            [
-                'label' => 'Ver Tareas Diarias',
-                'description' => 'Revisa el orden recomendado para trabajar hoy.',
-                'route' => route('daily-tasks.index'),
-                'tone' => 'slate',
-            ],
-        ]));
-    }
-
-    private function workdaySummary(array $metrics, array $operationHealth): array
-    {
-        if ($metrics['issues'] > 0 || $metrics['return_pending'] > 0) {
-            return [
-                'tone' => 'red',
-                'label' => 'Prioridad del dia',
-                'title' => 'Empieza resolviendo novedades',
-                'description' => 'Hay guias que pueden afectar la experiencia del cliente. Atiendelas antes de crear nuevos envios.',
-                'progress' => max(12, min(100, 100 - (($metrics['issues'] + $metrics['return_pending']) * 18))),
-            ];
-        }
-
-        if ($metrics['pending_print'] > 0 || $metrics['warehouse'] > 0 || $operationHealth['stale'] > 0) {
-            return [
-                'tone' => 'blue',
-                'label' => 'Trabajo operativo',
-                'title' => 'Avanza las guias que ya estan en proceso',
-                'description' => 'Imprime, prepara o revisa las guias quietas para que el dia no se acumule.',
-                'progress' => max(18, min(100, 100 - (($metrics['pending_print'] + $metrics['warehouse'] + $operationHealth['stale']) * 8))),
-            ];
-        }
-
-        return [
-            'tone' => 'emerald',
-            'label' => 'Dia despejado',
-            'title' => 'Tu operacion esta lista para crecer',
-            'description' => 'No tienes pendientes operativos. Puedes crear una nueva guia, preparar productos o mejorar tu marca.',
-            'progress' => 100,
-        ];
-    }
-
-    private function todayPriority($user, array $metrics, array $operationHealth): array
-    {
-        if ($metrics['issues'] > 0 || $metrics['return_pending'] > 0) {
-            $count = $metrics['issues'] + $metrics['return_pending'];
-
-            return [
-                'tone' => 'red',
-                'label' => 'Prioridad alta',
-                'title' => 'Resolver novedades antes de vender mas',
-                'description' => 'Estas guias pueden generar reclamos, devoluciones o clientes sin respuesta.',
-                'metric' => $count,
-                'metricLabel' => 'caso(s) critico(s)',
-                'route' => route('daily-tasks.index').'#novedades',
-                'action' => 'Resolver ahora',
-                'steps' => ['Llamar o escribir al cliente', 'Confirmar datos de entrega', 'Actualizar el estado de la guia'],
-            ];
-        }
-
-        if ($metrics['pending_print'] > 0) {
-            return [
-                'tone' => 'blue',
-                'label' => 'Preparacion',
-                'title' => 'Imprimir guias creadas',
-                'description' => 'Cada guia sin etiqueta retrasa preparacion, despacho y seguimiento.',
-                'metric' => $metrics['pending_print'],
-                'metricLabel' => 'por imprimir',
-                'route' => route('shipments.index', ['status' => 'created']),
-                'action' => 'Ver guias',
-                'steps' => ['Revisar datos del destinatario', 'Imprimir etiquetas pendientes', 'Pasar cada guia a preparacion'],
-            ];
-        }
-
-        if ($operationHealth['stale'] > 0) {
-            return [
-                'tone' => 'amber',
-                'label' => 'Seguimiento',
-                'title' => 'Revisar guias quietas',
-                'description' => 'Una guia sin movimiento por mas de 24 horas se percibe como falta de control.',
-                'metric' => $operationHealth['stale'],
-                'metricLabel' => 'sin movimiento',
-                'route' => route('daily-tasks.index').'#tareas',
-                'action' => 'Revisar',
-                'steps' => ['Abrir guias sin movimiento', 'Confirmar siguiente paso', 'Actualizar estado o novedad'],
-            ];
-        }
-
-        if ($metrics['warehouse'] > 0 || $metrics['in_transit'] > 0) {
-            return [
-                'tone' => 'emerald',
-                'label' => 'Buen ritmo',
-                'title' => 'Cerrar entregas en proceso',
-                'description' => 'Tu operacion esta avanzando. El mejor impacto ahora es cerrar estados y mantener al cliente informado.',
-                'metric' => $metrics['warehouse'] + $metrics['in_transit'],
-                'metricLabel' => 'en proceso',
-                'route' => route('daily-tasks.index').'#plan-dia',
-                'action' => 'Continuar',
-                'steps' => ['Actualizar preparacion o ruta', 'Compartir seguimiento si aplica', 'Cerrar entregas o novedades'],
-            ];
-        }
-
-        return [
-            'tone' => 'emerald',
-            'label' => 'Dia despejado',
-            'title' => 'Crear la siguiente venta',
-            'description' => 'No hay bloqueos importantes. Es buen momento para crear una guia o preparar productos frecuentes.',
-            'metric' => $metrics['shipments_today'],
-            'metricLabel' => 'guias del periodo',
-            'route' => $user->canCreateShipments() ? route('shipments.create') : route('daily-tasks.index').'#oportunidades',
-            'action' => $user->canCreateShipments() ? 'Crear guia' : 'Ver oportunidades',
-            'steps' => ['Registrar nuevo pedido', 'Usar productos frecuentes', 'Compartir seguimiento profesional'],
-        ];
-    }
-
-    private function dashboardReportText(array $dateRange, array $metrics, array $todayPriority, array $moneySummary, array $operationHealth, array $deliveryRate): string
-    {
-        return implode(PHP_EOL, [
-            'Reporte ejecutivo - Tus Envios',
-            'Periodo: '.$dateRange['label'],
-            'Prioridad: '.$todayPriority['title'].' ('.$todayPriority['metric'].' '.$todayPriority['metricLabel'].')',
-            'Salud operativa: '.$operationHealth['score'].'/100 - '.$operationHealth['label'],
-            'Guias creadas: '.$metrics['shipments_today'],
-            'Entregadas: '.$metrics['delivered_today'].' | Tasa de entrega: '.$deliveryRate['rate'].'%',
-            'Pendientes por imprimir: '.$metrics['pending_print'],
-            'Novedades: '.$metrics['issues'].' | Devoluciones pendientes: '.$metrics['return_pending'],
-            'Sin movimiento: '.$operationHealth['stale'],
-            'Dinero creado: $'.number_format($moneySummary['createdValue'], 0, ',', '.'),
-            'Entregado: $'.number_format($moneySummary['deliveredValue'], 0, ',', '.'),
-            'Dinero a vigilar: $'.number_format($moneySummary['moneyToWatch'], 0, ',', '.'),
-            '',
-            'Plan sugerido:',
-            '1. '.($todayPriority['steps'][0] ?? 'Revisar Tareas Diarias'),
-            '2. '.($todayPriority['steps'][1] ?? 'Actualizar guias pendientes'),
-            '3. '.($todayPriority['steps'][2] ?? 'Cerrar el dia con estados al dia'),
-        ]);
     }
 
     private function moneySummary($user, array $metrics, $from, $to): array
@@ -644,89 +398,9 @@ class DashboardController extends Controller
         ];
     }
 
-    private function growthActions($user, array $metrics, array $professionalScore, array $productSuggestions, array $deliveryRate): array
-    {
-        if ($user->isSuperAdmin()) {
-            return [];
-        }
-
-        $actions = [];
-        $pendingProfessionalStep = collect($professionalScore['steps'] ?? [])
-            ->first(fn (array $step) => ! ($step['done'] ?? false));
-
-        if ($pendingProfessionalStep) {
-            $actions[] = [
-                'label' => 'Sube la confianza de tu marca',
-                'description' => $pendingProfessionalStep['description'],
-                'metric' => "{$professionalScore['score']}%",
-                'metric_label' => 'profesionalismo',
-                'route' => $pendingProfessionalStep['route'],
-                'action' => $pendingProfessionalStep['action'],
-                'tone' => $professionalScore['score'] >= 60 ? 'blue' : 'amber',
-            ];
-        }
-
-        if (! empty($productSuggestions['items'])) {
-            $first = $productSuggestions['items'][0];
-            $actions[] = [
-                'label' => 'Ahorra tiempo con productos rapidos',
-                'description' => "{$first['name']} aparece varias veces. Guardalo para crear guias mas rapido.",
-                'metric' => (string) $first['count'],
-                'metric_label' => 'repeticiones',
-                'route' => $first['route'],
-                'action' => 'Guardar',
-                'tone' => 'blue',
-            ];
-        } elseif (($productSuggestions['ready_count'] ?? 0) > 0) {
-            $actions[] = [
-                'label' => 'Tus productos frecuentes estan listos',
-                'description' => 'Usalos al crear guias para reducir escritura y errores.',
-                'metric' => (string) $productSuggestions['ready_count'],
-                'metric_label' => 'listos',
-                'route' => $user->canCreateShipments() ? route('shipments.create') : route('quick-products.index'),
-                'action' => $user->canCreateShipments() ? 'Crear guia' : 'Ver productos',
-                'tone' => 'emerald',
-            ];
-        }
-
-        if ($metrics['shipments_today'] === 0 && $user->canCreateShipments()) {
-            $actions[] = [
-                'label' => 'Registra tu primer envio del periodo',
-                'description' => 'Mantener el flujo actualizado hace que tus clientes vean una operacion mas profesional.',
-                'metric' => '0',
-                'metric_label' => 'guias',
-                'route' => route('shipments.create'),
-                'action' => 'Crear',
-                'tone' => 'amber',
-            ];
-        } elseif ($deliveryRate['total'] > 0 && $deliveryRate['rate'] < 80) {
-            $actions[] = [
-                'label' => 'Mejora tu tasa de entrega',
-                'description' => 'Revisa novedades y guias en camino para cerrar mas entregas.',
-                'metric' => "{$deliveryRate['rate']}%",
-                'metric_label' => 'entrega',
-                'route' => route('daily-tasks.index'),
-                'action' => 'Revisar',
-                'tone' => 'red',
-            ];
-        } else {
-            $actions[] = [
-                'label' => 'Comparte seguimiento con tus clientes',
-                'description' => 'El enlace de seguimiento refuerza confianza y reduce preguntas por WhatsApp.',
-                'metric' => (string) max(0, $metrics['in_transit']),
-                'metric_label' => 'en proceso',
-                'route' => route('shipments.index'),
-                'action' => 'Ver guias',
-                'tone' => 'blue',
-            ];
-        }
-
-        return array_slice($actions, 0, 3);
-    }
-
     private function inventoryAlerts($user): array
     {
-        if (! $user->canUseInventory()) return [];
+        if (! $user->canUseInventory()) return ['low' => [], 'out' => []];
 
         $low = InventoryProduct::query()
             ->where('status', 'active')
@@ -741,18 +415,6 @@ class DashboardController extends Controller
             ->orderBy('name')->take(3)->get();
 
         return ['low' => $low, 'out' => $out];
-    }
-
-    private function recentAudit($user): array
-    {
-        return DB::table('audit_logs')
-            ->where('user_id', $user->id)
-            ->latest()->take(5)->get()
-            ->map(fn ($log) => [
-                'action' => $log->action,
-                'description' => $log->description ?? $log->action,
-                'date' => $log->created_at,
-            ])->toArray();
     }
 
     private function onboardingFor($user): array
@@ -798,105 +460,4 @@ class DashboardController extends Controller
         return ['show' => $completed < count($steps), 'steps' => $steps, 'completed' => $completed, 'total' => count($steps)];
     }
 
-    private function professionalScore($user): array
-    {
-        if ($user->isSuperAdmin()) {
-            return ['show' => false, 'score' => 0, 'label' => '', 'steps' => [], 'completed' => 0, 'total' => 0];
-        }
-
-        $brandOwner = $user->role === 'affiliate' && $user->affiliatedCompany
-            ? $user->affiliatedCompany : $user->tenant;
-
-        if (! $brandOwner) {
-            return ['show' => false, 'score' => 0, 'label' => '', 'steps' => [], 'completed' => 0, 'total' => 0];
-        }
-
-        $quickProductsCount = QuickProduct::query()
-            ->when(
-                $user->role === 'affiliate' && $user->affiliated_company_id,
-                fn ($q) => $q->where('affiliated_company_id', $user->affiliated_company_id),
-                fn ($q) => $q->where('tenant_id', $user->tenant_id)->whereNull('affiliated_company_id')
-            )->count();
-
-        $inventoryCount = InventoryProduct::query()
-            ->when(
-                $user->role === 'affiliate' && $user->affiliated_company_id,
-                fn ($q) => $q->where('affiliated_company_id', $user->affiliated_company_id),
-                fn ($q) => $q->where('tenant_id', $user->tenant_id)->whereNull('affiliated_company_id')
-            )->count();
-
-        $shipmentsCount = Shipment::query()->visibleTo($user)->count();
-
-        $steps = [
-            [
-                'label' => 'Logo de marca',
-                'description' => 'Haz que etiquetas y seguimiento se vean como tu negocio.',
-                'done' => filled($brandOwner->logo_path),
-                'route' => route('brand-settings.edit'),
-                'action' => 'Subir logo',
-            ],
-            [
-                'label' => 'Color y presencia',
-                'description' => 'Usa un color, redes o sitio web para reforzar tu imagen.',
-                'done' => filled($brandOwner->brand_color) || filled($brandOwner->brand_instagram) || filled($brandOwner->brand_website),
-                'route' => route('brand-settings.edit'),
-                'action' => 'Configurar marca',
-            ],
-            [
-                'label' => 'Contacto visible',
-                'description' => 'Permite que tus clientes sepan como contactarte.',
-                'done' => filled($brandOwner->brand_whatsapp) || filled($brandOwner->brand_phone) || filled($brandOwner->phone),
-                'route' => route('brand-settings.edit'),
-                'action' => 'Agregar contacto',
-            ],
-            [
-                'label' => 'Mensaje de marca',
-                'description' => 'Cierra la experiencia con una nota propia para tus clientes.',
-                'done' => filled($brandOwner->brand_message),
-                'route' => route('brand-settings.edit'),
-                'action' => 'Crear mensaje',
-            ],
-            [
-                'label' => $user->canUseInventory() ? 'Productos en inventario' : 'Productos rapidos',
-                'description' => 'Acelera la creacion de guias y evita escribir lo mismo.',
-                'done' => $user->canUseInventory() ? $inventoryCount > 0 : $quickProductsCount > 0,
-                'route' => $user->canUseInventory() ? route('inventory.index') : route('quick-products.index'),
-                'action' => 'Agregar productos',
-            ],
-            [
-                'label' => 'Primera guia creada',
-                'description' => 'Activa el flujo real de envio y seguimiento publico.',
-                'done' => $shipmentsCount > 0,
-                'route' => route('shipments.create'),
-                'action' => 'Crear guia',
-            ],
-            [
-                'label' => 'Seguimiento listo',
-                'description' => 'Ya puedes compartir enlaces de seguimiento con tus clientes.',
-                'done' => $shipmentsCount > 0,
-                'route' => route('shipments.index'),
-                'action' => 'Ver guias',
-            ],
-        ];
-
-        $completed = collect($steps)->where('done', true)->count();
-        $total = count($steps);
-        $score = (int) round(($completed / max(1, $total)) * 100);
-
-        $label = match (true) {
-            $score >= 85 => 'Marca lista para vender',
-            $score >= 60 => 'Buena base profesional',
-            $score >= 35 => 'En construccion',
-            default => 'Primeros ajustes',
-        };
-
-        return [
-            'show' => true,
-            'score' => $score,
-            'label' => $label,
-            'steps' => $steps,
-            'completed' => $completed,
-            'total' => $total,
-        ];
-    }
 }

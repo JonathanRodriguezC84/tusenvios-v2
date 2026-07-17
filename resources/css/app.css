@@ -22,6 +22,63 @@ button {
     font-size: 16px;
 }
 
+/* Feedback tactil: botones y tarjetas clicables reaccionan al instante al presionarlos. */
+button,
+[type="submit"],
+[type="button"],
+a[class*="rounded-"][class*="bg-"],
+a[class*="rounded-"][class*="border"] {
+    transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 120ms ease;
+}
+
+button:not(:disabled):active,
+[type="submit"]:not(:disabled):active,
+[type="button"]:not(:disabled):active,
+a[class*="rounded-"][class*="bg-"]:active,
+a[class*="rounded-"][class*="border"]:active {
+    transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button,
+    [type="submit"],
+    [type="button"],
+    a[class*="rounded-"][class*="bg-"],
+    a[class*="rounded-"][class*="border"] {
+        transition: none;
+    }
+
+    button:active,
+    [type="submit"]:active,
+    [type="button"]:active,
+    a[class*="rounded-"][class*="bg-"]:active,
+    a[class*="rounded-"][class*="border"]:active {
+        transform: none;
+    }
+}
+
+/* Medidores circulares (ring gauges): se llenan al entrar en pantalla en vez de aparecer estaticos. */
+.ring-gauge-arc {
+    stroke-dashoffset: var(--ring-gauge-offset, 0);
+    animation: ring-gauge-fill 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes ring-gauge-fill {
+    from {
+        stroke-dashoffset: var(--ring-gauge-circumference, 0);
+    }
+    to {
+        stroke-dashoffset: var(--ring-gauge-offset, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ring-gauge-arc {
+        animation: none;
+        stroke-dashoffset: var(--ring-gauge-offset, 0);
+    }
+}
+
 /* Compacta paneles y tarjetas operativas sin tocar cada vista una por una. */
 [class~="bg-white"][class~="border-gray-200"][class~="shadow-sm"][class~="p-5"] {
     padding: 1rem;

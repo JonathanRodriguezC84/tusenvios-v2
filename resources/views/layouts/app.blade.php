@@ -38,10 +38,6 @@
         <meta name="apple-mobile-web-app-title" content="Tus Envios">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
-<!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap" rel="stylesheet" />
-
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @php
@@ -123,21 +119,6 @@
             [class~="bg-blue-50"],
             [class~="hover:bg-blue-50"]:hover {
                 background-color: var(--te-button-soft) !important;
-            }
-        </style>
-            <style id="te-force-inter-font">
-            :root {
-                --te-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            }
-
-            html,
-            body,
-            body *,
-            button,
-            input,
-            select,
-            textarea {
-                font-family: var(--te-font-family) !important;
             }
         </style>
             <link rel="icon" href="/favicon.ico?v=20260521v15" sizes="any">

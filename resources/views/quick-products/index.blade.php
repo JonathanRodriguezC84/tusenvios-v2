@@ -53,158 +53,116 @@
             </div>
         </section>
 
-        <section class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
-                    <div>
-                        <p class="text-xs font-semibold text-gray-500">Productos listos</p>
-                        <h3 class="text-base font-black text-gray-950">{{ $activeProducts->count() }} activo(s)</h3>
-                    </div>
-                    <button type="button" data-qp-edit-toggle class="qp-btn qp-btn-secondary">Editar lista</button>
+        <aside id="new-product" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-black uppercase tracking-wider text-gray-500">Nuevo atajo</p>
+            <h3 class="mt-1 text-base font-black text-gray-950">Agregar producto</h3>
+            <form method="POST" action="{{ route('quick-products.store') }}" class="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre del producto</label>
+                    <input name="name" value="{{ old('name', request('name')) }}" required placeholder="Ej. Camiseta, kit skincare" class="qp-field">
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Como lo envias</label>
+                    <select name="package_type" class="qp-field">
+                        <option value="merchandise" @selected(old('package_type', request('package_type', 'merchandise')) === 'merchandise')>Mercancia</option>
+                        <option value="package" @selected(old('package_type', request('package_type', 'merchandise')) === 'package')>Paquete</option>
+                        <option value="document" @selected(old('package_type', request('package_type', 'merchandise')) === 'document')>Documento</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Precio de venta</label>
+                    <input name="price" value="{{ old('price', request('price', 0)) }}" type="number" min="0" step="100" inputmode="numeric" class="qp-field">
+                </div>
+                <button class="qp-btn qp-btn-primary">Guardar producto</button>
+            </form>
 
-                @if ($activeProducts->count())
-                    <div class="qp-card-grid p-4">
-                        @foreach ($activeProducts as $product)
-                            <article class="qp-product-card">
-                                <div class="min-w-0">
-                                    <p class="truncate text-base font-black text-gray-950">{{ $product->name }}</p>
-                                    <p class="mt-1 text-xs font-bold text-gray-500">{{ $packageLabels[$product->package_type] ?? 'Producto' }}</p>
-                                    <p class="mt-2 text-sm font-black text-gray-900">${{ number_format((float) $product->price, 0, ',', '.') }}</p>
-                                </div>
-                                <div class="mt-4 flex gap-2">
-                                    <a href="{{ route('shipments.create', ['quick_product' => $product->id]) }}" class="qp-btn qp-btn-primary flex-1">Crear guia</a>
-                                    <button type="button" data-qp-edit-toggle class="qp-icon-btn" aria-label="Editar {{ $product->name }}">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L7.5 19.152 3 21l1.848-4.5L16.862 4.487Z" /></svg>
-                                    </button>
-                                </div>
-                            </article>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="px-4 py-10 text-center">
-                        <svg class="mx-auto h-11 w-11 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7h16M6 7l1 13h10l1-13M9 7V5a3 3 0 0 1 6 0v2" /></svg>
-                        <p class="mt-3 text-base font-black text-gray-950">Agrega los productos que mas repites</p>
-                        <p class="mt-1 text-sm font-semibold text-gray-500">Despues podras crear una guia con un clic.</p>
-                    </div>
-                @endif
+            <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Flujo simple</p>
+                <ol class="mt-2 flex flex-col gap-2 text-sm font-semibold text-gray-700 lg:flex-row lg:gap-4">
+                    <li>1. Guarda el producto.</li>
+                    <li>2. Pulsa Crear guia.</li>
+                    <li>3. Completa cliente y destino.</li>
+                </ol>
             </div>
+        </aside>
 
-            <aside id="new-product" class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Nuevo atajo</p>
-                <h3 class="mt-1 text-base font-black text-gray-950">Agregar producto</h3>
-                <form method="POST" action="{{ route('quick-products.store') }}" class="mt-4 space-y-3">
-                    @csrf
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre del producto</label>
-                        <input name="name" value="{{ old('name', request('name')) }}" required placeholder="Ej. Camiseta, kit skincare" class="qp-field">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Como lo envias</label>
-                        <select name="package_type" class="qp-field">
-                            <option value="merchandise" @selected(old('package_type', request('package_type', 'merchandise')) === 'merchandise')>Mercancia</option>
-                            <option value="package" @selected(old('package_type', request('package_type', 'merchandise')) === 'package')>Paquete</option>
-                            <option value="document" @selected(old('package_type', request('package_type', 'merchandise')) === 'document')>Documento</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Precio de venta</label>
-                        <input name="price" value="{{ old('price', request('price', 0)) }}" type="number" min="0" step="100" inputmode="numeric" class="qp-field">
-                    </div>
-                    <button class="qp-btn qp-btn-primary w-full">Guardar producto</button>
-                </form>
-
-                <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <p class="text-xs font-black uppercase tracking-wider text-gray-500">Flujo simple</p>
-                    <ol class="mt-2 space-y-2 text-sm font-semibold text-gray-700">
-                        <li>1. Guarda el producto.</li>
-                        <li>2. Pulsa Crear guia.</li>
-                        <li>3. Completa cliente y destino.</li>
-                    </ol>
-                </div>
-            </aside>
-        </section>
-
-        <details id="qp-edit-products" class="rounded-xl border border-gray-200 bg-white shadow-sm">
-            <summary class="cursor-pointer list-none px-4 py-3">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-semibold text-gray-500">Opcional</p>
-                        <h3 class="text-base font-black text-gray-950">Administrar productos</h3>
-                    </div>
-                    <span class="qp-btn qp-btn-secondary">Abrir</span>
-                </div>
-            </summary>
-
-            <div class="border-t border-gray-200">
-                <div class="qp-head border-b border-gray-200 bg-gray-50 px-5 py-2.5 text-xs font-bold uppercase text-gray-500">
-                    <span>Producto</span>
-                    <span>Tipo</span>
-                    <span>Precio</span>
-                    <span>Estado</span>
-                    <span>Accion</span>
+        <section>
+            <div id="qp-edit-products" class="rounded-xl border border-gray-200 bg-white shadow-sm">
+                <div class="px-4 py-3">
+                    <h3 class="text-base font-black text-gray-950">Administrar productos</h3>
                 </div>
 
-                <div class="divide-y divide-gray-200">
-                    @if ($products->count() && $products->total() > 0)
-                        @foreach ($products as $product)
-                            <form method="POST" action="{{ route('quick-products.update', $product) }}" class="qp-row">
-                                @csrf
-                                @method('PATCH')
+                <div class="border-t border-gray-200">
+                    <div class="qp-head border-b border-gray-200 bg-gray-50 px-5 py-2.5 text-xs font-bold uppercase text-gray-500">
+                        <span>Producto</span>
+                        <span>Tipo</span>
+                        <span>Precio</span>
+                        <span>Estado</span>
+                        <span>Accion</span>
+                    </div>
 
-                                <div>
-                                    <p class="qp-mobile-label">Producto</p>
-                                    <input name="name" value="{{ old('name', $product->name) }}" required class="qp-field">
-                                </div>
+                    <div class="divide-y divide-gray-200">
+                        @if ($products->count() && $products->total() > 0)
+                            @foreach ($products as $product)
+                                <form method="POST" action="{{ route('quick-products.update', $product) }}" class="qp-row">
+                                    @csrf
+                                    @method('PATCH')
 
-                                <div>
-                                    <p class="qp-mobile-label">Tipo</p>
-                                    <select name="package_type" class="qp-field">
-                                        @foreach ($packageLabels as $value => $label)
-                                            <option value="{{ $value }}" @selected(old('package_type', $product->package_type) === $value)>{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <p class="qp-mobile-label">Precio</p>
-                                    <input name="price" value="{{ old('price', (int) $product->price) }}" type="number" min="0" step="100" inputmode="numeric" class="qp-field">
-                                </div>
-
-                                <div>
-                                    <p class="qp-mobile-label">Estado</p>
-                                    <select name="status" class="qp-field">
-                                        <option value="active" @selected(old('status', $product->status) === 'active')>Activo</option>
-                                        <option value="paused" @selected(old('status', $product->status) === 'paused')>Pausado</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <p class="qp-mobile-label">Accion</p>
-                                    <div class="flex gap-1.5">
-                                        <button class="qp-btn qp-btn-primary">Guardar</button>
-                                        <button type="button" class="qp-btn qp-btn-secondary" onclick="document.getElementById('confirm-qp-{{ $product->id }}').classList.remove('hidden')">Eliminar</button>
+                                    <div>
+                                        <p class="qp-mobile-label">Producto</p>
+                                        <input name="name" value="{{ old('name', $product->name) }}" required class="qp-field">
                                     </div>
-                                </div>
-                            </form>
 
-                            <x-confirmation-modal id="confirm-qp-{{ $product->id }}" title="Eliminar producto" message="Se eliminara permanentemente el producto &quot;{{ $product->name }}&quot;." confirmText="Eliminar" cancelText="Cancelar" />
-                            <form id="confirm-qp-{{ $product->id }}-form" method="POST" action="{{ route('quick-products.destroy', $product) }}" class="hidden">
-                                @csrf @method('DELETE')
-                            </form>
-                        @endforeach
-                    @else
-                        <div class="px-4 py-8 text-center text-sm font-semibold text-gray-500">No hay productos para administrar todavia.</div>
+                                    <div>
+                                        <p class="qp-mobile-label">Tipo</p>
+                                        <select name="package_type" class="qp-field">
+                                            @foreach ($packageLabels as $value => $label)
+                                                <option value="{{ $value }}" @selected(old('package_type', $product->package_type) === $value)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <p class="qp-mobile-label">Precio</p>
+                                        <input name="price" value="{{ old('price', (int) $product->price) }}" type="number" min="0" step="100" inputmode="numeric" class="qp-field">
+                                    </div>
+
+                                    <div>
+                                        <p class="qp-mobile-label">Estado</p>
+                                        <select name="status" class="qp-field">
+                                            <option value="active" @selected(old('status', $product->status) === 'active')>Activo</option>
+                                            <option value="paused" @selected(old('status', $product->status) === 'paused')>Pausado</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <p class="qp-mobile-label">Accion</p>
+                                        <div class="flex gap-1.5">
+                                            <button class="qp-btn qp-btn-primary">Guardar</button>
+                                            <button type="button" class="qp-btn qp-btn-secondary" onclick="document.getElementById('confirm-qp-{{ $product->id }}').classList.remove('hidden')">Eliminar</button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <x-confirmation-modal id="confirm-qp-{{ $product->id }}" title="Eliminar producto" message="Se eliminara permanentemente el producto &quot;{{ $product->name }}&quot;." confirmText="Eliminar" cancelText="Cancelar" />
+                                <form id="confirm-qp-{{ $product->id }}-form" method="POST" action="{{ route('quick-products.destroy', $product) }}" class="hidden">
+                                    @csrf @method('DELETE')
+                                </form>
+                            @endforeach
+                        @else
+                            <div class="px-4 py-8 text-center text-sm font-semibold text-gray-500">No hay productos para administrar todavia.</div>
+                        @endif
+                    </div>
+
+                    @if ($products->hasPages())
+                        <div class="border-t border-gray-200 px-5 py-3">
+                            {{ $products->links() }}
+                        </div>
                     @endif
                 </div>
-
-                @if ($products->hasPages())
-                    <div class="border-t border-gray-200 px-5 py-3">
-                        {{ $products->links() }}
-                    </div>
-                @endif
             </div>
-        </details>
+        </section>
 
         @if ($pausedProducts->count())
             <p class="px-1 text-xs font-semibold text-gray-500">{{ $pausedProducts->count() }} producto(s) pausado(s) estan disponibles en Administrar productos.</p>

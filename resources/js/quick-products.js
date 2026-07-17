@@ -1,15 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     const data = document.getElementById('qp-toast-data');
-    const editPanel = document.getElementById('qp-edit-products');
-
-    document.querySelectorAll('[data-qp-edit-toggle]').forEach((button) => {
-        button.addEventListener('click', () => {
-            if (editPanel) {
-                editPanel.open = true;
-                editPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        });
-    });
 
     if (!data) return;
 

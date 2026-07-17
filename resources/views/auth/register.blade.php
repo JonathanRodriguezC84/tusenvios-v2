@@ -6,13 +6,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#022a8c">
     <title>Crear negocio — Tus Envios</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css'])
     <style>
         :root { --brand-blue: #022a8c; --brand-orange: #ff7a00; --ink: #07111f; --muted: #5f6b7a; --line: #dbe2ea; --soft: #f4f7fb; }
         * { box-sizing: border-box; margin: 0; }
-        body { color: var(--ink); font-family: "Inter", ui-sans-serif, system-ui, sans-serif; background: var(--soft); overflow: hidden; }
+        body { color: var(--ink); background: var(--soft); overflow: hidden; }
         a { color: var(--brand-blue); text-decoration: none; font-weight: 700; }
 
         .reg-shell { display: grid; height: 100vh; }

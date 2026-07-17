@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Tenant extends Model
 {
+    protected $attributes = [
+        'daily_tasks_enabled' => true,
+    ];
+
     protected $fillable = [
         'name',
         'legal_name',
