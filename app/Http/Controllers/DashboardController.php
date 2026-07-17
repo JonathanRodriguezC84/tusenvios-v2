@@ -181,7 +181,6 @@ class DashboardController extends Controller
 
     private function chartStatusDistribution($user): array
     {
-        $statuses = ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'delivered', 'failed_delivery', 'rescheduled', 'return_pending', 'returned', 'cancelled'];
         $labels = [
             'created' => ['label' => 'Por imprimir', 'color' => '#6b7280'],
             'printed' => ['label' => 'Impresa', 'color' => '#9ca3af'],
@@ -197,11 +196,17 @@ class DashboardController extends Controller
             'cancelled' => ['label' => 'Canceladas', 'color' => '#d1d5db'],
         ];
 
+        $counts = Shipment::query()
+            ->visibleTo($user)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
         $total = 0;
         $items = [];
 
-        foreach ($statuses as $status) {
-            $count = Shipment::query()->visibleTo($user)->where('status', $status)->count();
+        foreach ($labels as $status => $meta) {
+            $count = (int) ($counts[$status] ?? 0);
             $items[$status] = $count;
             $total += $count;
         }
@@ -368,13 +373,6 @@ class DashboardController extends Controller
             ->selectRaw('COALESCE(SUM(collection_value), 0) + COALESCE(SUM(shipping_value), 0) as total')
             ->value('total') ?? 0;
 
-        $cancelledValue = Shipment::query()
-            ->visibleTo($user)
-            ->where('status', 'cancelled')
-            ->whereBetween('created_at', [$from, $to])
-            ->selectRaw('COALESCE(SUM(collection_value), 0) + COALESCE(SUM(shipping_value), 0) as total')
-            ->value('total') ?? 0;
-
         $moneyToWatch = (float) $metrics['collection_open']
             + (float) $metrics['affiliate_pending_value']
             + (float) $metrics['settlements_pending_payment_value']
@@ -392,8 +390,6 @@ class DashboardController extends Controller
             'deliveredValue' => (float) $metrics['revenue_today'],
             'collectionOpen' => (float) $metrics['collection_open'],
             'issueValue' => (float) $issueValue,
-            'cancelledValue' => (float) $cancelledValue,
-            'pendingSettlementValue' => (float) $metrics['affiliate_pending_value'] + (float) $metrics['settlements_pending_payment_value'],
             'moneyToWatch' => $moneyToWatch,
         ];
     }

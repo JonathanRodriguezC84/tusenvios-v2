@@ -14,7 +14,8 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
             registrations.forEach((registration) => {
-                if (registration.active?.scriptURL?.endsWith('/service-worker.js')) {
+                const worker = registration.active ?? registration.waiting ?? registration.installing;
+                if (worker?.scriptURL?.endsWith('/service-worker.js')) {
                     registration.unregister();
                 }
             });
