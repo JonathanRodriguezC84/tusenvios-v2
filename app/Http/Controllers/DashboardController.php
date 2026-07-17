@@ -21,7 +21,9 @@ class DashboardController extends Controller
         $onboarding = $this->onboardingFor($user);
 
         $chartShipmentsByDay = $this->chartShipmentsByDay($user, $from, $to);
-        $chartStatusDistribution = $this->chartStatusDistribution($user);
+        $statusCounts = $this->statusCounts($user);
+        $chartStatusDistribution = $this->chartStatusDistribution($user, $statusCounts);
+        $chartStatusBuckets = $this->chartStatusBuckets($statusCounts);
         $chartTopProducts = $this->chartTopProducts($user, $from, $to);
         $chartRevenueByDay = $this->chartRevenueByDay($user, $from, $to);
         $chartMonthlyTrend = $this->chartMonthlyTrend($user);
@@ -70,7 +72,7 @@ class DashboardController extends Controller
 
         return view('dashboard', compact(
             'metrics', 'onboarding', 'alerts', 'trialGuideCounter', 'dateRange',
-            'chartShipmentsByDay', 'chartStatusDistribution', 'chartTopProducts', 'chartRevenueByDay',
+            'chartShipmentsByDay', 'chartStatusDistribution', 'chartStatusBuckets', 'chartTopProducts', 'chartRevenueByDay',
             'chartMonthlyTrend', 'deliveryRate', 'operationHealth', 'moneySummary', 'inventoryAlerts'
         ));
     }
@@ -179,62 +181,85 @@ class DashboardController extends Controller
         return ['days' => $data, 'max' => $max ?: 1];
     }
 
-    private function chartStatusDistribution($user): array
+    /**
+     * Buckets that roll the 12 raw shipment statuses up into the 8 stages the
+     * business actually thinks in. Slot numbers map to the fixed categorical
+     * color order in resources/css/app.css (--viz-cat-1..8) — never reassign
+     * a bucket to a different slot, that's what keeps a color meaning the
+     * same thing on every visit.
+     */
+    private function statusBuckets(): array
     {
-        $labels = [
-            'created' => ['label' => 'Por imprimir', 'color' => '#6b7280'],
-            'printed' => ['label' => 'Impresa', 'color' => '#9ca3af'],
-            'in_warehouse' => ['label' => 'En bodega', 'color' => '#f59e0b'],
-            'in_sorting' => ['label' => 'En clasificacion', 'color' => '#fb923c'],
-            'assigned' => ['label' => 'Asignada', 'color' => '#6366f1'],
-            'on_route' => ['label' => 'En camino', 'color' => '#3b82f6'],
-            'delivered' => ['label' => 'Entregadas', 'color' => '#10b981'],
-            'failed_delivery' => ['label' => 'Novedad', 'color' => '#ef4444'],
-            'rescheduled' => ['label' => 'Reprogramada', 'color' => '#eab308'],
-            'return_pending' => ['label' => 'Por devolver', 'color' => '#fb7185'],
-            'returned' => ['label' => 'Devuelta', 'color' => '#a78bfa'],
-            'cancelled' => ['label' => 'Canceladas', 'color' => '#d1d5db'],
+        return [
+            'prep' => ['label' => 'En preparacion', 'slot' => 1, 'statuses' => ['created', 'printed']],
+            'warehouse' => ['label' => 'En bodega', 'slot' => 2, 'statuses' => ['in_warehouse', 'in_sorting']],
+            'route' => ['label' => 'En ruta', 'slot' => 3, 'statuses' => ['assigned', 'on_route']],
+            'delivered' => ['label' => 'Entregada', 'slot' => 4, 'statuses' => ['delivered']],
+            'issue' => ['label' => 'Con novedad', 'slot' => 5, 'statuses' => ['failed_delivery', 'rescheduled']],
+            'return_pending' => ['label' => 'Por devolver', 'slot' => 6, 'statuses' => ['return_pending']],
+            'returned' => ['label' => 'Devuelta', 'slot' => 7, 'statuses' => ['returned']],
+            'cancelled' => ['label' => 'Cancelada', 'slot' => 8, 'statuses' => ['cancelled']],
         ];
+    }
 
-        $counts = Shipment::query()
+    private function statusLabels(): array
+    {
+        $labels = [];
+        foreach ($this->statusBuckets() as $bucket) {
+            foreach ($bucket['statuses'] as $status) {
+                $labels[$status] = ['label' => $bucket['label'], 'slot' => $bucket['slot']];
+            }
+        }
+
+        return $labels;
+    }
+
+    private function statusCounts($user)
+    {
+        return Shipment::query()
             ->visibleTo($user)
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status');
+    }
 
+    private function chartStatusDistribution($user, $counts): array
+    {
+        $order = ['delivered', 'on_route', 'assigned', 'in_warehouse', 'in_sorting', 'created', 'printed', 'failed_delivery', 'rescheduled', 'return_pending', 'returned', 'cancelled'];
+        $statusLabels = [
+            'created' => 'Por imprimir', 'printed' => 'Impresa', 'in_warehouse' => 'En bodega',
+            'in_sorting' => 'En clasificacion', 'assigned' => 'Asignada', 'on_route' => 'En camino',
+            'delivered' => 'Entregadas', 'failed_delivery' => 'Novedad', 'rescheduled' => 'Reprogramada',
+            'return_pending' => 'Por devolver', 'returned' => 'Devuelta', 'cancelled' => 'Canceladas',
+        ];
+        $slots = $this->statusLabels();
+
+        $rows = [];
         $total = 0;
-        $items = [];
-
-        foreach ($labels as $status => $meta) {
+        foreach ($order as $status) {
             $count = (int) ($counts[$status] ?? 0);
-            $items[$status] = $count;
+            $rows[] = ['status' => $status, 'label' => $statusLabels[$status], 'slot' => $slots[$status]['slot'], 'count' => $count];
             $total += $count;
         }
 
-        $total = $total ?: 1;
-        $segments = [];
-        $angle = 0;
+        return ['rows' => $rows, 'total' => $total];
+    }
 
-        $order = ['delivered', 'on_route', 'assigned', 'in_warehouse', 'in_sorting', 'created', 'printed', 'failed_delivery', 'rescheduled', 'return_pending', 'returned', 'cancelled'];
+    private function chartStatusBuckets($counts): array
+    {
+        $buckets = [];
+        $total = 0;
 
-        foreach ($order as $status) {
-            $pct = round(($items[$status] / $total) * 100, 1);
-            if ($pct < 0.1) continue;
-            $deg = round(($pct / 100) * 360);
-            $segments[] = [
-                'status' => $status,
-                'label' => $labels[$status]['label'],
-                'color' => $labels[$status]['color'],
-                'count' => $items[$status],
-                'pct' => $pct,
-                'deg' => $deg,
-                'start' => $angle,
-                'end' => $angle + $deg,
-            ];
-            $angle += $deg;
+        foreach ($this->statusBuckets() as $bucket) {
+            $count = 0;
+            foreach ($bucket['statuses'] as $status) {
+                $count += (int) ($counts[$status] ?? 0);
+            }
+            $buckets[] = ['label' => $bucket['label'], 'slot' => $bucket['slot'], 'count' => $count];
+            $total += $count;
         }
 
-        return ['segments' => $segments, 'total' => $total];
+        return ['buckets' => $buckets, 'total' => $total];
     }
 
     private function chartTopProducts($user, $from = null, $to = null): array

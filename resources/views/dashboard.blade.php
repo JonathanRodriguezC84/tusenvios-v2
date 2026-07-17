@@ -2,7 +2,6 @@
     $rangeLabel = $dateRange['label'] ?? 'Periodo';
     $deliveryTone = $deliveryRate['total'] === 0 ? '#9ca3af' : ($deliveryRate['rate'] >= 80 ? '#059669' : ($deliveryRate['rate'] >= 50 ? '#d97706' : '#dc2626'));
     $deliveryRingValue = $deliveryRate['total'] === 0 ? 100 : $deliveryRate['rate'];
-    $statusTotal = max(1, $chartStatusDistribution['total'] ?? 1);
     $moneyTone = [
         'emerald' => ['panel' => 'border-emerald-200 bg-emerald-50', 'badge' => 'bg-emerald-100 text-emerald-800', 'text' => 'text-emerald-800'],
         'amber' => ['panel' => 'border-amber-200 bg-amber-50', 'badge' => 'bg-amber-100 text-amber-800', 'text' => 'text-amber-800'],
@@ -200,79 +199,69 @@
         </section>
 
         <section class="mt-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-            <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Estado de guias</h3>
-            <div class="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                @forelse ($chartStatusDistribution['segments'] as $seg)
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex min-w-0 items-center gap-2">
-                                <span class="h-2 w-2 shrink-0 rounded-full" style="background: {{ $seg['color'] }}"></span>
-                                <p class="truncate text-xs font-bold text-gray-700">{{ $seg['label'] }}</p>
-                            </div>
-                            <span class="shrink-0 text-xs font-black text-gray-950">{{ $seg['count'] }}</span>
-                        </div>
-                        <div class="mt-1.5 h-1.5 rounded-full bg-gray-200">
-                            <div class="h-1.5 rounded-full" style="width: {{ round(($seg['count'] / $statusTotal) * 100) }}%; background: {{ $seg['color'] }}"></div>
-                        </div>
-                    </div>
-                @empty
-                    <p class="text-sm font-semibold text-gray-500">Todavia no hay guias.</p>
-                @endforelse
+            <div class="flex items-center justify-between gap-2">
+                <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Estado de guias</h3>
+                <span class="text-xs font-bold text-gray-400">{{ $chartStatusDistribution['total'] }} en total</span>
             </div>
+            <div class="mt-3">
+                <x-charts.status-bar :buckets="$chartStatusBuckets['buckets']" :total="$chartStatusBuckets['total']" />
+            </div>
+
+            @if ($chartStatusDistribution['total'] > 0)
+                <details class="mt-3 border-t border-gray-100 pt-2">
+                    <summary class="cursor-pointer text-xs font-bold text-gray-500 hover:text-gray-700">Ver el detalle de cada estado</summary>
+                    <div class="mt-2 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                        @foreach ($chartStatusDistribution['rows'] as $row)
+                            @continue($row['count'] <= 0)
+                            <div class="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2.5 py-1.5">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <span class="h-2 w-2 shrink-0 rounded-sm" style="background: var(--viz-cat-{{ $row['slot'] }})"></span>
+                                    <p class="truncate text-xs font-semibold text-gray-700">{{ $row['label'] }}</p>
+                                </div>
+                                <span class="shrink-0 text-xs font-black text-gray-950">{{ $row['count'] }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </details>
+            @endif
         </section>
+
+        @php
+            $shipmentsByDay = collect($chartShipmentsByDay['days'])->map(fn ($d) => [
+                'label' => $d['full'], 'sub' => ucfirst($d['label']).' '.$d['full'], 'value' => $d['count'],
+            ])->all();
+            $revenueByDay = collect($chartRevenueByDay['days'])->map(fn ($d) => [
+                'label' => $d['full'], 'sub' => ucfirst($d['label']).' '.$d['full'], 'value' => $d['revenue'],
+            ])->all();
+            $monthlyTrend = collect($chartMonthlyTrend['months'])->map(fn ($m) => [
+                'label' => $m['label'], 'value' => $m['count'],
+            ])->all();
+        @endphp
 
         <section class="mt-3 flex flex-1 flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-2 text-sm font-black text-gray-950">
                     <span>Graficas y analisis</span>
                     <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-700">{{ $rangeLabel }}</span>
                 </div>
-                <div class="mt-3 grid flex-1 min-w-0 gap-3" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); grid-auto-rows: 1fr;">
+                <div class="mt-3 grid flex-1 min-w-0 gap-3" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); grid-auto-rows: 1fr;">
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Guias creadas</h3>
-                        @php $sd = $chartShipmentsByDay; @endphp
-                        <div class="mt-2 flex flex-1 items-end overflow-x-auto pb-1">
-                            <div class="flex h-36 min-w-max items-end gap-2">
-                                @foreach($sd['days'] as $d)
-                                    @php $h = max(10, round(($d['count'] / $sd['max']) * 110)); @endphp
-                                    <div class="flex h-full w-9 shrink-0 flex-col items-center justify-end gap-1">
-                                        <span class="text-xs font-black text-gray-950">{{ $d['count'] }}</span>
-                                        <div class="w-full rounded-t-md bg-blue-700" style="height: {{ $h }}px; min-height: 6px;"></div>
-                                        <span class="text-center text-xs font-bold leading-tight text-gray-500">{{ $d['label'] }}<br>{{ $d['full'] }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
+                        <div class="mt-2 flex-1">
+                            <x-charts.column-chart :data="$shipmentsByDay" color="var(--viz-cat-1)" format="number" />
                         </div>
                     </div>
 
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Ingresos por entregas</h3>
-                        @php $rd = $chartRevenueByDay; @endphp
-                        <div class="mt-2 flex flex-1 items-end overflow-x-auto pb-1">
-                            <div class="flex h-36 min-w-max items-end gap-2">
-                                @foreach($rd['days'] as $d)
-                                    @php $h = max(10, round(($d['revenue'] / $rd['max']) * 110)); @endphp
-                                    <div class="flex h-full w-10 shrink-0 flex-col items-center justify-end gap-1">
-                                        <span class="max-w-full truncate text-[10px] font-black text-emerald-700">${{ number_format($d['revenue'], 0, ',', '.') }}</span>
-                                        <div class="w-full rounded-t-md bg-emerald-600" style="height: {{ $h }}px; min-height: 6px;"></div>
-                                        <span class="text-center text-xs font-bold leading-tight text-gray-500">{{ $d['label'] }}<br>{{ $d['full'] }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
+                        <div class="mt-2 flex-1">
+                            <x-charts.column-chart :data="$revenueByDay" color="var(--viz-cat-2)" format="currency" />
                         </div>
                     </div>
 
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Tendencia mensual</h3>
-                        @php $mt = $chartMonthlyTrend; @endphp
-                        <div class="mt-2 flex flex-1 items-end justify-around gap-3">
-                            @foreach ($mt['months'] as $m)
-                                @php $h = max(10, round(($m['count'] / $mt['max']) * 90)); @endphp
-                                <div class="flex h-36 flex-1 flex-col items-center justify-end gap-1">
-                                    <span class="text-xs font-black text-gray-950">{{ $m['count'] }}</span>
-                                    <div class="w-full rounded-t-md bg-gray-900" style="height:{{ $h }}px; min-height:6px;"></div>
-                                    <span class="text-xs font-bold text-gray-500">{{ $m['label'] }}</span>
-                                </div>
-                            @endforeach
+                        <div class="mt-2 flex-1">
+                            <x-charts.column-chart :data="$monthlyTrend" color="var(--viz-primary)" format="number" />
                         </div>
                     </div>
 
@@ -286,8 +275,8 @@
                                             <p class="truncate text-sm font-black text-gray-950" title="{{ $p['name'] }}">{{ $p['name'] }}</p>
                                             <span class="shrink-0 text-xs font-black text-gray-500">{{ $p['count'] }}</span>
                                         </div>
-                                        <div class="mt-1 h-2 rounded-full bg-gray-100">
-                                            <div class="h-2 rounded-full bg-blue-700" style="width: {{ $p['pct'] }}%"></div>
+                                        <div class="mt-1 h-2 rounded-full" style="background: var(--viz-grid)">
+                                            <div class="h-2 rounded-full" style="width: {{ $p['pct'] }}%; background: var(--viz-cat-1)"></div>
                                         </div>
                                     </div>
                                 @endforeach

@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "reason": "User explicitly asked to unify the whole app on Inter earlier this session",
+        "createdAt": "2026-07-17T22:25:04.090Z"
+      }
+    ]
+  }
+}
