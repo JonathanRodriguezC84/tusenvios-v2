@@ -757,10 +757,11 @@ class AdminDashboardController extends Controller
         $this->authorizeAdmin();
 
         $carriers = config('shipping.carriers', []);
-        $apiKey = config('services.carrier_api.key', env('CARRIER_API_KEY', ''));
+        $rawKey = config('services.carrier_api.key', env('CARRIER_API_KEY', ''));
+        $apiKey = $rawKey ? substr($rawKey, 0, 4) . str_repeat('•', max(0, strlen($rawKey) - 4)) : '';
         $baseUrl = config('app.url', url('/'));
 
-        return view('admin.carriers', compact('carriers', 'apiKey', 'baseUrl'));
+        return view('admin.carriers', compact('carriers', 'apiKey', 'rawKey', 'baseUrl'));
     }
 
     public function apiDocs()

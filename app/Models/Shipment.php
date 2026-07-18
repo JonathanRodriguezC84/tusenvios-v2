@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Shipment extends Model
 {
+    use HasFactory;
     public const STATUS_FLOW = [
         'created' => ['printed', 'cancelled'],
         'printed' => ['in_warehouse'],

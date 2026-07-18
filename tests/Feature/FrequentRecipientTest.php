@@ -65,6 +65,6 @@ class FrequentRecipientTest extends TestCase
 
         $response = $this->actingAs($this->user)->delete(route('recipients.destroy', $recipient));
         $response->assertRedirect();
-        $this->assertDatabaseMissing('frequent_recipients', ['id' => $recipient->id]);
+        $this->assertNull($recipient->fresh());
     }
 }

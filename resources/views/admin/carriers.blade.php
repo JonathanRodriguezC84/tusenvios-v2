@@ -48,7 +48,7 @@
 {
   "email": "mensajero@transp.com",
   "password": "su-contrasena",
-  "api_key": "{{ $apiKey ?: '(configurar CARRIER_API_KEY en .env)' }}"
+  "api_key": "{{ $rawKey ? 'TU_API_KEY_AQUI' : '(configurar CARRIER_API_KEY en .env)' }}"
 }
 → { "token": "1|abc123...", "user": {...} }</code>
             </div>
@@ -96,7 +96,25 @@ Authorization: Bearer {token}
             </div>
             <div class="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
                 <span class="text-xs font-semibold uppercase text-gray-500 w-20">API Key</span>
-                <code class="rounded bg-gray-100 px-3 py-1.5 font-mono text-gray-700">{{ $apiKey ?: 'No configurada — editar .env' }}</code>
+                <code class="rounded bg-gray-100 px-3 py-1.5 font-mono text-gray-700" id="apiKeyDisplay">{{ $apiKey ?: 'No configurada — editar .env' }}</code>
+                @if($rawKey)
+                    <button type="button" onclick="toggleApiKey()" class="text-xs text-blue-600 hover:underline shrink-0" id="apiKeyToggle">Mostrar</button>
+                    <script>
+                        function toggleApiKey() {
+                            const display = document.getElementById('apiKeyDisplay');
+                            const toggle = document.getElementById('apiKeyToggle');
+                            if (display.dataset.revealed === '1') {
+                                display.textContent = '{{ $apiKey }}';
+                                display.dataset.revealed = '0';
+                                toggle.textContent = 'Mostrar';
+                            } else {
+                                display.textContent = '{{ $rawKey }}';
+                                display.dataset.revealed = '1';
+                                toggle.textContent = 'Ocultar';
+                            }
+                        }
+                    </script>
+                @endif
             </div>
         </div>
     </section>

@@ -2,7 +2,6 @@
     $rangeLabel = $dateRange['label'] ?? 'Periodo';
     $deliveryTone = $deliveryRate['total'] === 0 ? '#9ca3af' : ($deliveryRate['rate'] >= 80 ? '#059669' : ($deliveryRate['rate'] >= 50 ? '#d97706' : '#dc2626'));
     $deliveryRingValue = $deliveryRate['total'] === 0 ? 100 : $deliveryRate['rate'];
-    $statusTotal = max(1, $chartStatusDistribution['total'] ?? 1);
     $moneyTone = [
         'emerald' => ['panel' => 'border-emerald-200 bg-emerald-50', 'badge' => 'bg-emerald-100 text-emerald-800', 'text' => 'text-emerald-800'],
         'amber' => ['panel' => 'border-amber-200 bg-amber-50', 'badge' => 'bg-amber-100 text-amber-800', 'text' => 'text-amber-800'],
@@ -246,79 +245,145 @@
         </section>
 
         <section class="mt-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-            <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Estado de guias</h3>
-            <div class="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <?php $__empty_1 = true; $__currentLoopData = $chartStatusDistribution['segments']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $seg): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                    <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex min-w-0 items-center gap-2">
-                                <span class="h-2 w-2 shrink-0 rounded-full" style="background: <?php echo e($seg['color']); ?>"></span>
-                                <p class="truncate text-xs font-bold text-gray-700"><?php echo e($seg['label']); ?></p>
-                            </div>
-                            <span class="shrink-0 text-xs font-black text-gray-950"><?php echo e($seg['count']); ?></span>
-                        </div>
-                        <div class="mt-1.5 h-1.5 rounded-full bg-gray-200">
-                            <div class="h-1.5 rounded-full" style="width: <?php echo e(round(($seg['count'] / $statusTotal) * 100)); ?>%; background: <?php echo e($seg['color']); ?>"></div>
-                        </div>
-                    </div>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                    <p class="text-sm font-semibold text-gray-500">Todavia no hay guias.</p>
-                <?php endif; ?>
+            <div class="flex items-center justify-between gap-2">
+                <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Estado de guias</h3>
+                <span class="text-xs font-bold text-gray-400"><?php echo e($chartStatusDistribution['total']); ?> en total</span>
             </div>
+            <div class="mt-3">
+                <?php if (isset($component)) { $__componentOriginalf584b1043d16481e13254b25f367dc76 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginalf584b1043d16481e13254b25f367dc76 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.status-bar','data' => ['buckets' => $chartStatusBuckets['buckets'],'total' => $chartStatusBuckets['total']]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('charts.status-bar'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['buckets' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($chartStatusBuckets['buckets']),'total' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($chartStatusBuckets['total'])]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginalf584b1043d16481e13254b25f367dc76)): ?>
+<?php $attributes = $__attributesOriginalf584b1043d16481e13254b25f367dc76; ?>
+<?php unset($__attributesOriginalf584b1043d16481e13254b25f367dc76); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalf584b1043d16481e13254b25f367dc76)): ?>
+<?php $component = $__componentOriginalf584b1043d16481e13254b25f367dc76; ?>
+<?php unset($__componentOriginalf584b1043d16481e13254b25f367dc76); ?>
+<?php endif; ?>
+            </div>
+
+            <?php if($chartStatusDistribution['total'] > 0): ?>
+                <details class="mt-3 border-t border-gray-100 pt-2">
+                    <summary class="cursor-pointer text-xs font-bold text-gray-500 hover:text-gray-700">Ver el detalle de cada estado</summary>
+                    <div class="mt-2 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                        <?php $__currentLoopData = $chartStatusDistribution['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <?php if($row['count'] <= 0) continue; ?>
+                            <div class="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2.5 py-1.5">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <span class="h-2 w-2 shrink-0 rounded-sm" style="background: var(--viz-cat-<?php echo e($row['slot']); ?>)"></span>
+                                    <p class="truncate text-xs font-semibold text-gray-700"><?php echo e($row['label']); ?></p>
+                                </div>
+                                <span class="shrink-0 text-xs font-black text-gray-950"><?php echo e($row['count']); ?></span>
+                            </div>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    </div>
+                </details>
+            <?php endif; ?>
         </section>
+
+        <?php
+            $shipmentsByDay = collect($chartShipmentsByDay['days'])->map(fn ($d) => [
+                'label' => $d['full'], 'sub' => ucfirst($d['label']).' '.$d['full'], 'value' => $d['count'],
+            ])->all();
+            $revenueByDay = collect($chartRevenueByDay['days'])->map(fn ($d) => [
+                'label' => $d['full'], 'sub' => ucfirst($d['label']).' '.$d['full'], 'value' => $d['revenue'],
+            ])->all();
+            $monthlyTrend = collect($chartMonthlyTrend['months'])->map(fn ($m) => [
+                'label' => $m['label'], 'value' => $m['count'],
+            ])->all();
+        ?>
 
         <section class="mt-3 flex flex-1 flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-2 text-sm font-black text-gray-950">
                     <span>Graficas y analisis</span>
                     <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-700"><?php echo e($rangeLabel); ?></span>
                 </div>
-                <div class="mt-3 grid flex-1 min-w-0 gap-3" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); grid-auto-rows: 1fr;">
+                <div class="mt-3 grid flex-1 min-w-0 gap-3" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); grid-auto-rows: 1fr;">
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Guias creadas</h3>
-                        <?php $sd = $chartShipmentsByDay; ?>
-                        <div class="mt-2 flex flex-1 items-end overflow-x-auto pb-1">
-                            <div class="flex h-36 min-w-max items-end gap-2">
-                                <?php $__currentLoopData = $sd['days']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $d): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <?php $h = max(10, round(($d['count'] / $sd['max']) * 110)); ?>
-                                    <div class="flex h-full w-9 shrink-0 flex-col items-center justify-end gap-1">
-                                        <span class="text-xs font-black text-gray-950"><?php echo e($d['count']); ?></span>
-                                        <div class="w-full rounded-t-md bg-blue-700" style="height: <?php echo e($h); ?>px; min-height: 6px;"></div>
-                                        <span class="text-center text-xs font-bold leading-tight text-gray-500"><?php echo e($d['label']); ?><br><?php echo e($d['full']); ?></span>
-                                    </div>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                            </div>
+                        <div class="mt-2 flex-1">
+                            <?php if (isset($component)) { $__componentOriginal7f5eee30baa85644e054dd78a51aa94c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.column-chart','data' => ['data' => $shipmentsByDay,'color' => 'var(--viz-cat-1)','format' => 'number']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('charts.column-chart'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['data' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($shipmentsByDay),'color' => 'var(--viz-cat-1)','format' => 'number']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
+<?php $attributes = $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
+<?php unset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
+<?php $component = $__componentOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
+<?php unset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
+<?php endif; ?>
                         </div>
                     </div>
 
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Ingresos por entregas</h3>
-                        <?php $rd = $chartRevenueByDay; ?>
-                        <div class="mt-2 flex flex-1 items-end overflow-x-auto pb-1">
-                            <div class="flex h-36 min-w-max items-end gap-2">
-                                <?php $__currentLoopData = $rd['days']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $d): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <?php $h = max(10, round(($d['revenue'] / $rd['max']) * 110)); ?>
-                                    <div class="flex h-full w-10 shrink-0 flex-col items-center justify-end gap-1">
-                                        <span class="max-w-full truncate text-[10px] font-black text-emerald-700">$<?php echo e(number_format($d['revenue'], 0, ',', '.')); ?></span>
-                                        <div class="w-full rounded-t-md bg-emerald-600" style="height: <?php echo e($h); ?>px; min-height: 6px;"></div>
-                                        <span class="text-center text-xs font-bold leading-tight text-gray-500"><?php echo e($d['label']); ?><br><?php echo e($d['full']); ?></span>
-                                    </div>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                            </div>
+                        <div class="mt-2 flex-1">
+                            <?php if (isset($component)) { $__componentOriginal7f5eee30baa85644e054dd78a51aa94c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.column-chart','data' => ['data' => $revenueByDay,'color' => 'var(--viz-cat-2)','format' => 'currency']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('charts.column-chart'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['data' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($revenueByDay),'color' => 'var(--viz-cat-2)','format' => 'currency']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
+<?php $attributes = $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
+<?php unset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
+<?php $component = $__componentOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
+<?php unset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
+<?php endif; ?>
                         </div>
                     </div>
 
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Tendencia mensual</h3>
-                        <?php $mt = $chartMonthlyTrend; ?>
-                        <div class="mt-2 flex flex-1 items-end justify-around gap-3">
-                            <?php $__currentLoopData = $mt['months']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $m): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <?php $h = max(10, round(($m['count'] / $mt['max']) * 90)); ?>
-                                <div class="flex h-36 flex-1 flex-col items-center justify-end gap-1">
-                                    <span class="text-xs font-black text-gray-950"><?php echo e($m['count']); ?></span>
-                                    <div class="w-full rounded-t-md bg-gray-900" style="height:<?php echo e($h); ?>px; min-height:6px;"></div>
-                                    <span class="text-xs font-bold text-gray-500"><?php echo e($m['label']); ?></span>
-                                </div>
-                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        <div class="mt-2 flex-1">
+                            <?php if (isset($component)) { $__componentOriginal7f5eee30baa85644e054dd78a51aa94c = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.column-chart','data' => ['data' => $monthlyTrend,'color' => 'var(--viz-primary)','format' => 'number']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('charts.column-chart'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['data' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($monthlyTrend),'color' => 'var(--viz-primary)','format' => 'number']); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
+<?php $attributes = $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
+<?php unset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
+<?php $component = $__componentOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
+<?php unset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
+<?php endif; ?>
                         </div>
                     </div>
 
@@ -332,8 +397,8 @@
                                             <p class="truncate text-sm font-black text-gray-950" title="<?php echo e($p['name']); ?>"><?php echo e($p['name']); ?></p>
                                             <span class="shrink-0 text-xs font-black text-gray-500"><?php echo e($p['count']); ?></span>
                                         </div>
-                                        <div class="mt-1 h-2 rounded-full bg-gray-100">
-                                            <div class="h-2 rounded-full bg-blue-700" style="width: <?php echo e($p['pct']); ?>%"></div>
+                                        <div class="mt-1 h-2 rounded-full" style="background: var(--viz-grid)">
+                                            <div class="h-2 rounded-full" style="width: <?php echo e($p['pct']); ?>%; background: var(--viz-cat-1)"></div>
                                         </div>
                                     </div>
                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>

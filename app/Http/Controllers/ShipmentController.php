@@ -12,6 +12,10 @@ use App\Models\Shipment;
 use App\Models\ShipmentEvent;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Http\Requests\StoreShipmentRequest;
+use App\Http\Requests\UpdateShipmentRequest;
+use App\Http\Requests\BulkUpdateShipmentStatusRequest;
+use App\Http\Requests\UpdateShipmentStatusRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -337,7 +341,7 @@ class ShipmentController extends Controller
 
     public function create(Request $request)
     {
-        abort_unless(Auth::user()->canCreateShipments(), 403);
+        $this->authorize('create', Shipment::class);
 
         $tenant = Auth::user()->tenant_id
             ? Tenant::query()->find(Auth::user()->tenant_id)
@@ -383,37 +387,9 @@ class ShipmentController extends Controller
         return view('shipments.create', compact('companies', 'departments', 'deliveryZones', 'deliveryZoneSuggestions', 'companyTerms', 'senderPresets', 'companySenderPresetKeys', 'quickProducts', 'inventoryProducts', 'useInventory', 'planCode', 'prefillRecipient', 'prefillQuickProduct'));
     }
 
-    public function store(Request $request)
+    public function store(StoreShipmentRequest $request)
     {
-        abort_unless(Auth::user()->canCreateShipments(), 403);
-
-        $validated = $request->validate([
-            'sender_name' => ['required', 'string', 'max:255'],
-            'sender_phone' => ['required', 'string', 'max:50'],
-            'sender_address' => ['required', 'string', 'max:255'],
-            'sender_neighborhood' => ['nullable', 'string', 'max:255'],
-            'sender_locality' => ['nullable', 'string', 'max:255'],
-            'recipient_name' => ['required', 'string', 'max:255'],
-            'recipient_lastname' => ['required', 'string', 'max:255'],
-            'recipient_phone' => ['required', 'string', 'max:50'],
-            'recipient_alt_phone' => ['nullable', 'string', 'max:50'],
-            'recipient_email' => ['nullable', 'email', 'max:255'],
-            'recipient_address' => ['required', 'string', 'max:255'],
-            'recipient_neighborhood' => ['required', 'string', 'max:255'],
-            'recipient_department' => ['nullable', 'string', 'max:255'],
-            'recipient_locality' => ['required', 'string', 'max:255'],
-            'recipient_city' => ['nullable', 'string', 'max:255'],
-            'package_type' => ['required', 'string', 'max:50'],
-            'pieces' => ['required', 'integer', 'min:1'],
-            'content_description' => ['nullable', 'string', 'max:1000'],
-            'declared_value' => ['nullable', 'numeric', 'min:0'],
-            'shipping_value' => ['nullable', 'numeric', 'min:0'],
-            'delivery_zone_id' => ['nullable', 'exists:delivery_zones,id'],
-            'payment_method' => ['required', 'string', 'max:50'],
-            'collection_value' => ['nullable', 'numeric', 'min:0'],
-            'zone' => ['nullable', 'string', 'max:255'],
-            'recipient_notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validated();
 
         $tenant = Auth::user()->tenant_id
             ? Tenant::query()->findOrFail(Auth::user()->tenant_id)
@@ -948,9 +924,7 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
 
     public function edit(Shipment $shipment)
     {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
-        abort_unless(Auth::user()->canEditShipments(), 403);
-        abort_unless($shipment->canBeEdited(), 403);
+        $this->authorize('update', $shipment);
 
         $tenant = Auth::user()->tenant_id
             ? Tenant::query()->find(Auth::user()->tenant_id)
@@ -983,39 +957,11 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
         return view('shipments.edit', compact('shipment', 'companies', 'deliveryZones', 'deliveryZoneSuggestions', 'senderPresets', 'companySenderPresetKeys', 'usesInventory'));
     }
 
-    public function update(Request $request, Shipment $shipment)
+    public function update(UpdateShipmentRequest $request, Shipment $shipment)
     {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
-        abort_unless(Auth::user()->canEditShipments(), 403);
-        abort_unless($shipment->canBeEdited(), 403);
+        $this->authorize('update', $shipment);
 
-        $validated = $request->validate([
-            'affiliated_company_id' => ['nullable', 'exists:affiliated_companies,id'],
-            'service_type' => ['required', 'string', 'max:50'],
-            'sender_name' => ['required', 'string', 'max:255'],
-            'sender_phone' => ['nullable', 'string', 'max:50'],
-            'sender_address' => ['required', 'string', 'max:255'],
-            'sender_neighborhood' => ['nullable', 'string', 'max:255'],
-            'sender_locality' => ['nullable', 'string', 'max:255'],
-            'recipient_name' => ['required', 'string', 'max:255'],
-            'recipient_lastname' => ['nullable', 'string', 'max:255'],
-            'recipient_phone' => ['required', 'string', 'max:50'],
-            'recipient_alt_phone' => ['nullable', 'string', 'max:50'],
-            'recipient_address' => ['required', 'string', 'max:255'],
-            'recipient_neighborhood' => ['nullable', 'string', 'max:255'],
-            'recipient_locality' => ['nullable', 'string', 'max:255'],
-            'recipient_city' => ['nullable', 'string', 'max:255'],
-            'package_type' => ['required', 'string', 'max:50'],
-            'pieces' => ['required', 'integer', 'min:1'],
-            'content_description' => ['nullable', 'string', 'max:1000'],
-            'declared_value' => ['nullable', 'numeric', 'min:0'],
-            'shipping_value' => ['nullable', 'numeric', 'min:0'],
-            'delivery_zone_id' => ['nullable', 'exists:delivery_zones,id'],
-            'payment_method' => ['required', 'string', 'max:50'],
-            'collection_value' => ['nullable', 'numeric', 'min:0'],
-            'zone' => ['nullable', 'string', 'max:255'],
-            'recipient_notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validated();
 
         if (Auth::user()->role === 'affiliate') {
             $validated['affiliated_company_id'] = Auth::user()->affiliated_company_id;
@@ -1220,15 +1166,9 @@ $printFormats = $this->printFormats();
             ->with('status', $message);
     }
 
-    public function bulkUpdateStatus(Request $request)
+    public function bulkUpdateStatus(BulkUpdateShipmentStatusRequest $request)
     {
-        abort_unless(Auth::user()->canScanShipments() || Auth::user()->canEditShipments(), 403);
-
-        $validated = $request->validate([
-            'shipment_ids' => ['required', 'array', 'min:1'],
-            'shipment_ids.*' => ['integer', 'exists:shipments,id'],
-            'status' => ['required', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
 
         $shipments = Shipment::query()
             ->visibleTo(Auth::user())
@@ -1383,16 +1323,9 @@ private function printFormats(): array
             ],
         ];
     }
-    public function updateStatus(Request $request, Shipment $shipment)
+    public function updateStatus(UpdateShipmentStatusRequest $request, Shipment $shipment)
     {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
-        abort_unless(Auth::user()->canScanShipments() || Auth::user()->canEditShipments(), 403);
-
-        $validated = $request->validate([
-            'status' => ['required', 'string', 'max:50'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'daily_mode' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
         if (! $shipment->canTransitionTo($validated['status'])) {
             return back()
@@ -1496,9 +1429,7 @@ private function printFormats(): array
 
     public function cancel(Request $request, Shipment $shipment)
     {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
-        abort_unless(Auth::user()->canEditShipments(), 403);
-        abort_unless($shipment->canBeCancelled(), 403);
+        $this->authorize('cancel', $shipment);
 
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:1000'],

@@ -12,9 +12,7 @@ class QuickProductController extends Controller
 {
     public function index()
     {
-        $owner = $this->owner();
-
-        abort_unless($owner, 403);
+        $this->authorize('viewAny', QuickProduct::class);
 
         if (Auth::user()->canUseInventory()) {
             return redirect()->route('inventory.index');
@@ -29,13 +27,7 @@ class QuickProductController extends Controller
 
     public function store(Request $request)
     {
-        if (Auth::user()->canUseInventory()) {
-            return redirect()->route('inventory.index');
-        }
-
-        $owner = $this->owner();
-
-        abort_unless($owner, 403);
+        $this->authorize('create', QuickProduct::class);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -58,11 +50,7 @@ class QuickProductController extends Controller
 
     public function update(Request $request, QuickProduct $quickProduct)
     {
-        if (Auth::user()->canUseInventory()) {
-            return redirect()->route('inventory.index');
-        }
-
-        $this->authorizeProduct($quickProduct);
+        $this->authorize('update', $quickProduct);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -84,11 +72,7 @@ class QuickProductController extends Controller
 
     public function destroy(QuickProduct $quickProduct)
     {
-        if (Auth::user()->canUseInventory()) {
-            return redirect()->route('inventory.index');
-        }
-
-        $this->authorizeProduct($quickProduct);
+        $this->authorize('delete', $quickProduct);
 
         Audit::log('quick_product.deleted', $quickProduct, "Producto rapido {$quickProduct->name} eliminado.");
 
@@ -141,16 +125,5 @@ class QuickProductController extends Controller
             );
     }
 
-    private function authorizeProduct(QuickProduct $quickProduct): void
-    {
-        $keys = $this->ownerKeys();
-
-        abort_if(
-            $keys['affiliated_company_id']
-                ? $quickProduct->affiliated_company_id !== $keys['affiliated_company_id']
-                : ($quickProduct->tenant_id !== $keys['tenant_id'] || $quickProduct->affiliated_company_id),
-            403
-        );
-    }
 }
 

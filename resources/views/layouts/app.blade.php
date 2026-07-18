@@ -5,166 +5,91 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         @php
-            $mobileThemeColor = '#022a8c';
-            $mobileThemeUser = auth()->user();
-            if ($mobileThemeUser) {
-                $mobileThemeOwner = $mobileThemeUser->affiliatedCompany ?: $mobileThemeUser->tenant;
-                $mobileThemeBrand = $mobileThemeOwner?->brandData();
-                $mobileThemeCandidate = $mobileThemeBrand['color'] ?? null;
-                if (is_string($mobileThemeCandidate) && preg_match('/^#[0-9A-Fa-f]{6}$/', $mobileThemeCandidate)) {
-                    $mobileThemeColor = strtolower($mobileThemeCandidate);
+            $brandColor = '#022a8c';
+            $brandUser = auth()->user();
+            if ($brandUser) {
+                $brandOwner = $brandUser->affiliatedCompany ?: $brandUser->tenant;
+                $brandData = $brandOwner?->brandData();
+                $brandCandidate = $brandData['color'] ?? null;
+                if (is_string($brandCandidate) && preg_match('/^#[0-9A-Fa-f]{6}$/', $brandCandidate)) {
+                    $brandColor = strtolower($brandCandidate);
                 }
             }
+            $brandR = hexdec(substr($brandColor, 1, 2));
+            $brandG = hexdec(substr($brandColor, 3, 2));
+            $brandB = hexdec(substr($brandColor, 5, 2));
+            $brandTint = "rgba({$brandR}, {$brandG}, {$brandB}, 0.10)";
+            $brandText = (($brandR * 299 + $brandG * 587 + $brandB * 114) / 1000) > 165 ? '#111827' : '#ffffff';
         @endphp
-        <meta name="theme-color" content="{{ $mobileThemeColor }}">
-        <meta name="msapplication-TileColor" content="{{ $mobileThemeColor }}">
+        <meta name="theme-color" content="{{ $brandColor }}">
+        <meta name="msapplication-TileColor" content="{{ $brandColor }}">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
-        <script id="te-mobile-theme-color-v16">
-            document.addEventListener('DOMContentLoaded', () => {
-                const color = @json($mobileThemeColor);
-                if (! /^#[0-9A-Fa-f]{6}$/.test(color)) {
-                    return;
-                }
-
-                document.querySelectorAll('meta[name="theme-color"], meta[name="msapplication-TileColor"]').forEach((meta) => {
-                    meta.setAttribute('content', color);
-                });
-
-                document.documentElement.style.setProperty('--tenant-brand-color', color);
-            });
-        </script><!-- te-mobile-theme-color-v16 -->
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Tus Envios">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @php
-            $activeBrandColor = Auth::check() ? (Auth::user()->tenant?->brand_color ?: '#022a8c') : '#022a8c';
 
-            $hex = ltrim($activeBrandColor, '#');
-            $r = hexdec(substr($hex, 0, 2));
-            $g = hexdec(substr($hex, 2, 2));
-            $b = hexdec(substr($hex, 4, 2));
-            $activeBrandText = (($r * 299 + $g * 587 + $b * 114) / 1000) > 165 ? '#111827' : '#ffffff';
-        @endphp
-    
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        {{-- Desktop layout overrides --}}
         <style>
             @media (min-width: 1024px) {
-                .app-content-frame {
-                    padding-left: 12rem !important;
-                }
-
-                .app-content-frame > header > div {
-                    max-width: none;
-                    padding: 0.75rem 1rem;
-                }
-
-                .app-content-frame main > div > div.mx-auto {
-                    max-width: none;
-                    padding-left: 1rem;
-                    padding-right: 1rem;
-                }
-
-                .app-content-frame main [class~="py-8"],
-                .app-content-frame main [class~="py-6"] {
-                    padding-top: 1rem;
-                    padding-bottom: 1rem;
-                }
-
-                .app-content-frame [class~="p-5"] {
-                    padding: 1rem;
-                }
+                .app-content-frame { padding-left: 12rem !important; }
+                .app-content-frame > header > div { max-width: none; padding: 0.75rem 1rem; }
+                .app-content-frame main > div > div.mx-auto { max-width: none; padding-left: 1rem; padding-right: 1rem; }
+                .app-content-frame main [class~="py-8"], .app-content-frame main [class~="py-6"] { padding-top: 1rem; padding-bottom: 1rem; }
+                .app-content-frame [class~="p-5"] { padding: 1rem; }
             }
         </style>
-    
+
+        {{-- Brand button colors --}}
         <style id="tus-envios-button-color">
             :root {
-                --te-button-color: {{ $activeBrandColor ?? '#022a8c' }};
-                --te-button-hover: {{ $activeBrandColor ?? '#022a8c' }};
+                --te-button-color: {{ $brandColor }};
+                --te-button-hover: {{ $brandColor }};
                 --te-button-soft: #eef3ff;
-                --te-button-soft-text: {{ $activeBrandColor ?? '#022a8c' }};
-                --te-button-text: {{ $activeBrandText ?? '#ffffff' }};
+                --te-button-soft-text: {{ $brandColor }};
+                --te-button-text: {{ $brandText }};
             }
-
-            [class~="bg-blue-700"],
-            [class~="bg-blue-800"] {
-                background-color: var(--te-button-color) !important;
-            }
-
-            [class~="bg-blue-700"][class~="text-white"],
-            [class~="bg-blue-800"][class~="text-white"] {
-                color: var(--te-button-text) !important;
-            }
-
-            [class~="hover:bg-blue-800"]:hover,
-            [class~="hover:bg-blue-700"]:hover,
-            [class~="hover:bg-blue-500"]:hover {
-                background-color: var(--te-button-hover) !important;
-            }
-
-            [class~="text-blue-700"],
-            [class~="text-blue-800"] {
-                color: var(--te-button-soft-text) !important;
-            }
-
-            [class~="border-blue-600"],
-            [class~="border-blue-700"],
-            [class~="focus:border-blue-700"]:focus,
-            [class~="focus:ring-blue-700"]:focus {
-                border-color: var(--te-button-color) !important;
-            }
-
-            [class~="bg-blue-50"],
-            [class~="hover:bg-blue-50"]:hover {
-                background-color: var(--te-button-soft) !important;
-            }
+            [class~="bg-blue-700"], [class~="bg-blue-800"] { background-color: var(--te-button-color) !important; }
+            [class~="bg-blue-700"][class~="text-white"], [class~="bg-blue-800"][class~="text-white"] { color: var(--te-button-text) !important; }
+            [class~="hover:bg-blue-800"]:hover, [class~="hover:bg-blue-700"]:hover, [class~="hover:bg-blue-500"]:hover { background-color: var(--te-button-hover) !important; }
+            [class~="text-blue-700"], [class~="text-blue-800"] { color: var(--te-button-soft-text) !important; }
+            [class~="border-blue-600"], [class~="border-blue-700"], [class~="focus:border-blue-700"]:focus, [class~="focus:ring-blue-700"]:focus { border-color: var(--te-button-color) !important; }
+            [class~="bg-blue-50"], [class~="hover:bg-blue-50"]:hover { background-color: var(--te-button-soft) !important; }
         </style>
-            <link rel="icon" href="/favicon.ico?v=20260521v15" sizes="any">
+
+        <link rel="icon" href="/favicon.ico?v=20260521v15" sizes="any">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260521v15">
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260521v15">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521v15">
         <link rel="manifest" href="/site-20260521v15.webmanifest">
-            <script id="te-refresh-sw-v17">
+
+        {{-- Service worker refresh --}}
+        <script id="te-refresh-sw-v17">
             window.addEventListener('load', () => {
-                if (! ('serviceWorker' in navigator)) {
-                    return;
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then((r) => r.forEach((reg) => reg.update())).catch(() => {});
                 }
-
-                navigator.serviceWorker.getRegistrations().then((registrations) => {
-                    registrations.forEach((registration) => registration.update());
-                }).catch(() => {});
             });
-
             window.addEventListener('pageshow', () => {
-                const color = getComputedStyle(document.documentElement).getPropertyValue('--tenant-brand-color').trim();
-                if (! /^#[0-9A-Fa-f]{6}$/.test(color)) {
-                    return;
-                }
-
                 document.querySelectorAll('meta[name="theme-color"], meta[name="msapplication-TileColor"]').forEach((meta) => {
-                    meta.setAttribute('content', color);
+                    meta.setAttribute('content', @json($brandColor));
                 });
             });
-        </script><!-- te-refresh-sw-v17 -->
-            <style id="te-mobile-menu-color-v18">
+        </script>
+
+        {{-- Mobile menu brand colors (CSS) --}}
+        <style id="te-mobile-menu-color-v18">
             @media (max-width: 1023px) {
-                html {
-                    --te-active-tint: color-mix(in srgb, var(--tenant-brand-color, #022a8c) 12%, white);
-                }
-
-                .te-mobile-brand-active {
-                    background-color: var(--te-active-tint) !important;
-                    color: var(--tenant-brand-color, #022a8c) !important;
-                }
-
-                .te-mobile-brand-featured {
-                    background-color: var(--tenant-brand-color, #022a8c) !important;
-                    color: #fff !important;
-                }
+                html { --te-active-tint: color-mix(in srgb, {{ $brandColor }} 12%, white); }
+                .te-mobile-brand-active { background-color: var(--te-active-tint) !important; color: {{ $brandColor }} !important; }
+                .te-mobile-brand-featured { background-color: {{ $brandColor }} !important; color: #fff !important; }
             }
         </style>
+
+        {{-- Full-height layout --}}
         <style id="te-app-fullheight-v01">
             @media (min-width: 1024px) {
                 html, body { height: 100dvh; overflow: hidden; }
@@ -173,16 +98,11 @@
                 .app-content-frame > header { flex-shrink: 0; }
             }
         </style>
+
+        {{-- Mobile menu brand colors (JS) --}}
         <script id="te-mobile-menu-color-v18">
             document.addEventListener('DOMContentLoaded', () => {
-                const normalize = (value) => (value || '').trim();
-                const color = normalize(getComputedStyle(document.documentElement).getPropertyValue('--tenant-brand-color'))
-                    || normalize(document.querySelector('meta[name="theme-color"]')?.getAttribute('content'))
-                    || '#022a8c';
-
-                if (! /^#[0-9A-Fa-f]{6}$/.test(color)) {
-                    return;
-                }
+                const color = @json($brandColor);
 
                 document.documentElement.style.setProperty('--tenant-brand-color', color);
 
@@ -191,41 +111,22 @@
                     try {
                         const url = new URL(href, window.location.origin);
                         const path = url.pathname.replace(/\/+$/, '') || '/';
-                        if (path === currentPath) {
-                            return true;
-                        }
-                        if (path === '/shipments' && currentPath.startsWith('/shipments')) {
-                            return ! currentPath.includes('/create');
-                        }
-                        if (path === '/dashboard' && currentPath === '/') {
-                            return true;
-                        }
-                    } catch (error) {
-                        return false;
-                    }
-
+                        if (path === currentPath) return true;
+                        if (path === '/shipments' && currentPath.startsWith('/shipments') && !currentPath.includes('/create')) return true;
+                        if (path === '/dashboard' && currentPath === '/') return true;
+                    } catch (e) { return false; }
                     return false;
                 };
 
                 const applyMobileMenuColor = () => {
-                    const mobileAreas = [
-                        document.querySelector('div.fixed.inset-x-0.bottom-0'),
-                        document.querySelector('aside.fixed.inset-y-0.left-0'),
-                    ].filter(Boolean);
-
-                    mobileAreas.forEach((area) => {
+                    document.querySelectorAll('div.fixed.inset-x-0.bottom-0, aside.fixed.inset-y-0.left-0').forEach((area) => {
                         area.querySelectorAll('a[href]').forEach((link) => {
-                            const label = normalize(link.textContent).toLowerCase();
+                            const label = (link.textContent || '').trim().toLowerCase();
                             const href = link.getAttribute('href') || '';
-
                             link.classList.remove('te-mobile-brand-active', 'te-mobile-brand-featured');
-
                             if (label === 'crear' || label === 'crear guia' || href.includes('/shipments/create')) {
                                 link.classList.add('te-mobile-brand-featured');
-                                return;
-                            }
-
-                            if (isActiveHref(href) || /bg-(blue|red|orange|green|pink|purple|emerald|rose|sky|indigo)-50/.test(link.className)) {
+                            } else if (isActiveHref(href) || /bg-(blue|red|orange|green|pink|purple|emerald|rose|sky|indigo)-50/.test(link.className)) {
                                 link.classList.add('te-mobile-brand-active');
                             }
                         });
@@ -233,117 +134,67 @@
                 };
 
                 applyMobileMenuColor();
-
-                document.addEventListener('click', () => {
-                    window.setTimeout(applyMobileMenuColor, 80);
-                }, true);
-
+                document.addEventListener('click', () => window.setTimeout(applyMobileMenuColor, 80), true);
                 window.addEventListener('pageshow', applyMobileMenuColor);
             });
-        </script><!-- te-mobile-menu-color-v18 -->
-            @php // te-force-mobile-menu-v20-start
-            $forceMobileMenuColor = '#022a8c';
-            $forceMobileMenuUser = auth()->user();
-            if ($forceMobileMenuUser) {
-                $forceMobileMenuOwner = $forceMobileMenuUser->affiliatedCompany ?: $forceMobileMenuUser->tenant;
-                $forceMobileMenuBrand = $forceMobileMenuOwner?->brandData();
-                $forceMobileMenuCandidate = $forceMobileMenuBrand['color'] ?? null;
-                if (is_string($forceMobileMenuCandidate) && preg_match('/^#[0-9A-Fa-f]{6}$/', $forceMobileMenuCandidate)) {
-                    $forceMobileMenuColor = strtolower($forceMobileMenuCandidate);
-                }
-            }
+        </script>
 
-            $forceMobileMenuRed = hexdec(substr($forceMobileMenuColor, 1, 2));
-            $forceMobileMenuGreen = hexdec(substr($forceMobileMenuColor, 3, 2));
-            $forceMobileMenuBlue = hexdec(substr($forceMobileMenuColor, 5, 2));
-            $forceMobileMenuTint = "rgba({$forceMobileMenuRed}, {$forceMobileMenuGreen}, {$forceMobileMenuBlue}, 0.10)";
-        @endphp
+        {{-- Force mobile menu colors (v20) --}}
         <style id="te-force-mobile-menu-v20">
-            :root {
-                --tenant-brand-color: {{ $forceMobileMenuColor }};
-                --tenant-brand-tint: {{ $forceMobileMenuTint }};
-            }
-
+            :root { --tenant-brand-color: {{ $brandColor }}; --tenant-brand-tint: {{ $brandTint }}; }
             @media (max-width: 1023px) {
                 nav div.fixed.inset-x-0.bottom-0 a[href*="/shipments/create"],
                 nav div[class*="bottom-0"] a[href*="/shipments/create"],
-                nav a[href*="/shipments/create"].bg-blue-600,
-                nav a[href*="/shipments/create"].bg-red-600,
-                nav a[href*="/shipments/create"].bg-orange-600,
-                nav a[href*="/shipments/create"].bg-green-600,
-                nav a[href*="/shipments/create"].bg-purple-600,
-                nav a[href*="/shipments/create"].bg-pink-600,
-                nav a[href*="/shipments/create"].bg-rose-600,
-                nav a[href*="/shipments/create"].bg-indigo-600 {
-                    background-color: {{ $forceMobileMenuColor }} !important;
-                    border-color: {{ $forceMobileMenuColor }} !important;
-                    color: #ffffff !important;
-                }
-
+                nav a[href*="/shipments/create"] { background-color: {{ $brandColor }} !important; border-color: {{ $brandColor }} !important; color: #ffffff !important; }
                 nav div.fixed.inset-x-0.bottom-0 a[href*="/shipments/create"] svg,
-                nav div[class*="bottom-0"] a[href*="/shipments/create"] svg {
-                    color: #ffffff !important;
-                    stroke: currentColor !important;
-                }
-
+                nav div[class*="bottom-0"] a[href*="/shipments/create"] svg { color: #ffffff !important; stroke: currentColor !important; }
                 nav div.fixed.inset-x-0.bottom-0 a[href]:not([href*="/shipments/create"]).te-current-mobile-v20,
                 nav div[class*="bottom-0"] a[href]:not([href*="/shipments/create"]).te-current-mobile-v20,
-                nav aside a[href].te-current-mobile-v20 {
-                    background-color: {{ $forceMobileMenuTint }} !important;
-                    color: {{ $forceMobileMenuColor }} !important;
-                }
-
+                nav aside a[href].te-current-mobile-v20 { background-color: {{ $brandTint }} !important; color: {{ $brandColor }} !important; }
                 nav div.fixed.inset-x-0.bottom-0 a[href]:not([href*="/shipments/create"]).te-current-mobile-v20 svg,
                 nav div[class*="bottom-0"] a[href]:not([href*="/shipments/create"]).te-current-mobile-v20 svg,
-                nav aside a[href].te-current-mobile-v20 svg {
-                    color: {{ $forceMobileMenuColor }} !important;
-                    stroke: currentColor !important;
-                }
+                nav aside a[href].te-current-mobile-v20 svg { color: {{ $brandColor }} !important; stroke: currentColor !important; }
             }
         </style>
         <script id="te-force-mobile-menu-v20">
             (() => {
+                const color = @json($brandColor);
+                const tint = @json($brandTint);
                 const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
-                const color = @json($forceMobileMenuColor);
-                const tint = @json($forceMobileMenuTint);
 
                 const isCurrent = (href) => {
                     try {
-                        const url = new URL(href, window.location.origin);
-                        const path = url.pathname.replace(/\/+$/, '') || '/';
+                        const path = new URL(href, window.location.origin).pathname.replace(/\/+$/, '') || '/';
                         if (path === currentPath) return true;
                         if (path === '/shipments' && currentPath === '/shipments') return true;
                         if (path === '/dashboard' && (currentPath === '/' || currentPath === '/dashboard')) return true;
-                    } catch (error) {}
+                    } catch (e) { return false; }
                     return false;
                 };
 
                 const paint = () => {
                     document.documentElement.style.setProperty('--tenant-brand-color', color);
                     document.documentElement.style.setProperty('--tenant-brand-tint', tint);
-
                     document.querySelectorAll('nav a[href]').forEach((link) => {
-                        const href = link.getAttribute('href') || '';
                         const inMobileMenu = Boolean(link.closest('div.fixed.inset-x-0.bottom-0, div[class*="bottom-0"], aside'));
-                        if (! inMobileMenu) return;
-
-                        link.classList.toggle('te-current-mobile-v20', isCurrent(href));
-
-                        if (href.includes('/shipments/create')) {
+                        if (!inMobileMenu) return;
+                        link.classList.toggle('te-current-mobile-v20', isCurrent(link.getAttribute('href') || ''));
+                        if ((link.getAttribute('href') || '').includes('/shipments/create')) {
                             link.style.setProperty('background-color', color, 'important');
                             link.style.setProperty('border-color', color, 'important');
                             link.style.setProperty('color', '#ffffff', 'important');
                         }
                     });
                 };
-
                 paint();
                 document.addEventListener('DOMContentLoaded', paint);
                 window.addEventListener('pageshow', paint);
                 window.setTimeout(paint, 250);
                 window.setTimeout(paint, 900);
             })();
-        </script><!-- te-force-mobile-menu-v20 -->
+        </script>
+
+        {{-- Dark mode detection --}}
         <script>
             (function(){var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}})();
         </script>
@@ -353,7 +204,6 @@
             @include('layouts.navigation')
 
             <div class="app-content-frame pb-20 pt-16 lg:pb-0 lg:pl-52 lg:pt-0">
-                <!-- Page Heading -->
                 @isset($header)
                     <header class="border-b border-gray-200 bg-white shadow-sm">
                         <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
@@ -362,29 +212,13 @@
                     </header>
                 @endisset
 
-                <!-- Page Content -->
                 <main>
                     {{ $slot }}
                 </main>
             </div>
         </div>
-            @php // te-bottom-mobile-final-v22-start
-            $bottomFinalColor = '#022a8c';
-            $bottomFinalUser = auth()->user();
-            if ($bottomFinalUser) {
-                $bottomFinalOwner = $bottomFinalUser->affiliatedCompany ?: $bottomFinalUser->tenant;
-                $bottomFinalBrand = $bottomFinalOwner?->brandData();
-                $bottomFinalCandidate = $bottomFinalBrand['color'] ?? null;
-                if (is_string($bottomFinalCandidate) && preg_match('/^#[0-9A-Fa-f]{6}$/', $bottomFinalCandidate)) {
-                    $bottomFinalColor = strtolower($bottomFinalCandidate);
-                }
-            }
 
-            $bottomFinalR = hexdec(substr($bottomFinalColor, 1, 2));
-            $bottomFinalG = hexdec(substr($bottomFinalColor, 3, 2));
-            $bottomFinalB = hexdec(substr($bottomFinalColor, 5, 2));
-            $bottomFinalTint = "rgba({$bottomFinalR}, {$bottomFinalG}, {$bottomFinalB}, 0.10)";
-        @endphp
+        {{-- Bottom mobile nav (v22) --}}
         <style id="te-bottom-mobile-final-v22">
             @media (max-width: 1023px) {
                 body nav [class*="bottom-0"] a[href*="/shipments/create"],
@@ -395,55 +229,46 @@
                 body .fixed.inset-x-0.bottom-0 a[href*="/shipments/create"],
                 body nav [class*="bottom-0"] a:nth-child(3),
                 body .fixed.inset-x-0.bottom-0 a:nth-child(3) {
-                    background: {{ $bottomFinalColor }} !important;
-                    background-color: {{ $bottomFinalColor }} !important;
-                    border-color: {{ $bottomFinalColor }} !important;
+                    background: {{ $brandColor }} !important;
+                    background-color: {{ $brandColor }} !important;
+                    border-color: {{ $brandColor }} !important;
                     color: #ffffff !important;
                 }
-
                 body nav [class*="bottom-0"] a[href*="/shipments/create"] *,
                 body .fixed.inset-x-0.bottom-0 a[href*="/shipments/create"] *,
                 body nav [class*="bottom-0"] a:nth-child(3) *,
                 body .fixed.inset-x-0.bottom-0 a:nth-child(3) * {
-                    color: #ffffff !important;
-                    stroke: currentColor !important;
-                    fill: none !important;
+                    color: #ffffff !important; stroke: currentColor !important; fill: none !important;
                 }
-
                 body nav [class*="bottom-0"] a[aria-current="page"]:not([href*="/shipments/create"]),
                 body nav [class*="bottom-0"] a.is-active:not([href*="/shipments/create"]),
                 body nav [class*="bottom-0"] a.active:not([href*="/shipments/create"]),
                 body .fixed.inset-x-0.bottom-0 a[aria-current="page"]:not([href*="/shipments/create"]) {
-                    background-color: {{ $bottomFinalTint }} !important;
-                    color: {{ $bottomFinalColor }} !important;
+                    background-color: {{ $brandTint }} !important;
+                    color: {{ $brandColor }} !important;
                 }
             }
         </style>
         <script id="te-bottom-mobile-final-v22">
             (() => {
-                const color = @json($bottomFinalColor);
-                const tint = @json($bottomFinalTint);
+                const color = @json($brandColor);
+                const tint = @json($brandTint);
 
                 const paintBottomMenu = () => {
                     document.documentElement.style.setProperty('--tenant-brand-color', color);
                     document.documentElement.style.setProperty('--tenant-brand-tint', tint);
 
-                    const bottomBars = Array.from(document.querySelectorAll('[class*="bottom-0"], .fixed.inset-x-0.bottom-0, .fixed.bottom-0'))
-                        .filter((bar) => bar.querySelectorAll('a').length >= 3);
-
-                    bottomBars.forEach((bar) => {
-                        const links = Array.from(bar.querySelectorAll('a'));
-                        links.forEach((link) => {
+                    document.querySelectorAll('[class*="bottom-0"], .fixed.inset-x-0.bottom-0, .fixed.bottom-0').forEach((bar) => {
+                        if (bar.querySelectorAll('a').length < 3) return;
+                        Array.from(bar.querySelectorAll('a')).forEach((link, index) => {
                             const href = link.getAttribute('href') || '';
                             const text = (link.textContent || '').trim().toLowerCase();
                             const isCreate = href.includes('/shipments/create') || text === 'crear' || text.includes('crear');
-
-                            if (isCreate || links.indexOf(link) === 2) {
+                            if (isCreate || index === 2) {
                                 link.style.setProperty('background', color, 'important');
                                 link.style.setProperty('background-color', color, 'important');
                                 link.style.setProperty('border-color', color, 'important');
                                 link.style.setProperty('color', '#ffffff', 'important');
-
                                 link.querySelectorAll('*').forEach((child) => {
                                     child.style.setProperty('color', '#ffffff', 'important');
                                     child.style.setProperty('stroke', 'currentColor', 'important');
@@ -461,62 +286,42 @@
                 window.setTimeout(paintBottomMenu, 500);
                 window.setTimeout(paintBottomMenu, 1500);
             })();
-        </script><!-- te-bottom-mobile-final-v22 -->
-            @php // te-real-mobile-menu-v23-start
-            $realMobileMenuColor = '#022a8c';
-            $realMobileMenuUser = auth()->user();
-            if ($realMobileMenuUser) {
-                $realMobileMenuOwner = $realMobileMenuUser->affiliatedCompany ?: $realMobileMenuUser->tenant;
-                $realMobileMenuBrand = $realMobileMenuOwner?->brandData();
-                $realMobileMenuCandidate = $realMobileMenuBrand['color'] ?? null;
-                if (is_string($realMobileMenuCandidate) && preg_match('/^#[0-9A-Fa-f]{6}$/', $realMobileMenuCandidate)) {
-                    $realMobileMenuColor = strtolower($realMobileMenuCandidate);
-                }
-            }
+        </script>
 
-            $realMobileMenuR = hexdec(substr($realMobileMenuColor, 1, 2));
-            $realMobileMenuG = hexdec(substr($realMobileMenuColor, 3, 2));
-            $realMobileMenuB = hexdec(substr($realMobileMenuColor, 5, 2));
-            $realMobileMenuTint = "rgba({$realMobileMenuR}, {$realMobileMenuG}, {$realMobileMenuB}, 0.10)";
-        @endphp
+        {{-- Real mobile menu (v23) --}}
         <style id="te-real-mobile-menu-v23">
             @media (max-width: 1023px) {
                 .mobile-bottom-nav .mobile-bottom-link.is-featured,
                 .mobile-bottom-nav .mobile-bottom-link[data-route-create="1"],
                 .mobile-bottom-grid .mobile-bottom-link.is-featured,
                 .mobile-bottom-grid .mobile-bottom-link[data-route-create="1"] {
-                    background: {{ $realMobileMenuColor }} !important;
-                    background-color: {{ $realMobileMenuColor }} !important;
-                    border-color: {{ $realMobileMenuColor }} !important;
+                    background: {{ $brandColor }} !important;
+                    background-color: {{ $brandColor }} !important;
+                    border-color: {{ $brandColor }} !important;
                     color: #ffffff !important;
                 }
-
                 .mobile-bottom-nav .mobile-bottom-link.is-featured *,
                 .mobile-bottom-nav .mobile-bottom-link[data-route-create="1"] *,
                 .mobile-bottom-grid .mobile-bottom-link.is-featured *,
                 .mobile-bottom-grid .mobile-bottom-link[data-route-create="1"] * {
-                    color: #ffffff !important;
-                    stroke: currentColor !important;
+                    color: #ffffff !important; stroke: currentColor !important;
                 }
-
                 .mobile-bottom-nav .mobile-bottom-link[data-route-current="1"]:not([data-route-create="1"]),
                 .mobile-bottom-grid .mobile-bottom-link[data-route-current="1"]:not([data-route-create="1"]) {
-                    background: {{ $realMobileMenuTint }} !important;
-                    background-color: {{ $realMobileMenuTint }} !important;
-                    color: {{ $realMobileMenuColor }} !important;
+                    background: {{ $brandTint }} !important;
+                    background-color: {{ $brandTint }} !important;
+                    color: {{ $brandColor }} !important;
                 }
-
                 .mobile-bottom-nav .mobile-bottom-link[data-route-current="1"]:not([data-route-create="1"]) *,
                 .mobile-bottom-grid .mobile-bottom-link[data-route-current="1"]:not([data-route-create="1"]) * {
-                    color: {{ $realMobileMenuColor }} !important;
-                    stroke: currentColor !important;
+                    color: {{ $brandColor }} !important; stroke: currentColor !important;
                 }
             }
         </style>
         <script id="te-real-mobile-menu-v23">
             (() => {
-                const color = @json($realMobileMenuColor);
-                const tint = @json($realMobileMenuTint);
+                const color = @json($brandColor);
+                const tint = @json($brandTint);
 
                 const paintRealMobileMenu = () => {
                     document.documentElement.style.setProperty('--tenant-brand-color', color);
@@ -551,19 +356,9 @@
                 window.setTimeout(paintRealMobileMenu, 100);
                 window.setTimeout(paintRealMobileMenu, 500);
             })();
-        </script><!-- te-real-mobile-menu-v23 -->
-            @php // te-mobile-logout-v24-start
-            $mobileLogoutColor = '#022a8c';
-            $mobileLogoutUser = auth()->user();
-            if ($mobileLogoutUser) {
-                $mobileLogoutOwner = $mobileLogoutUser->affiliatedCompany ?: $mobileLogoutUser->tenant;
-                $mobileLogoutBrand = $mobileLogoutOwner?->brandData();
-                $mobileLogoutCandidate = $mobileLogoutBrand['color'] ?? null;
-                if (is_string($mobileLogoutCandidate) && preg_match('/^#[0-9A-Fa-f]{6}$/', $mobileLogoutCandidate)) {
-                    $mobileLogoutColor = strtolower($mobileLogoutCandidate);
-                }
-            }
-        @endphp
+        </script>
+
+        {{-- Mobile logout button (v24) --}}
         <style id="te-mobile-logout-v24">
             @media (max-width: 1023px) {
                 .te-mobile-drawer-logout-v24 {
@@ -571,44 +366,26 @@
                     background: #ffffff;
                     padding: 0.75rem 1rem calc(env(safe-area-inset-bottom) + 4.6rem);
                 }
-
                 .te-mobile-drawer-logout-v24 button {
-                    display: flex;
-                    width: 100%;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 0.5rem;
-                    border-radius: 0.5rem;
-                    border: 1px solid #d1d5db;
-                    background: #ffffff;
-                    padding: 0.7rem 1rem;
-                    color: #111827;
-                    font-weight: 800;
-                    line-height: 1;
+                    display: flex; width: 100%; align-items: center; justify-content: center; gap: 0.5rem;
+                    border-radius: 0.5rem; border: 1px solid #d1d5db; background: #ffffff;
+                    padding: 0.7rem 1rem; color: #111827; font-weight: 800; line-height: 1;
                 }
-
-                .te-mobile-drawer-logout-v24 button:active {
-                    border-color: {{ $mobileLogoutColor }};
-                    color: {{ $mobileLogoutColor }};
-                }
+                .te-mobile-drawer-logout-v24 button:active { border-color: {{ $brandColor }}; color: {{ $brandColor }}; }
             }
         </style>
         <script id="te-mobile-logout-v24">
             (() => {
                 const addLogoutButton = () => {
-                    if (document.querySelector('.te-mobile-drawer-logout-v24')) {
-                        return;
-                    }
+                    if (document.querySelector('.te-mobile-drawer-logout-v24')) return;
 
                     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
                     const sidePanel = document.querySelector('aside, .mobile-menu, .mobile-sidebar, [class*="mobile"][class*="menu"]');
-                    if (! sidePanel) {
-                        return;
-                    }
+                    if (!sidePanel) return;
 
                     const userBlock = Array.from(sidePanel.querySelectorAll('div, section, footer'))
                         .reverse()
-                        .find((element) => /@/.test(element.textContent || ''));
+                        .find((el) => /@/.test(el.textContent || ''));
 
                     const wrapper = document.createElement('div');
                     wrapper.className = 'te-mobile-drawer-logout-v24';
@@ -624,11 +401,8 @@
                         </form>
                     `;
 
-                    if (userBlock) {
-                        userBlock.insertAdjacentElement('afterend', wrapper);
-                    } else {
-                        sidePanel.appendChild(wrapper);
-                    }
+                    if (userBlock) { userBlock.insertAdjacentElement('afterend', wrapper); }
+                    else { sidePanel.appendChild(wrapper); }
                 };
 
                 addLogoutButton();
@@ -637,7 +411,7 @@
                 window.addEventListener('pageshow', addLogoutButton);
                 window.setTimeout(addLogoutButton, 500);
             })();
-        </script><!-- te-mobile-logout-v24 -->
+        </script>
 
         <script>
             if ('serviceWorker' in navigator) {

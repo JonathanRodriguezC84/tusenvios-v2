@@ -30,9 +30,11 @@ Thumbs.db
 database/database.sqlite
 deploy_prod.zip
 deploy_prod.sql
+*.bak
 *.bak-*
 desktop.ini
 routes.zip
 well-known.zip
 test_view.php
 /cache
+/storage/framework/views/*.php

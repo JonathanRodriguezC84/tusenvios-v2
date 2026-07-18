@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreInventoryProductRequest;
+use App\Http\Requests\StoreMovementRequest;
 use App\Models\InventoryProduct;
 use App\Models\InventoryMovement;
 use App\Models\Category;
@@ -455,11 +457,9 @@ class InventoryProductController extends Controller
         return $pdf->download('inventario-tus-envios-'.now()->format('Y-m-d').'.pdf');
     }
 
-    public function store(Request $request)
+    public function store(StoreInventoryProductRequest $request)
     {
-        $this->authorizeInventoryAccess();
-
-        $validated = $request->validate($this->rules());
+        $validated = $request->validated();
         $validated['stock'] = (int) $validated['stock'];
         $validated['stock_minimum'] = (int) $validated['stock_minimum'];
 
@@ -558,16 +558,11 @@ class InventoryProductController extends Controller
             ->with('status', 'Inventario actualizado correctamente.');
     }
 
-    public function movement(Request $request, InventoryProduct $inventoryProduct)
+    public function movement(StoreMovementRequest $request, InventoryProduct $inventoryProduct)
     {
-        $this->authorizeInventoryAccess();
         $this->authorizeProduct($inventoryProduct);
 
-        $validated = $request->validate([
-            'type' => ['required', 'in:manual_in,manual_out,adjustment'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:999999'],
-            'notes' => ['nullable', 'string', 'max:180'],
-        ]);
+        $validated = $request->validated();
 
         $quantity = (int) $validated['quantity'];
         $delta = $validated['type'] === 'manual_out' ? -1 * $quantity : $quantity;
@@ -658,7 +653,7 @@ class InventoryProductController extends Controller
 
     private function authorizeInventoryAccess(): void
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('viewAny', InventoryProduct::class);
     }
 
     private function ownerKeys(): array
