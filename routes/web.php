@@ -15,8 +15,11 @@ use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ShippingRateController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DeployController;
 use App\Http\Controllers\TrackingController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/deploy/{key}', DeployController::class);
 
 Route::get('/', function () {
     return view('welcome');
