@@ -310,9 +310,13 @@
                     Si es contraentrega, confirma el valor a recaudar antes de crear la guia.
                 </div>
 
-                <div class="mt-auto rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-600">
+                <div class="mt-auto rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-600 lg:hidden">
                     Completa los pasos de la izquierda y confirma la guia.
                 </div>
+
+                <button class="hidden lg:block w-full rounded-lg bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800 shadow-sm mt-4">
+                    Crear guia
+                </button>
             </div>
 
             {{-- Mobile bottom bar --}}
