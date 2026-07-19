@@ -422,5 +422,5 @@
             oldCollectionValue: Number(@json(old('collection_value', 0))),
         };
     </script>
-    <script src="{{ asset('js/shipments-create.js') }}"></script>
+    <script src="{{ asset('js/shipments-create.js') }}?v={{ filemtime(public_path('js/shipments-create.js')) }}"></script>
 </x-app-layout>
