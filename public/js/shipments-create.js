@@ -396,7 +396,7 @@
         updateReadiness();
     });
 
-    async function loadCities(departmentId) {
+    window.loadCities = async function (departmentId) {
         var citySelect = document.getElementById('recipient_locality');
         citySelect.innerHTML = '<option value="">Cargando...</option>';
         if (!departmentId) {
