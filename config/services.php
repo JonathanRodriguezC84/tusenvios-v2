@@ -41,6 +41,10 @@ return [
         'base_url' => env('BOLD_BASE_URL', 'https://integrations.api.bold.co'),
     ],
 
+    'carrier_api' => [
+        'key' => env('CARRIER_API_KEY', ''),
+    ],
+
     'whatsapp' => [
         'enabled' => env('WHATSAPP_ENABLED', false),
         'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v18.0'),

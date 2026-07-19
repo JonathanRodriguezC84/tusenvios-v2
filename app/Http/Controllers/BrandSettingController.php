@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 
 class BrandSettingController extends Controller
 {
-    public function edit()
+    public function edit(): \Illuminate\View\View
     {
         $brandOwner = $this->brandOwner();
 
@@ -19,7 +19,7 @@ class BrandSettingController extends Controller
         return view('brand-settings.edit', compact('brandOwner'));
     }
 
-    public function preview()
+    public function preview(): \Illuminate\View\View
     {
         $brandOwner = $this->brandOwner();
 
@@ -28,7 +28,7 @@ class BrandSettingController extends Controller
         return view('brand-settings.label-preview', compact('brandOwner'));
     }
 
-    public function settings()
+    public function settings(): \Illuminate\View\View
     {
         $brandOwner = $this->brandOwner();
 
@@ -37,7 +37,7 @@ class BrandSettingController extends Controller
         return view('brand-settings.configuration', compact('brandOwner'));
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(Request $request): \Illuminate\Http\RedirectResponse
     {
         $brandOwner = $this->brandOwner();
 
@@ -85,7 +85,7 @@ class BrandSettingController extends Controller
             ->with('status', 'Configuracion actualizada correctamente.');
     }
 
-    public function update(Request $request)
+    public function update(Request $request): \Illuminate\Http\RedirectResponse
     {
         $brandOwner = $this->brandOwner();
 

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreInventoryProductRequest;
-use App\Http\Requests\StoreMovementRequest;
 use App\Models\InventoryProduct;
 use App\Models\InventoryMovement;
 use App\Models\Category;
@@ -21,7 +20,7 @@ class InventoryProductController extends Controller
         protected InventoryService $inventoryService,
     ) {}
 
-    public function index(Request $request)
+    public function index(Request $request): \Illuminate\View\View
     {
         $this->authorizeInventoryAccess();
 
@@ -75,30 +74,7 @@ class InventoryProductController extends Controller
         ]);
     }
 
-    public function movements(Request $request)
-    {
-        $this->authorizeInventoryAccess();
-
-        $filters = $request->validate([
-            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,status_change'],
-            'search' => ['nullable', 'string', 'max:120'],
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date'],
-        ]);
-
-        $movementBaseQuery = $this->movementQuery($filters);
-        $movementSummary = $this->movementSummary($movementBaseQuery);
-
-        $movements = (clone $movementBaseQuery)
-            ->with(['product', 'shipment'])
-            ->latest()
-            ->paginate(30)
-            ->withQueryString();
-
-        return view('inventory.movements', compact('movements', 'filters', 'movementSummary'));
-    }
-
-    public function export(Request $request)
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $this->authorizeInventoryAccess();
 
@@ -148,127 +124,7 @@ class InventoryProductController extends Controller
         }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function template()
-    {
-        $this->authorizeInventoryAccess();
-
-        return response()->streamDownload(function () {
-            $handle = fopen('php://output', 'w');
-
-            fputcsv($handle, ['Producto', 'SKU', 'Categoria', 'Costo', 'Precio', 'Stock', 'Stock minimo', 'Estado']);
-            fputcsv($handle, ['Camiseta negra talla M', 'CAM-NEG-M', 'Ropa', '18000', '45000', '10', '2', 'active']);
-            fputcsv($handle, ['Case iPhone 15 Pro', 'CASE-15PRO', 'Accesorios', '12000', '30000', '25', '5', 'active']);
-
-            fclose($handle);
-        }, 'plantilla-inventario-tus-envios.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
-    }
-
-    public function import(Request $request)
-    {
-        $this->authorizeInventoryAccess();
-
-        $validated = $request->validate([
-            'inventory_file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
-        ]);
-
-        $path = $validated['inventory_file']->getRealPath();
-        $handle = fopen($path, 'r');
-
-        if (! $handle) {
-            return back()->withErrors(['inventory_file' => 'No se pudo leer el archivo.']);
-        }
-
-        $delimiter = $this->detectCsvDelimiter($handle);
-        $headers = fgetcsv($handle, 0, $delimiter);
-        $headers = $this->csvHeaders($headers ?: []);
-
-        if (! collect($headers)->contains('name', 'producto')) {
-            fclose($handle);
-
-            return back()->withErrors([
-                'inventory_file' => 'El CSV debe incluir la columna Producto. Descarga la plantilla para usar el formato correcto.',
-            ]);
-        }
-
-        $created = 0;
-        $updated = 0;
-        $skipped = 0;
-        $skippedRows = [];
-        $rowNumber = 1;
-
-        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-            $rowNumber++;
-            $data = $this->csvRowData($headers, $row);
-
-            if (! is_array($data) || blank($data['producto'] ?? null)) {
-                $skipped++;
-                $skippedRows[] = $rowNumber;
-                continue;
-            }
-
-            $payload = [
-                'name' => trim((string) ($data['producto'] ?? '')),
-                'sku' => trim((string) ($data['sku'] ?? '')) ?: null,
-                'category' => trim((string) ($data['categoria'] ?? '')) ?: null,
-                'cost' => $this->csvMoney($data['costo'] ?? 0),
-                'price' => $this->csvMoney($data['precio'] ?? 0),
-                'stock' => max(0, (int) $this->csvMoney($data['stock'] ?? 0)),
-                'stock_minimum' => max(0, (int) $this->csvMoney($data['stock_minimo'] ?? $data['stock_minimum'] ?? 0)),
-                'status' => $this->csvStatus($data['estado'] ?? 'active'),
-            ];
-
-            if ($payload['name'] === '') {
-                $skipped++;
-                $skippedRows[] = $rowNumber;
-                continue;
-            }
-
-            $query = $this->queryForOwner();
-            $product = $this->findImportProduct($payload, $query);
-
-            if (! $product) {
-                $product = InventoryProduct::query()->create(array_merge($payload, $this->ownerKeys()));
-                $created++;
-
-                if ($product->stock > 0) {
-                    $product->movements()->create(array_merge($this->ownerKeys(), [
-                        'type' => 'initial',
-                        'quantity_delta' => $product->stock,
-                        'stock_after' => $product->stock,
-                        'notes' => "Importacion CSV fila {$rowNumber}",
-                    ]));
-                }
-
-                continue;
-            }
-
-            $previousStock = $product->stock;
-            $product->update($payload);
-            $updated++;
-
-            $delta = $product->stock - $previousStock;
-            if ($delta !== 0) {
-                $product->movements()->create(array_merge($this->ownerKeys(), [
-                    'type' => 'adjustment',
-                    'quantity_delta' => $delta,
-                    'stock_after' => $product->stock,
-                    'notes' => "Actualizacion CSV fila {$rowNumber}",
-                ]));
-            }
-        }
-
-        fclose($handle);
-
-        $skippedDetail = $skippedRows
-            ? ' Filas omitidas: '.implode(', ', array_slice($skippedRows, 0, 8)).(count($skippedRows) > 8 ? '...' : '').'.'
-            : '';
-
-        return redirect()
-            ->route('inventory.index')
-            ->with('status', "Importacion lista: {$created} producto(s) creado(s), {$updated} actualizado(s), {$skipped} fila(s) omitida(s).{$skippedDetail}");
-    }
-
-    public function bulk(Request $request)
+    public function bulk(Request $request): \Illuminate\Http\RedirectResponse|\Symfony\Component\HttpFoundation\StreamedResponse
     {
         $this->authorizeInventoryAccess();
 
@@ -353,68 +209,7 @@ class InventoryProductController extends Controller
             ->with('status', "Accion masiva aplicada a {$products->count()} producto(s).");
     }
 
-    public function exportMovements(Request $request)
-    {
-        $this->authorizeInventoryAccess();
-
-        $filters = $request->validate([
-            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,status_change'],
-            'search' => ['nullable', 'string', 'max:120'],
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date'],
-        ]);
-
-        $fileName = 'movimientos-inventario-tus-envios-'.now()->format('Y-m-d-His').'.csv';
-
-        return response()->streamDownload(function () use ($filters) {
-            $handle = fopen('php://output', 'w');
-
-            fputcsv($handle, ['Fecha', 'Producto', 'SKU', 'Tipo', 'Cantidad', 'Stock despues', 'Guia', 'Nota']);
-
-            $this->movementQuery($filters)
-                ->with(['product', 'shipment'])
-                ->latest()
-                ->chunk(200, function ($movements) use ($handle) {
-                    foreach ($movements as $movement) {
-                        fputcsv($handle, [
-                            optional($movement->created_at)->format('Y-m-d H:i:s'),
-                            $movement->product?->name,
-                            $movement->product?->sku,
-                            $movement->type,
-                            $movement->quantity_delta,
-                            $movement->stock_after,
-                            $movement->shipment?->guide_number,
-                            $movement->notes,
-                        ]);
-                    }
-                });
-
-            fclose($handle);
-        }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
-    }
-
-    public function exportMovementsPdf(Request $request)
-    {
-        $this->authorizeInventoryAccess();
-
-        $filters = $request->validate([
-            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,status_change'],
-            'search' => ['nullable', 'string', 'max:120'],
-            'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date'],
-        ]);
-
-        $movements = $this->movementQuery($filters)
-            ->with(['product', 'shipment'])
-            ->latest()
-            ->get();
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('inventory.movements-export-pdf', compact('movements'));
-
-        return $pdf->download('movimientos-inventario-'.now()->format('Y-m-d').'.pdf');
-    }
-
-    public function create()
+    public function create(): \Illuminate\View\View
     {
         $this->authorizeInventoryAccess();
 
@@ -434,7 +229,7 @@ class InventoryProductController extends Controller
         ]);
     }
 
-    public function exportPdf(Request $request)
+    public function exportPdf(Request $request): \Illuminate\Http\Response
     {
         $this->authorizeInventoryAccess();
 
@@ -457,7 +252,7 @@ class InventoryProductController extends Controller
         return $pdf->download('inventario-tus-envios-'.now()->format('Y-m-d').'.pdf');
     }
 
-    public function store(StoreInventoryProductRequest $request)
+    public function store(StoreInventoryProductRequest $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
         $validated['stock'] = (int) $validated['stock'];
@@ -492,7 +287,7 @@ class InventoryProductController extends Controller
             ->with('status', 'Producto agregado al inventario.');
     }
 
-    public function update(Request $request, InventoryProduct $inventoryProduct)
+    public function update(Request $request, InventoryProduct $inventoryProduct): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
         $this->authorizeInventoryAccess();
         $this->authorizeProduct($inventoryProduct);
@@ -558,63 +353,7 @@ class InventoryProductController extends Controller
             ->with('status', 'Inventario actualizado correctamente.');
     }
 
-    public function movement(StoreMovementRequest $request, InventoryProduct $inventoryProduct)
-    {
-        $this->authorizeProduct($inventoryProduct);
-
-        $validated = $request->validated();
-
-        $quantity = (int) $validated['quantity'];
-        $delta = $validated['type'] === 'manual_out' ? -1 * $quantity : $quantity;
-
-        $updatedProduct = DB::transaction(function () use ($inventoryProduct, $validated, $quantity, $delta) {
-            $lockedProduct = $this->queryForOwner()
-                ->whereKey($inventoryProduct->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($lockedProduct->status !== 'active') {
-                throw ValidationException::withMessages([
-                    'quantity' => 'Reactiva el producto antes de registrar movimientos de stock.',
-                ]);
-            }
-
-            if ($validated['type'] === 'manual_out' && $lockedProduct->stock < $quantity) {
-                throw ValidationException::withMessages([
-                    'quantity' => "No hay stock suficiente para {$lockedProduct->name}. Disponible: {$lockedProduct->stock}.",
-                ]);
-            }
-
-            $lockedProduct->increment('stock', $delta);
-            $lockedProduct->refresh();
-
-            $lockedProduct->movements()->create(array_merge($this->ownerKeys(), [
-                'type' => $validated['type'],
-                'quantity_delta' => $delta,
-                'stock_after' => $lockedProduct->stock,
-                'notes' => $validated['notes'] ?: $this->movementDefaultNote($validated['type']),
-            ]));
-
-            return $lockedProduct;
-        });
-
-        Audit::log('inventory_product.movement', $updatedProduct, "Movimiento de inventario {$delta} para {$updatedProduct->name}.");
-
-        return redirect()
-            ->route('inventory.index')
-            ->with('status', 'Movimiento de inventario registrado.');
-    }
-
-    private function movementDefaultNote(string $type): string
-    {
-        return [
-            'manual_in' => 'Entrada manual',
-            'manual_out' => 'Salida manual',
-            'adjustment' => 'Ajuste positivo',
-        ][$type] ?? 'Movimiento manual';
-    }
-
-    public function destroy(InventoryProduct $inventoryProduct)
+    public function destroy(InventoryProduct $inventoryProduct): \Illuminate\Http\RedirectResponse
     {
         $this->authorizeInventoryAccess();
         $this->authorizeProduct($inventoryProduct);
@@ -638,7 +377,7 @@ class InventoryProductController extends Controller
             ->with('status', 'Producto eliminado del inventario.');
     }
 
-    private function rules(): array
+    protected function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:120'],
@@ -651,12 +390,12 @@ class InventoryProductController extends Controller
         ];
     }
 
-    private function authorizeInventoryAccess(): void
+    protected function authorizeInventoryAccess(): void
     {
         $this->authorize('viewAny', InventoryProduct::class);
     }
 
-    private function ownerKeys(): array
+    protected function ownerKeys(): array
     {
         $user = Auth::user();
 
@@ -675,7 +414,7 @@ class InventoryProductController extends Controller
         ];
     }
 
-    private function queryForOwner()
+    protected function queryForOwner()
     {
         $keys = $this->ownerKeys();
 
@@ -687,7 +426,7 @@ class InventoryProductController extends Controller
             );
     }
 
-    private function ensureCategoryExists(?string $category): void
+    protected function ensureCategoryExists(?string $category): void
     {
         if (blank($category)) {
             return;
@@ -702,7 +441,7 @@ class InventoryProductController extends Controller
         ]);
     }
 
-    private function filteredProducts(array $filters)
+    protected function filteredProducts(array $filters)
     {
         return $this->queryForOwner()
             ->when($filters['search'] ?? null, function ($query, $search) {
@@ -720,7 +459,7 @@ class InventoryProductController extends Controller
             ->when(($filters['stock'] ?? null) === 'out', fn ($query) => $query->where('status', 'active')->where('stock', '<=', 0));
     }
 
-    private function sortedProducts($query, array $filters)
+    protected function sortedProducts($query, array $filters)
     {
         return match ($filters['sort'] ?? 'latest') {
             'name' => $query->orderBy('name'),
@@ -736,7 +475,7 @@ class InventoryProductController extends Controller
         };
     }
 
-    private function generateSku(): string
+    protected function generateSku(): string
     {
         $owner = $this->ownerKeys();
         $last = InventoryProduct::query()
@@ -756,7 +495,7 @@ class InventoryProductController extends Controller
         return $sku;
     }
 
-    private function ensureSkuIsAvailable(?string $sku, ?int $ignoreProductId = null): void
+    protected function ensureSkuIsAvailable(?string $sku, ?int $ignoreProductId = null): void
     {
         $sku = trim((string) $sku);
 
@@ -776,7 +515,7 @@ class InventoryProductController extends Controller
         }
     }
 
-    private function ensureNameCategoryIsAvailable(array $payload, ?int $ignoreProductId = null): void
+    protected function ensureNameCategoryIsAvailable(array $payload, ?int $ignoreProductId = null): void
     {
         if (filled($payload['sku'] ?? null)) {
             return;
@@ -808,165 +547,7 @@ class InventoryProductController extends Controller
         }
     }
 
-    private function csvMoney($value): float
-    {
-        $normalized = trim((string) $value);
-        $normalized = str_replace(['$', ' ', "\xc2\xa0"], '', $normalized);
-
-        if (str_contains($normalized, ',') && str_contains($normalized, '.')) {
-            $normalized = str_replace('.', '', $normalized);
-            $normalized = str_replace(',', '.', $normalized);
-        } elseif (str_contains($normalized, ',')) {
-            $normalized = str_replace(',', '.', $normalized);
-        }
-
-        return (float) $normalized;
-    }
-
-    private function detectCsvDelimiter($handle): string
-    {
-        $position = ftell($handle);
-        $line = fgets($handle) ?: '';
-
-        if ($position !== false) {
-            fseek($handle, $position);
-        }
-
-        return collect([',', ';', "\t"])
-            ->mapWithKeys(fn ($delimiter) => [$delimiter => count(str_getcsv($line, $delimiter))])
-            ->sortDesc()
-            ->keys()
-            ->first() ?: ',';
-    }
-
-    private function csvStatus($value): string
-    {
-        $normalized = $this->normalizeCsvHeader($value);
-
-        return [
-            'active' => 'active',
-            'activo' => 'active',
-            'activa' => 'active',
-            '1' => 'active',
-            'si' => 'active',
-            'yes' => 'active',
-            'paused' => 'paused',
-            'pausado' => 'paused',
-            'pausada' => 'paused',
-            'inactivo' => 'paused',
-            'inactiva' => 'paused',
-            '0' => 'paused',
-            'no' => 'paused',
-        ][$normalized] ?? 'active';
-    }
-
-    private function csvHeaders(array $headers): array
-    {
-        $seen = [];
-
-        return collect($headers)
-            ->map(fn ($header, $index) => [
-                'index' => $index,
-                'name' => $this->csvHeaderAlias($this->normalizeCsvHeader($header)),
-            ])
-            ->map(function ($header) use (&$seen) {
-                $name = $header['name'];
-
-                if ($name === '' || isset($seen[$name])) {
-                    return null;
-                }
-
-                $seen[$name] = true;
-
-                return $header;
-            })
-            ->filter()
-            ->values()
-            ->all();
-    }
-
-    private function csvRowData(array $headers, array $row): ?array
-    {
-        if ($headers === []) {
-            return null;
-        }
-
-        return collect($headers)
-            ->mapWithKeys(fn ($header) => [$header['name'] => $row[$header['index']] ?? null])
-            ->all();
-    }
-
-    private function normalizeCsvHeader($header): string
-    {
-        $normalized = strtolower(trim(str_replace("\xEF\xBB\xBF", '', (string) $header)));
-        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
-
-        if (is_string($ascii) && $ascii !== '') {
-            $normalized = strtolower($ascii);
-        }
-
-        $normalized = str_replace(
-            ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', 'à', 'è', 'ì', 'ò', 'ù'],
-            ['a', 'e', 'i', 'o', 'u', 'n', 'u', 'a', 'e', 'i', 'o', 'u'],
-            $normalized
-        );
-        $normalized = preg_replace('/[^a-z0-9]+/', '_', $normalized) ?? $normalized;
-        $normalized = trim($normalized, '_');
-
-        return [
-            'categor_a' => 'categoria',
-            'stock_m_nimo' => 'stock_minimo',
-            'stock_m_nimum' => 'stock_minimum',
-            'fecha_creaci_n' => 'fecha_creacion',
-        ][$normalized] ?? $normalized;
-    }
-
-    private function csvHeaderAlias(string $header): string
-    {
-        return [
-            'nombre' => 'producto',
-            'nombre_producto' => 'producto',
-            'producto_nombre' => 'producto',
-            'product' => 'producto',
-            'item' => 'producto',
-            'referencia' => 'sku',
-            'codigo' => 'sku',
-            'codigo_producto' => 'sku',
-            'categoria_producto' => 'categoria',
-            'category' => 'categoria',
-            'costo_unitario' => 'costo',
-            'precio_venta' => 'precio',
-            'precio_unitario' => 'precio',
-            'cantidad' => 'stock',
-            'existencias' => 'stock',
-            'inventario' => 'stock',
-            'stock_min' => 'stock_minimo',
-            'stock_minimum' => 'stock_minimo',
-            'minimo' => 'stock_minimo',
-            'estado_producto' => 'estado',
-            'status' => 'estado',
-        ][$header] ?? $header;
-    }
-
-    private function findImportProduct(array $payload, $query): ?InventoryProduct
-    {
-        if ($payload['sku']) {
-            return (clone $query)->where('sku', $payload['sku'])->first();
-        }
-
-        return (clone $query)
-            ->where('name', $payload['name'])
-            ->when(
-                filled($payload['category']),
-                fn ($query) => $query->where('category', $payload['category']),
-                fn ($query) => $query->where(function ($query) {
-                    $query->whereNull('category')->orWhere('category', '');
-                })
-            )
-            ->first();
-    }
-
-    private function movementQuery(array $filters)
+    protected function movementQuery(array $filters)
     {
         $keys = $this->ownerKeys();
 
@@ -993,7 +574,7 @@ class InventoryProductController extends Controller
             });
     }
 
-    private function movementSummary($query): array
+    protected function movementSummary($query): array
     {
         $row = (clone $query)
             ->selectRaw('COUNT(*) as total')
@@ -1015,7 +596,7 @@ class InventoryProductController extends Controller
         ];
     }
 
-    private function authorizeProduct(InventoryProduct $inventoryProduct): void
+    protected function authorizeProduct(InventoryProduct $inventoryProduct): void
     {
         $keys = $this->ownerKeys();
 

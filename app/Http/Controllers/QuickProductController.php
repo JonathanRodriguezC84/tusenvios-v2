@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class QuickProductController extends Controller
 {
-    public function index()
+    public function index(): \Illuminate\View\View|\Illuminate\Http\RedirectResponse
     {
         $this->authorize('viewAny', QuickProduct::class);
 
@@ -25,7 +25,7 @@ class QuickProductController extends Controller
         return view('quick-products.index', compact('products'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', QuickProduct::class);
 
@@ -48,7 +48,7 @@ class QuickProductController extends Controller
             ->with('status', 'Producto rapido creado correctamente.');
     }
 
-    public function update(Request $request, QuickProduct $quickProduct)
+    public function update(Request $request, QuickProduct $quickProduct): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $quickProduct);
 
@@ -70,7 +70,7 @@ class QuickProductController extends Controller
             ->with('status', 'Producto rapido actualizado correctamente.');
     }
 
-    public function destroy(QuickProduct $quickProduct)
+    public function destroy(QuickProduct $quickProduct): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $quickProduct);
 

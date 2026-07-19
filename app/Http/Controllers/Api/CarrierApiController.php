@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Validator;
 
 class CarrierApiController extends Controller
 {
-    public function login(Request $request)
+    public function login(Request $request): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
             'email' => ['required', 'email'],
@@ -21,7 +21,7 @@ class CarrierApiController extends Controller
             'api_key' => ['required', 'string'],
         ]);
 
-        $validKey = config('services.carrier_api.key', env('CARRIER_API_KEY', ''));
+        $validKey = config('services.carrier_api.key');
         if (! hash_equals($validKey, $validated['api_key'])) {
             return response()->json(['message' => 'API key invalida'], 401);
         }
@@ -42,7 +42,7 @@ class CarrierApiController extends Controller
         ]);
     }
 
-    public function shipments(Request $request)
+    public function shipments(Request $request): \Illuminate\Http\JsonResponse
     {
         $courierId = $request->input('courier_id');
         if (! $courierId) {
@@ -59,7 +59,7 @@ class CarrierApiController extends Controller
         return response()->json($shipments);
     }
 
-    public function updateStatus(Request $request, Shipment $shipment)
+    public function updateStatus(Request $request, Shipment $shipment): \Illuminate\Http\JsonResponse
     {
         $courierId = $request->input('courier_id');
         if ($shipment->courier_id !== (int) $courierId) {
@@ -98,7 +98,7 @@ class CarrierApiController extends Controller
         ]);
     }
 
-    public function scan(Request $request)
+    public function scan(Request $request): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
             'guide_number' => ['required', 'string', 'max:50'],

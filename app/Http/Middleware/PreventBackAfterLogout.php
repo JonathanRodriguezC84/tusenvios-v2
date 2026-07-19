@@ -12,10 +12,14 @@ class PreventBackAfterLogout
     {
         $response = $next($request);
 
-        return $response->withHeaders([
-            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-            'Pragma' => 'no-cache',
-            'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
-        ]);
+        if (method_exists($response, 'withHeaders')) {
+            $response->withHeaders([
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma' => 'no-cache',
+                'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
+            ]);
+        }
+
+        return $response;
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DailyTaskController extends Controller
 {
-    public function __invoke()
+    public function __invoke(): \Illuminate\View\View
     {
         $user = Auth::user();
         $tenant = $user->tenant ?: $user->affiliatedCompany?->tenant;

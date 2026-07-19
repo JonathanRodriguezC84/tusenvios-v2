@@ -8,9 +8,9 @@ class ShippingRateService
 {
     protected array $carrierRates = [];
 
-    public function __construct()
+    public function __construct(?array $carrierRates = null)
     {
-        $this->carrierRates = config('shipping.carriers', []);
+        $this->carrierRates = $carrierRates ?? config('shipping.carriers', []);
     }
 
     public function calculateRate(string $origin, string $destination, float $weightKg = 0, int $pieces = 1, ?string $serviceType = null): array

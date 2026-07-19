@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
 use App\Services\WhatsAppService;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class WhatsAppServiceTest extends TestCase
 {
@@ -12,7 +12,7 @@ class WhatsAppServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new WhatsAppService();
+        $this->service = new WhatsAppService(['enabled' => false]);
     }
 
     public function test_is_disabled_without_config(): void

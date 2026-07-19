@@ -7,7 +7,7 @@ use App\Models\Shipment;
 
 class TrackingApiController extends Controller
 {
-    public function show(string $guideNumber)
+    public function show(string $guideNumber): \Illuminate\Http\JsonResponse
     {
         $guideNumber = strtoupper(trim($guideNumber));
 

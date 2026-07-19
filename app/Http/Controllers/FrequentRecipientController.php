@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 
 class FrequentRecipientController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): \Illuminate\View\View|\Illuminate\Http\JsonResponse
     {
         $user = Auth::user();
         $filters = $request->validate([
@@ -49,7 +49,7 @@ class FrequentRecipientController extends Controller
         return view('recipients.index', compact('recipients', 'filters', 'summary'));
     }
 
-    public function search(Request $request)
+    public function search(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = Auth::user();
         $q = $request->get('q', '');
@@ -75,7 +75,7 @@ class FrequentRecipientController extends Controller
         return response()->json($recipients->map(fn ($r) => $this->recipientPayload($r)));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = Auth::user();
 
@@ -101,7 +101,7 @@ class FrequentRecipientController extends Controller
         return response()->json($recipient, 201);
     }
 
-    public function destroy(FrequentRecipient $frequentRecipient)
+    public function destroy(FrequentRecipient $frequentRecipient): \Illuminate\Http\JsonResponse
     {
         $user = Auth::user();
 

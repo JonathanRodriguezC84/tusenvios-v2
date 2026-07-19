@@ -12,12 +12,12 @@ class WhatsAppService
     protected string $phoneNumberId;
     protected bool $enabled;
 
-    public function __construct()
+    public function __construct(?array $whatsappConfig = null)
     {
-        $this->apiUrl = config('services.whatsapp.api_url', 'https://graph.facebook.com/v18.0');
-        $this->token = config('services.whatsapp.token', '');
-        $this->phoneNumberId = config('services.whatsapp.phone_number_id', '');
-        $this->enabled = config('services.whatsapp.enabled', false);
+        $this->apiUrl = $whatsappConfig['api_url'] ?? config('services.whatsapp.api_url', 'https://graph.facebook.com/v18.0');
+        $this->token = $whatsappConfig['token'] ?? config('services.whatsapp.token', '');
+        $this->phoneNumberId = $whatsappConfig['phone_number_id'] ?? config('services.whatsapp.phone_number_id', '');
+        $this->enabled = $whatsappConfig['enabled'] ?? config('services.whatsapp.enabled', false);
     }
 
     public function isEnabled(): bool

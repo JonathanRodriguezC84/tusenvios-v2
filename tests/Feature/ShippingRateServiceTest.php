@@ -1,18 +1,65 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
+use App\Models\DeliveryZone;
 use App\Services\ShippingRateService;
-use PHPUnit\Framework\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ShippingRateServiceTest extends TestCase
 {
+    use RefreshDatabase;
+
     private ShippingRateService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ShippingRateService();
+        DeliveryZone::create([
+            'locality' => 'Medellin',
+            'city' => 'Medellin',
+            'zone' => 'urban',
+            'name' => 'Urbano',
+            'status' => 'active',
+        ]);
+        DeliveryZone::create([
+            'locality' => 'Cali',
+            'city' => 'Cali',
+            'zone' => 'urban',
+            'name' => 'Urbano',
+            'status' => 'active',
+        ]);
+        DeliveryZone::create([
+            'locality' => 'Barranquilla',
+            'city' => 'Barranquilla',
+            'zone' => 'urban',
+            'name' => 'Urbano',
+            'status' => 'active',
+        ]);
+        $this->service = new ShippingRateService($this->mockCarrierRates());
+    }
+
+    private function mockCarrierRates(): array
+    {
+        return [
+            'carriers' => [
+                'coordi_express' => [
+                    'base_rate' => 8000,
+                    'rate_per_kg' => 1500,
+                    'express_surcharge' => 0.30,
+                    'estimated_days' => ['estandar' => 3, 'expreso' => 1],
+                    'free_shipping_threshold' => 80000,
+                ],
+                'tcc' => [
+                    'base_rate' => 7500,
+                    'rate_per_kg' => 1200,
+                    'express_surcharge' => 0.35,
+                    'estimated_days' => ['estandar' => 4, 'expreso' => 2],
+                    'free_shipping_threshold' => 70000,
+                ],
+            ],
+        ];
     }
 
     public function test_calculate_rate_returns_structure(): void

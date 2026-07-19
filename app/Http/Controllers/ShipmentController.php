@@ -26,7 +26,7 @@ use App\Jobs\SendWhatsAppNotification;
 
 class ShipmentController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): \Illuminate\View\View
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
@@ -53,7 +53,7 @@ class ShipmentController extends Controller
         return view('shipments.index', compact('shipments', 'filters', 'shipmentSummary', 'couriers', 'deliveryZones'));
     }
 
-    public function export(Request $request)
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
@@ -124,7 +124,7 @@ class ShipmentController extends Controller
         ]);
     }
 
-    public function exportPdf(Request $request)
+    public function exportPdf(Request $request): \Illuminate\Http\Response
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
@@ -149,24 +149,6 @@ class ShipmentController extends Controller
         return $pdf->download('guias-tus-envios-'.now()->format('Y-m-d').'.pdf');
     }
 
-    public function report(Request $request)
-    {
-        $filters = $request->validate([
-            'search' => ['nullable', 'string', 'max:120'],
-            'status' => ['nullable', 'string', 'max:50'],
-            'settlement_status' => ['nullable', 'in:pending,closed,paid'],
-            'zone' => ['nullable', 'string', 'max:120'],
-            'delivery_zone_id' => ['nullable', 'integer', 'exists:delivery_zones,id'],
-            'date' => ['nullable', 'date'],
-        ]);
-
-        $shipments = $this->filteredShipments($filters)
-            ->latest()
-            ->limit(500)
-            ->get();
-
-        return view('shipments.report', compact('shipments', 'filters'));
-    }
 
     private function filteredShipments(array $filters)
     {
@@ -339,7 +321,7 @@ class ShipmentController extends Controller
             ->all();
     }
 
-    public function create(Request $request)
+    public function create(Request $request): \Illuminate\View\View
     {
         $this->authorize('create', Shipment::class);
 
@@ -387,7 +369,7 @@ class ShipmentController extends Controller
         return view('shipments.create', compact('companies', 'departments', 'deliveryZones', 'deliveryZoneSuggestions', 'companyTerms', 'senderPresets', 'companySenderPresetKeys', 'quickProducts', 'inventoryProducts', 'useInventory', 'planCode', 'prefillRecipient', 'prefillQuickProduct'));
     }
 
-    public function store(StoreShipmentRequest $request)
+    public function store(StoreShipmentRequest $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
 
@@ -635,7 +617,7 @@ return $this->inventoryQueryForUser()
             ->all();
     }
 
-    private function reserveInventoryForShipment(Shipment $shipment, array $inventoryItems): void
+    public function reserveInventoryForShipment(Shipment $shipment, array $inventoryItems): void
     {
         if (empty($inventoryItems)) {
             return;
@@ -697,7 +679,7 @@ return $this->inventoryQueryForUser()
         }
     }
 
-    private function restoreInventoryForShipment(Shipment $shipment): void
+    public function restoreInventoryForShipment(Shipment $shipment): void
     {
         if ($shipment->inventoryMovements()->where('type', 'restock')->exists()) {
             return;
@@ -894,9 +876,9 @@ private function normalizeShipmentText(array $validated): array
 
         return $validated;
     }
-    public function show(Request $request, Shipment $shipment)
+    public function show(Request $request, Shipment $shipment): \Illuminate\View\View
     {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
+        $this->authorize('view', $shipment);
 
         $shipment->load([
             'affiliatedCompany',
@@ -922,7 +904,7 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
         return view('shipments.show', compact('shipment', 'couriers', 'nextStatuses', 'printFormats', 'isDailyMode', 'dailyPendingCount'));
     }
 
-    public function edit(Shipment $shipment)
+    public function edit(Shipment $shipment): \Illuminate\View\View
     {
         $this->authorize('update', $shipment);
 
@@ -957,7 +939,7 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
         return view('shipments.edit', compact('shipment', 'companies', 'deliveryZones', 'deliveryZoneSuggestions', 'senderPresets', 'companySenderPresetKeys', 'usesInventory'));
     }
 
-    public function update(UpdateShipmentRequest $request, Shipment $shipment)
+    public function update(UpdateShipmentRequest $request, Shipment $shipment): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $shipment);
 
@@ -1001,261 +983,8 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
             ->with('status', 'Guia actualizada correctamente.');
     }
 
-    public function print(Request $request, Shipment $shipment)
-    {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
 
-        $shipment->load(['affiliatedCompany', 'tenant', 'deliveryZone']);
-
-        if ($shipment->status === 'created') {
-            $shipment->update(['status' => 'printed']);
-
-            ShipmentEvent::query()->create([
-                'shipment_id' => $shipment->id,
-                'user_id' => Auth::id(),
-                'status' => 'printed',
-                'location' => 'Sistema',
-                'notes' => 'Guia impresa.',
-            ]);
-
-            Audit::log('shipment.printed', $shipment, "Guia {$shipment->guide_number} impresa.");
-        }
-
-$printFormats = $this->printFormats();
-        $defaultFormat = $shipment->affiliatedCompany?->default_print_format
-            ?? $shipment->tenant?->default_print_format
-            ?? '100x150';
-        if (!array_key_exists($defaultFormat, $printFormats)) {
-            $defaultFormat = '100x150';
-        }
-        $selectedPrintFormat = array_key_exists($request->query('format'), $printFormats)
-            ? $request->query('format')
-            : $defaultFormat;
-        $printFormat = $printFormats[$selectedPrintFormat];
-
-        return view('shipments.print', compact('shipment', 'printFormats', 'selectedPrintFormat', 'printFormat'));
-    }
-
-    public function printPdf(Request $request, Shipment $shipment)
-    {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
-        $shipment->load(['affiliatedCompany', 'tenant', 'deliveryZone']);
-
-$printFormats = $this->printFormats();
-        $defaultFormat = $shipment->affiliatedCompany?->default_print_format
-            ?? $shipment->tenant?->default_print_format
-            ?? '100x150';
-        if (!array_key_exists($defaultFormat, $printFormats)) {
-            $defaultFormat = '100x150';
-        }
-        $selectedPrintFormat = array_key_exists($request->query('format'), $printFormats)
-            ? $request->query('format')
-            : $defaultFormat;
-        $printFormat = $printFormats[$selectedPrintFormat];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('shipments.print-pdf', compact('shipment', 'printFormat', 'selectedPrintFormat'));
-
-        if (in_array($selectedPrintFormat, ['letter', 'a4'], true)) {
-            $pdf->setPaper($selectedPrintFormat === 'a4' ? 'a4' : 'letter');
-        }
-
-        return $pdf->download('guia-'.$shipment->guide_number.'.pdf');
-    }
-    public function assignCourier(Request $request, Shipment $shipment)
-    {
-        abort_unless($shipment->isVisibleTo(Auth::user()), 403);
-        abort_unless(in_array(Auth::user()->role, ['superadmin', 'tenant_admin', 'warehouse'], true), 403);
-
-        $validated = $request->validate([
-            'courier_id' => ['nullable', 'exists:users,id'],
-        ]);
-
-        $courier = null;
-
-        if ($validated['courier_id']) {
-            $courier = User::query()
-                ->where('role', 'courier')
-                ->where('status', 'active')
-                ->findOrFail($validated['courier_id']);
-        }
-
-        if ($courier && ! $shipment->canTransitionTo('assigned')) {
-            return back()
-                ->withErrors(['courier_id' => 'La guia debe estar en clasificacion antes de asignar mensajero.']);
-        }
-
-        $shipment->update([
-            'courier_id' => $courier?->id,
-            'status' => $courier ? 'assigned' : $shipment->status,
-        ]);
-
-        ShipmentEvent::query()->create([
-            'shipment_id' => $shipment->id,
-            'user_id' => Auth::id(),
-            'status' => $courier ? 'assigned' : 'courier_unassigned',
-            'location' => 'Operacion',
-            'notes' => $courier ? "Asignada al mensajero {$courier->name}." : 'Mensajero retirado de la guia.',
-        ]);
-
-        Audit::log(
-            $courier ? 'shipment.courier_assigned' : 'shipment.courier_unassigned',
-            $shipment,
-            $courier ? "Guia {$shipment->guide_number} asignada a {$courier->name}." : "Mensajero retirado de guia {$shipment->guide_number}."
-        );
-
-        return redirect()
-            ->route('shipments.show', $shipment)
-            ->with('status', 'Mensajero actualizado correctamente.');
-    }
-
-    public function bulkAssignCourier(Request $request)
-    {
-        abort_unless(in_array(Auth::user()->role, ['superadmin', 'tenant_admin', 'warehouse'], true), 403);
-
-        $validated = $request->validate([
-            'shipment_ids' => ['required', 'array', 'min:1'],
-            'shipment_ids.*' => ['integer', 'exists:shipments,id'],
-            'courier_id' => ['required', 'exists:users,id'],
-        ]);
-
-        $courier = User::query()
-            ->where('role', 'courier')
-            ->where('status', 'active')
-            ->findOrFail($validated['courier_id']);
-
-        $shipments = Shipment::query()
-            ->visibleTo(Auth::user())
-            ->whereIn('id', $validated['shipment_ids'])
-            ->get();
-
-        $assigned = 0;
-        $skipped = 0;
-
-        foreach ($shipments as $shipment) {
-            if (! $shipment->canTransitionTo('assigned')) {
-                $skipped++;
-                continue;
-            }
-
-            $shipment->update([
-                'courier_id' => $courier->id,
-                'status' => 'assigned',
-            ]);
-
-            ShipmentEvent::query()->create([
-                'shipment_id' => $shipment->id,
-                'user_id' => Auth::id(),
-                'status' => 'assigned',
-                'location' => 'Operacion',
-                'notes' => "Asignacion masiva al mensajero {$courier->name}.",
-            ]);
-
-            Audit::log('shipment.bulk_courier_assigned', $shipment, "Guia {$shipment->guide_number} asignada masivamente a {$courier->name}.");
-
-            $assigned++;
-        }
-
-        $message = "{$assigned} guia(s) asignada(s) a {$courier->name}.";
-
-        if ($skipped) {
-            $message .= " {$skipped} guia(s) omitida(s) por estado no permitido.";
-        }
-
-        return redirect()
-            ->route('shipments.index', $request->query())
-            ->with('status', $message);
-    }
-
-    public function bulkUpdateStatus(BulkUpdateShipmentStatusRequest $request)
-    {
-        $validated = $request->validated();
-
-        $shipments = Shipment::query()
-            ->visibleTo(Auth::user())
-            ->whereIn('id', $validated['shipment_ids'])
-            ->get();
-
-        $updated = 0;
-        $skipped = 0;
-
-        foreach ($shipments as $shipment) {
-            if (! $shipment->canTransitionTo($validated['status'])) {
-                $skipped++;
-                continue;
-            }
-
-            $shipment->update(['status' => $validated['status']]);
-
-            ShipmentEvent::query()->create([
-                'shipment_id' => $shipment->id,
-                'user_id' => Auth::id(),
-                'status' => $validated['status'],
-                'location' => 'Operacion',
-                'notes' => 'Cambio de estado masivo.',
-            ]);
-
-            Audit::log('shipment.bulk_status_updated', $shipment, "Guia {$shipment->guide_number} actualizada masivamente a {$validated['status']}.");
-
-            $updated++;
-        }
-
-        $message = "{$updated} guia(s) actualizada(s).";
-
-        if ($skipped) {
-            $message .= " {$skipped} guia(s) omitida(s) por estado no permitido.";
-        }
-
-        return redirect()
-            ->route('shipments.index', $request->query())
-            ->with('status', $message);
-    }
-
-    public function bulkPrint(Request $request)
-    {
-        $validated = $request->validate([
-            'shipment_ids' => ['required', 'array', 'min:1'],
-            'shipment_ids.*' => ['integer', 'exists:shipments,id'],
-            'format' => ['nullable', 'string'],
-        ]);
-
-        $shipments = Shipment::query()
-            ->with(['affiliatedCompany', 'tenant', 'deliveryZone'])
-            ->visibleTo(Auth::user())
-            ->whereIn('id', $validated['shipment_ids'])
-            ->get();
-
-        foreach ($shipments as $shipment) {
-            if ($shipment->status === 'created') {
-                $shipment->update(['status' => 'printed']);
-
-                ShipmentEvent::query()->create([
-                    'shipment_id' => $shipment->id,
-                    'user_id' => Auth::id(),
-                    'status' => 'printed',
-                    'location' => 'Sistema',
-                    'notes' => 'Guia impresa en lote.',
-                ]);
-
-                Audit::log('shipment.printed', $shipment, "Guia {$shipment->guide_number} impresa en lote.");
-            }
-        }
-
-$printFormats = $this->printFormats();
-        $defaultFormat = Auth::user()->affiliatedCompany?->default_print_format
-            ?? Auth::user()->tenant?->default_print_format
-            ?? '100x150';
-        if (!array_key_exists($defaultFormat, $printFormats)) {
-            $defaultFormat = '100x150';
-        }
-        $selectedPrintFormat = array_key_exists($validated['format'] ?? null, $printFormats)
-            ? $validated['format']
-            : $defaultFormat;
-        $printFormat = $printFormats[$selectedPrintFormat];
-
-        return view('shipments.bulk-print', compact('shipments', 'printFormats', 'selectedPrintFormat', 'printFormat'));
-    }
-
-private function printFormats(): array
+    private function printFormats(): array
     {
         return [
             '100x150' => [
@@ -1306,154 +1035,12 @@ private function printFormats(): array
                 'page' => 'letter',
                 'width' => '8.5in',
                 'height' => '11in',
-                'scale' => '1.73',
-                'padding' => '10mm',
-                'help' => 'Impresora normal de oficina, 1 guia por hoja.',
-            ],
-            'letter' => [
-                'label' => 'Carta (1 por hoja)',
-                'short_label' => 'Carta',
-                'page' => 'letter',
-                'width' => '8.5in',
-                'height' => '11in',
                 'scale' => '1.35',
                 'padding' => '10mm',
                 'help' => 'Impresora normal de oficina, 1 guia por hoja.',
                 'multi' => false,
             ],
         ];
-    }
-    public function updateStatus(UpdateShipmentStatusRequest $request, Shipment $shipment)
-    {
-        $validated = $request->validated();
-
-        if (! $shipment->canTransitionTo($validated['status'])) {
-            return back()
-                ->withErrors(['status' => 'Ese cambio de estado no esta permitido para esta guia.']);
-        }
-
-        $shipment->update([
-            'status' => $validated['status'],
-        ]);
-
-        ShipmentEvent::query()->create([
-            'shipment_id' => $shipment->id,
-            'user_id' => Auth::id(),
-            'status' => $validated['status'],
-            'location' => 'Operacion',
-            'notes' => $validated['notes'] ?? 'Estado actualizado desde el panel.',
-        ]);
-
-        Audit::log('shipment.status_updated', $shipment, "Guia {$shipment->guide_number} cambio a {$validated['status']}.");
-
-        $whatsappEvent = match ($validated['status']) {
-            'in_transit', 'in_transit' => 'in_transit',
-            'delivered' => 'delivered',
-            default => null,
-        };
-        if ($whatsappEvent) {
-            SendWhatsAppNotification::dispatch($shipment, $whatsappEvent);
-        }
-
-        // Webhook
-        $tenant = $shipment->tenant;
-        if ($tenant && $tenant->webhook_url) {
-            $events = $tenant->webhook_events ?? ['delivered', 'failed_delivery', 'cancelled'];
-            if (in_array($validated['status'], $events)) {
-                \App\Jobs\DispatchWebhook::dispatch($tenant->webhook_url, $shipment, $validated['status']);
-            }
-        }
-
-        if ($request->boolean('daily_mode')) {
-            $nextShipment = $this->nextDailyPendingShipment(Auth::user(), $shipment->id);
-
-            if ($nextShipment) {
-                return redirect()
-                    ->route('shipments.show', ['shipment' => $nextShipment, 'daily' => 1])
-                    ->with('status', 'Estado actualizado. Continuamos con la siguiente guia pendiente.');
-            }
-
-            return redirect()
-                ->route('daily-tasks.index')
-                ->with('status', 'Estado actualizado. Ya no quedan guias pendientes en tu jornada.');
-        }
-
-        return back()->with('status', 'Estado actualizado correctamente.');
-    }
-
-    private function dailyPendingShipmentQuery(User $user)
-    {
-        $priorityStatuses = [
-            'failed_delivery',
-            'rescheduled',
-            'return_pending',
-            'created',
-            'printed',
-            'in_warehouse',
-            'in_sorting',
-            'assigned',
-            'on_route',
-        ];
-
-        return Shipment::query()
-            ->visibleTo($user)
-            ->whereIn('status', $priorityStatuses);
-    }
-
-    private function nextDailyPendingShipment(User $user, ?int $excludeShipmentId = null): ?Shipment
-    {
-        $priorityGroups = [
-            ['failed_delivery', 'rescheduled', 'return_pending'],
-            ['created'],
-            ['printed', 'in_warehouse', 'in_sorting', 'assigned'],
-            ['on_route'],
-            ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled', 'return_pending'],
-        ];
-
-        foreach ($priorityGroups as $index => $statuses) {
-            $shipment = Shipment::query()
-                ->visibleTo($user)
-                ->whereIn('status', $statuses)
-                ->when($excludeShipmentId, fn ($query) => $query->whereKeyNot($excludeShipmentId))
-                ->when($index === 4, fn ($query) => $query->where('updated_at', '<=', now()->subDay()))
-                ->latest('updated_at')
-                ->first();
-
-            if ($shipment) {
-                return $shipment;
-            }
-        }
-
-        return null;
-    }
-
-    public function cancel(Request $request, Shipment $shipment)
-    {
-        $this->authorize('cancel', $shipment);
-
-        $validated = $request->validate([
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        DB::transaction(function () use ($shipment, $validated) {
-            $shipment->update(['status' => 'cancelled']);
-
-            $this->restoreInventoryForShipment($shipment);
-
-            ShipmentEvent::query()->create([
-                'shipment_id' => $shipment->id,
-                'user_id' => Auth::id(),
-                'status' => 'cancelled',
-                'location' => 'Sistema',
-                'notes' => $validated['notes'] ?: 'Guia cancelada antes de impresion.',
-            ]);
-
-            Audit::log('shipment.cancelled', $shipment, "Guia {$shipment->guide_number} cancelada.");
-        });
-
-        return redirect()
-            ->route('shipments.show', $shipment)
-            ->with('status', 'Guia cancelada correctamente.');
     }
 }
 

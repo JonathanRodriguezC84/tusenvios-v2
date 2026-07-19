@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 
 class DeployController extends Controller
 {
-    public function __invoke(Request $request, string $key)
+    public function __invoke(Request $request, string $key): \Illuminate\Http\Response
     {
         $expectedKey = config('app.deploy_key');
 

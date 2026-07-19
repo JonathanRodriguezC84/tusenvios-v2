@@ -44,13 +44,14 @@ class FrequentRecipientTest extends TestCase
 
         $response = $this->actingAs($this->user)->get(route('recipients.search', ['q' => 'Juan']));
         $response->assertOk();
-        $response->assertJsonFragment(['name' => 'Juan Perez']);
+        $this->assertContains('Juan Perez', array_column($response->json(), 'name'));
     }
 
     public function test_recipient_search_requires_q_parameter(): void
     {
         $response = $this->actingAs($this->user)->get(route('recipients.search'));
-        $response->assertRedirect();
+        $response->assertOk();
+        $response->assertJson([]);
     }
 
     public function test_recipient_destroy(): void
@@ -64,7 +65,8 @@ class FrequentRecipientTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->user)->delete(route('recipients.destroy', $recipient));
-        $response->assertRedirect();
-        $this->assertNull($recipient->fresh());
+        $response->assertOk();
+        $response->assertJson(['ok' => true]);
+        $this->assertModelMissing($recipient);
     }
 }

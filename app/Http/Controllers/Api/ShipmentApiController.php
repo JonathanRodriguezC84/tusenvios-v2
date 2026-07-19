@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class ShipmentApiController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request): \Illuminate\Http\JsonResponse
     {
         $tenant = $request->__tenant;
 
@@ -79,7 +79,7 @@ class ShipmentApiController extends Controller
         ], 201);
     }
 
-    public function index(Request $request)
+    public function index(Request $request): \Illuminate\Http\JsonResponse
     {
         $tenant = $request->__tenant;
 
@@ -92,7 +92,7 @@ class ShipmentApiController extends Controller
         return response()->json($shipments);
     }
 
-    public function show(Request $request, Shipment $shipment)
+    public function show(Request $request, Shipment $shipment): \Illuminate\Http\JsonResponse
     {
         $tenant = $request->__tenant;
 

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    public function __invoke()
+    public function __invoke(): \Illuminate\View\View
     {
         $user = Auth::user();
 

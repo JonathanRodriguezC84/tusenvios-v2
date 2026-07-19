@@ -7,12 +7,12 @@ use Illuminate\Http\Request;
 
 class TrackingController extends Controller
 {
-    public function index()
+    public function index(): \Illuminate\View\View
     {
         return view('tracking.index');
     }
 
-    public function search(Request $request)
+    public function search(Request $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:80'],
@@ -29,7 +29,7 @@ class TrackingController extends Controller
         return redirect()->route('tracking.show', $shipment->guide_number);
     }
 
-    public function show(string $guideNumber)
+    public function show(string $guideNumber): \Illuminate\View\View
     {
         $shipment = $this->findShipment($guideNumber);
 

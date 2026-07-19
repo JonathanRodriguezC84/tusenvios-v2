@@ -4,18 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Services\ShippingRateService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ShippingRateController extends Controller
 {
-    public function index()
+    public function index(): \Illuminate\View\View
     {
-        abort_unless(Auth::user()->isSuperAdmin(), 403);
+        $this->authorize('access-admin');
 
         return view('shipping-rates.index');
     }
 
-    public function calculate(Request $request, ShippingRateService $service)
+    public function calculate(Request $request, ShippingRateService $service): \Illuminate\View\View
     {
         $validated = $request->validate([
             'origin' => 'nullable|string|max:100',

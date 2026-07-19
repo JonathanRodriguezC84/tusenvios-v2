@@ -4,22 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeInventoryAccess();
+        $this->authorize('use-inventory');
 
         $categories = $this->queryForOwner()->orderBy('name')->get();
 
         return response()->json($categories);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeInventoryAccess();
+        $this->authorize('use-inventory');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:80'],
@@ -43,9 +42,9 @@ class CategoryController extends Controller
         return response()->json($category, 201);
     }
 
-    public function update(Request $request, Category $category)
+    public function update(Request $request, Category $category): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeInventoryAccess();
+        $this->authorize('use-inventory');
 
         $this->ensureOwner($category);
 
@@ -67,9 +66,9 @@ class CategoryController extends Controller
         return response()->json($category);
     }
 
-    public function destroy(Category $category)
+    public function destroy(Category $category): \Illuminate\Http\JsonResponse
     {
-        $this->authorizeInventoryAccess();
+        $this->authorize('use-inventory');
 
         $this->ensureOwner($category);
 
@@ -78,14 +77,9 @@ class CategoryController extends Controller
         return response()->json(['message' => 'Categoria eliminada.']);
     }
 
-    private function authorizeInventoryAccess(): void
-    {
-        abort_unless(Auth::user()->canUseInventory(), 403);
-    }
-
     private function ownerKeys(): array
     {
-        $user = Auth::user();
+        $user = auth()->user();
 
         if ($user->role === 'affiliate' && $user->affiliated_company_id) {
             return [

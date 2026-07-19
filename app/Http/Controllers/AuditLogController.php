@@ -5,13 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class AuditLogController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): \Illuminate\View\View
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::user()->isTenantAdmin(), 403);
+        $this->authorize('view-audit-logs');
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
@@ -28,13 +27,13 @@ class AuditLogController extends Controller
 
         $actions = AuditLog::query()
             ->select('action')
-            ->when(! Auth::user()->isSuperAdmin(), fn ($query) => $query->whereHas('user', fn ($q) => $q->where('tenant_id', Auth::user()->tenant_id)))
+            ->when(! auth()->user()->isSuperAdmin(), fn ($query) => $query->whereHas('user', fn ($q) => $q->where('tenant_id', auth()->user()->tenant_id)))
             ->distinct()
             ->orderBy('action')
             ->pluck('action');
 
         $users = User::query()
-            ->when(! Auth::user()->isSuperAdmin(), fn ($q) => $q->where('tenant_id', Auth::user()->tenant_id))
+            ->when(! auth()->user()->isSuperAdmin(), fn ($q) => $q->where('tenant_id', auth()->user()->tenant_id))
             ->whereIn('id', AuditLog::query()->select('user_id')->whereNotNull('user_id'))
             ->orderBy('name')
             ->get();
@@ -42,9 +41,9 @@ class AuditLogController extends Controller
         return view('audit-logs.index', compact('logs', 'filters', 'actions', 'users'));
     }
 
-    public function export(Request $request)
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::user()->isTenantAdmin(), 403);
+        $this->authorize('view-audit-logs');
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
@@ -85,7 +84,7 @@ class AuditLogController extends Controller
     {
         return AuditLog::query()
             ->with('user')
-            ->when(! Auth::user()->isSuperAdmin(), fn ($query) => $query->whereHas('user', fn ($q) => $q->where('tenant_id', Auth::user()->tenant_id)))
+            ->when(! auth()->user()->isSuperAdmin(), fn ($query) => $query->whereHas('user', fn ($q) => $q->where('tenant_id', auth()->user()->tenant_id)))
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('description', 'like', "%{$search}%"))
             ->when($filters['action'] ?? null, fn ($query, $action) => $query->where('action', $action))
             ->when($filters['user_id'] ?? null, fn ($query, $userId) => $query->where('user_id', $userId))

@@ -7,14 +7,13 @@ use App\Models\InventoryProduct;
 use App\Models\Tenant;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class InventoryReportController extends Controller
 {
-    public function sales(Request $request)
+    public function sales(Request $request): \Illuminate\View\View
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
@@ -30,9 +29,9 @@ class InventoryReportController extends Controller
         return view('inventory.sales-report', compact('rows', 'totals', 'filters', 'categories'));
     }
 
-    public function exportSales(Request $request)
+    public function exportSales(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
@@ -69,9 +68,9 @@ class InventoryReportController extends Controller
         }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function exportSalesPdf(Request $request)
+    public function exportSalesPdf(Request $request): \Illuminate\Http\Response
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
@@ -88,9 +87,9 @@ class InventoryReportController extends Controller
         return $pdf->download('ventas-productos-'.now()->format('Y-m-d').'.pdf');
     }
 
-    public function rotation(Request $request)
+    public function rotation(Request $request): \Illuminate\View\View
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $this->validateRotationFilters($request);
         $days = (int) ($filters['days'] ?? 30);
@@ -101,9 +100,9 @@ class InventoryReportController extends Controller
         return view('inventory.rotation-report', compact('rows', 'totals', 'filters', 'categories', 'days'));
     }
 
-    public function exportRotation(Request $request)
+    public function exportRotation(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $this->validateRotationFilters($request);
         $days = (int) ($filters['days'] ?? 30);
@@ -140,9 +139,9 @@ class InventoryReportController extends Controller
         }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function exportRotationPdf(Request $request)
+    public function exportRotationPdf(Request $request): \Illuminate\Http\Response
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $this->validateRotationFilters($request);
         $days = (int) ($filters['days'] ?? 30);
@@ -153,9 +152,9 @@ class InventoryReportController extends Controller
         return $pdf->download('rotacion-inventario-'.$days.'-dias-'.now()->format('Y-m-d').'.pdf');
     }
 
-    public function categories(Request $request)
+    public function categories(Request $request): \Illuminate\View\View
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $this->validateCategoryFilters($request);
         ['rows' => $rows, 'totals' => $totals] = $this->categoryRows($filters);
@@ -163,9 +162,9 @@ class InventoryReportController extends Controller
         return view('inventory.category-report', compact('rows', 'totals', 'filters'));
     }
 
-    public function exportCategories(Request $request)
+    public function exportCategories(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $this->validateCategoryFilters($request);
         ['rows' => $rows] = $this->categoryRows($filters);
@@ -196,9 +195,9 @@ class InventoryReportController extends Controller
         }, $fileName, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
-    public function exportCategoriesPdf(Request $request)
+    public function exportCategoriesPdf(Request $request): \Illuminate\Http\Response
     {
-        abort_unless(Auth::user()->canUseInventory(), 403);
+        $this->authorize('use-inventory');
 
         $filters = $this->validateCategoryFilters($request);
         ['rows' => $rows, 'totals' => $totals] = $this->categoryRows($filters);
@@ -214,7 +213,7 @@ class InventoryReportController extends Controller
         $uniqueShipmentIds = [];
 
         Shipment::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo(auth()->user())
             ->whereNotNull('inventory_snapshot')
             ->where('status', '!=', 'cancelled')
             ->when($filters['date_from'] ?? null, fn ($query, $date) => $query->whereDate('created_at', '>=', $date))
@@ -466,7 +465,7 @@ class InventoryReportController extends Controller
         $salesByKey = [];
 
         Shipment::query()
-            ->visibleTo(Auth::user())
+            ->visibleTo(auth()->user())
             ->whereNotNull('inventory_snapshot')
             ->where('status', '!=', 'cancelled')
             ->where('created_at', '>=', now()->subDays($days)->startOfDay())
@@ -546,7 +545,7 @@ class InventoryReportController extends Controller
 
     private function ownerKeys(): array
     {
-        $user = Auth::user();
+        $user = auth()->user();
 
         if ($user->role === 'affiliate' && $user->affiliated_company_id) {
             return [
