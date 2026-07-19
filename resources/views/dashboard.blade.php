@@ -7,6 +7,7 @@
         'amber' => ['panel' => 'border-amber-200 bg-amber-50', 'badge' => 'bg-amber-100 text-amber-800', 'text' => 'text-amber-800'],
         'blue' => ['panel' => 'border-blue-200 bg-blue-50', 'badge' => 'bg-blue-100 text-blue-800', 'text' => 'text-blue-800'],
     ][$moneySummary['tone']] ?? ['panel' => 'border-blue-200 bg-blue-50', 'badge' => 'bg-blue-100 text-blue-800', 'text' => 'text-blue-800'];
+    $catColors = [1 => '#2a78d6', 2 => '#1baf7a', 3 => '#eda100', 4 => '#008300', 5 => '#4a3aa7', 6 => '#e34948', 7 => '#e87ba4', 8 => '#eb6834'];
 @endphp
 
 <x-app-layout>
@@ -215,7 +216,7 @@
                             @continue($row['count'] <= 0)
                             <div class="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2.5 py-1.5">
                                 <div class="flex min-w-0 items-center gap-2">
-                                    <span class="h-2 w-2 shrink-0 rounded-sm" style="background: var(--viz-cat-{{ $row['slot'] }})"></span>
+                                    <span class="h-2 w-2 shrink-0 rounded-sm" style="background: {{ $catColors[$row['slot']] ?? '#2a78d6' }}"></span>
                                     <p class="truncate text-xs font-semibold text-gray-700">{{ $row['label'] }}</p>
                                 </div>
                                 <span class="shrink-0 text-xs font-black text-gray-950">{{ $row['count'] }}</span>
@@ -238,30 +239,30 @@
             ])->all();
         @endphp
 
-        <section class="mt-3 flex flex-1 flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <section class="mt-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-2 text-sm font-black text-gray-950">
                     <span>Graficas y analisis</span>
                     <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-700">{{ $rangeLabel }}</span>
                 </div>
-                <div class="mt-3 grid flex-1 min-w-0 gap-3" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); grid-auto-rows: 1fr;">
+                <div class="mt-3 grid min-w-0 gap-3" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Guias creadas</h3>
-                        <div class="mt-2 flex-1">
-                            <x-charts.column-chart :data="$shipmentsByDay" color="var(--viz-cat-1)" format="number" />
+                        <div class="mt-2" style="min-height:130px">
+                            <x-charts.column-chart :data="$shipmentsByDay" color="#2a78d6" format="number" />
                         </div>
                     </div>
 
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Ingresos por entregas</h3>
-                        <div class="mt-2 flex-1">
-                            <x-charts.column-chart :data="$revenueByDay" color="var(--viz-cat-2)" format="currency" />
+                        <div class="mt-2" style="min-height:130px">
+                            <x-charts.column-chart :data="$revenueByDay" color="#1baf7a" format="currency" />
                         </div>
                     </div>
 
                     <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
                         <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Tendencia mensual</h3>
-                        <div class="mt-2 flex-1">
-                            <x-charts.column-chart :data="$monthlyTrend" color="var(--viz-primary)" format="number" />
+                        <div class="mt-2" style="min-height:130px">
+                            <x-charts.column-chart :data="$monthlyTrend" color="#0b0b0b" format="number" />
                         </div>
                     </div>
 
@@ -275,8 +276,8 @@
                                             <p class="truncate text-sm font-black text-gray-950" title="{{ $p['name'] }}">{{ $p['name'] }}</p>
                                             <span class="shrink-0 text-xs font-black text-gray-500">{{ $p['count'] }}</span>
                                         </div>
-                                        <div class="mt-1 h-2 rounded-full" style="background: var(--viz-grid)">
-                                            <div class="h-2 rounded-full" style="width: {{ $p['pct'] }}%; background: var(--viz-cat-1)"></div>
+                                        <div class="mt-1 h-2 rounded-full" style="background: #e1e0d9">
+                                            <div class="h-2 rounded-full" style="width: {{ $p['pct'] }}%; background: #2a78d6"></div>
                                         </div>
                                     </div>
                                 @endforeach

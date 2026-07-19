@@ -30,7 +30,7 @@
 @endphp
 
 <div class="flex items-stretch gap-2">
-    <div class="flex w-9 shrink-0 flex-col justify-between text-right text-[10px] font-bold text-[var(--viz-muted)]" style="height: {{ $plotHeight }}px">
+    <div class="flex w-9 shrink-0 flex-col justify-between text-right text-[10px] font-bold" style="height: {{ $plotHeight }}px; color: #898781">
         <span>{{ $formatValue($niceMax) }}</span>
         <span>{{ $formatValue($niceMax / 2) }}</span>
         <span>0</span>
@@ -38,9 +38,9 @@
 
     <div class="min-w-0 flex-1 overflow-x-auto pb-1">
         <div class="relative flex min-w-max items-end gap-2" style="height: {{ $plotHeight }}px">
-            <div class="pointer-events-none absolute inset-x-0 top-0 border-t border-[var(--viz-grid)]"></div>
-            <div class="pointer-events-none absolute inset-x-0 border-t border-[var(--viz-grid)]" style="top: 50%"></div>
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 border-t border-[var(--viz-axis)]"></div>
+            <div class="pointer-events-none absolute inset-x-0 top-0 border-t" style="border-color: #e1e0d9"></div>
+            <div class="pointer-events-none absolute inset-x-0 border-t" style="top: 50%; border-color: #e1e0d9"></div>
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 border-t" style="border-color: #c3c2b7"></div>
 
             @forelse ($data as $i => $d)
                 @php
@@ -49,23 +49,23 @@
                     $showLabel = $count <= 10 || $i % $thinStep === 0 || $isLast;
                 @endphp
                 <div class="group relative flex h-full w-7 shrink-0 flex-col items-center justify-end" tabindex="0">
-                    <div class="pointer-events-none absolute -top-7 z-10 hidden whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-bold shadow-lg group-hover:block group-focus:block" style="background: var(--viz-tooltip-bg); color: var(--viz-tooltip-text)">
+                    <div class="pointer-events-none absolute -top-7 z-10 hidden whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-bold shadow-lg group-hover:block group-focus:block" style="background: #0b0b0b; color: #ffffff">
                         {{ $d['sub'] ?? $d['label'] }}: {{ $formatValue($d['value']) }}
                     </div>
 
                     @if ($isLast)
-                        <span class="mb-1 text-[11px] font-black" style="color: var(--viz-primary)">{{ $formatValue($d['value']) }}</span>
+                        <span class="mb-1 text-[11px] font-black" style="color: #0b0b0b">{{ $formatValue($d['value']) }}</span>
                     @endif
 
                     <div class="w-6 rounded-t transition-opacity group-hover:opacity-75"
                          style="height: {{ $barHeight }}px; min-height: {{ $d['value'] > 0 ? '2px' : '0' }}; background: {{ $color }};"></div>
 
-                    <span class="mt-1 text-center text-[10px] font-bold leading-tight text-[var(--viz-muted)]">
+                    <span class="mt-1 text-center text-[10px] font-bold leading-tight" style="color: #898781">
                         {{ $showLabel ? $d['label'] : "\u{00A0}" }}
                     </span>
                 </div>
             @empty
-                <p class="text-sm font-semibold" style="color: var(--viz-muted)">Todavia no hay datos.</p>
+                <p class="text-sm font-semibold" style="color: #898781">Todavia no hay datos.</p>
             @endforelse
         </div>
     </div>
