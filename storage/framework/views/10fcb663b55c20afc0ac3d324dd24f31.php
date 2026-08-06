@@ -1,12 +1,6 @@
 <?php
     $rangeLabel = $dateRange['label'] ?? 'Periodo';
-    $deliveryTone = $deliveryRate['total'] === 0 ? '#9ca3af' : ($deliveryRate['rate'] >= 80 ? '#059669' : ($deliveryRate['rate'] >= 50 ? '#d97706' : '#dc2626'));
-    $deliveryRingValue = $deliveryRate['total'] === 0 ? 100 : $deliveryRate['rate'];
-    $moneyTone = [
-        'emerald' => ['panel' => 'border-emerald-200 bg-emerald-50', 'badge' => 'bg-emerald-100 text-emerald-800', 'text' => 'text-emerald-800'],
-        'amber' => ['panel' => 'border-amber-200 bg-amber-50', 'badge' => 'bg-amber-100 text-amber-800', 'text' => 'text-amber-800'],
-        'blue' => ['panel' => 'border-blue-200 bg-blue-50', 'badge' => 'bg-blue-100 text-blue-800', 'text' => 'text-blue-800'],
-    ][$moneySummary['tone']] ?? ['panel' => 'border-blue-200 bg-blue-50', 'badge' => 'bg-blue-100 text-blue-800', 'text' => 'text-blue-800'];
+    $catColors = [1 => '#2a78d6', 2 => '#1baf7a', 3 => '#eda100', 4 => '#008300', 5 => '#4a3aa7', 6 => '#e34948', 7 => '#e87ba4', 8 => '#eb6834'];
 ?>
 
 <?php if (isset($component)) { $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54 = $component; } ?>
@@ -22,19 +16,18 @@
      <?php $__env->slot('header', null, []); ?> 
         <?php if (isset($component)) { $__componentOriginalf8d4ea307ab1e58d4e472a43c8548d8e = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginalf8d4ea307ab1e58d4e472a43c8548d8e = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.page-header','data' => ['title' => 'Dashboard','description' => 'Los resultados de tu negocio, de un vistazo.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.page-header','data' => ['title' => 'Dashboard','description' => 'Tus envios de un vistazo.']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('page-header'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['title' => 'Dashboard','description' => 'Los resultados de tu negocio, de un vistazo.']); ?>
-             <?php $__env->slot('eyebrow', null, []); ?> <?php echo e(\Carbon\Carbon::now()->locale('es')->isoFormat('dddd D [de] MMMM [del] YYYY')); ?> <?php $__env->endSlot(); ?>
+<?php $component->withAttributes(['title' => 'Dashboard','description' => 'Tus envios de un vistazo.']); ?>
              <?php $__env->slot('actions', null, []); ?> 
                 <form method="GET" action="<?php echo e(route('dashboard')); ?>" class="flex flex-wrap items-center gap-2">
                     <div class="relative">
-                        <select name="range" id="dash-range" class="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <select name="range" id="dash-range" class="appearance-none rounded-lg border border-gray-200 bg-white px-3 py-2 pr-8 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                             <option value="today" <?php echo e($dateRange['range'] === 'today' ? 'selected' : ''); ?>>Hoy</option>
                             <option value="7d" <?php echo e($dateRange['range'] === '7d' ? 'selected' : ''); ?>>Ultimos 7 dias</option>
                             <option value="30d" <?php echo e($dateRange['range'] === '30d' ? 'selected' : ''); ?>>Ultimos 30 dias</option>
@@ -44,11 +37,11 @@
                         <svg class="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4 4 4-4" /></svg>
                     </div>
                     <div id="dash-dates" class="hidden items-center gap-2">
-                        <input type="date" name="from" value="<?php echo e($dateRange['from']); ?>" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <input type="date" name="from" value="<?php echo e($dateRange['from']); ?>" class="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                         <span class="text-sm text-gray-500">a</span>
-                        <input type="date" name="to" value="<?php echo e($dateRange['to']); ?>" class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <input type="date" name="to" value="<?php echo e($dateRange['to']); ?>" class="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                     </div>
-                    <button type="submit" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800">Aplicar</button>
+                    <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">Aplicar</button>
                 </form>
                 <?php if(Auth::user()->canCreateShipments()): ?>
                     <a href="<?php echo e(route('shipments.create')); ?>" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-blue-800">Crear guia</a>
@@ -68,260 +61,66 @@
 
     <div class="flex h-full flex-col p-3 sm:p-4 lg:p-4">
         <?php if($operationHealth['stale'] > 0): ?>
-            <section class="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 shadow-sm">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-wider text-amber-700">Recordatorio diario</p>
-                        <h2 class="text-sm font-black text-gray-950">
-                            Tienes <?php echo e($operationHealth['stale']); ?> guia<?php echo e($operationHealth['stale'] === 1 ? '' : 's'); ?> sin actualizar en mas de 24 horas
-                        </h2>
-                    </div>
-                    <a href="<?php echo e(route('daily-tasks.index')); ?>" class="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-black text-white shadow-sm hover:bg-amber-700">
-                        Actualizar guias
-                    </a>
-                </div>
-            </section>
-        <?php endif; ?>
-
-        <?php if($onboarding['show']): ?>
-            <section class="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-wider text-blue-700">Primeros pasos</p>
-                        <h2 class="text-sm font-black text-gray-950">Completa la base profesional de tu negocio</h2>
-                    </div>
-                    <div class="min-w-40">
-                        <div class="h-1.5 rounded-full bg-white">
-                            <div class="h-1.5 rounded-full bg-blue-700" style="width: <?php echo e(round(($onboarding['completed'] / max(1, $onboarding['total'])) * 100)); ?>%"></div>
-                        </div>
-                        <p class="mt-0.5 text-right text-[11px] font-bold text-blue-800"><?php echo e($onboarding['completed']); ?>/<?php echo e($onboarding['total']); ?> completo</p>
-                    </div>
-                </div>
-                <div class="mt-2 grid gap-2 md:grid-cols-3">
-                    <?php $__currentLoopData = $onboarding['steps']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $step): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <a href="<?php echo e($step['route']); ?>" class="rounded-lg border <?php echo e($step['done'] ? 'border-emerald-200 bg-white' : 'border-blue-100 bg-white'); ?> p-2 hover:border-blue-300">
-                            <p class="text-xs font-black text-gray-950"><?php echo e($step['done'] ? 'Listo' : $loop->iteration.'.'); ?> <?php echo e($step['label']); ?></p>
-                        </a>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                </div>
-            </section>
-        <?php endif; ?>
-
-        <?php if($trialGuideCounter): ?>
-            <section class="mb-3 rounded-lg border border-blue-200 bg-white p-3 shadow-sm">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-wider text-blue-700">Prueba gratis</p>
-                        <h2 class="text-sm font-black text-gray-950">Te quedan <?php echo e($trialGuideCounter['remaining']); ?> de <?php echo e($trialGuideCounter['total']); ?> guias</h2>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="h-2 w-36 overflow-hidden rounded-full bg-blue-100">
-                            <div class="h-full rounded-full bg-blue-700" style="width:<?php echo e(($trialGuideCounter['total'] - $trialGuideCounter['remaining']) / max(1, $trialGuideCounter['total']) * 100); ?>%"></div>
-                        </div>
-                        <span class="text-xs font-black text-blue-800"><?php echo e($trialGuideCounter['remaining']); ?>/<?php echo e($trialGuideCounter['total']); ?></span>
-                    </div>
-                </div>
-            </section>
-        <?php endif; ?>
-
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Guias creadas</p>
-                <p class="mt-1.5 text-3xl font-black text-gray-950"><?php echo e($metrics['shipments_today']); ?></p>
-                <p class="mt-1.5 text-xs font-semibold text-gray-500"><?php echo e($rangeLabel); ?></p>
+            <div class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
+                <p class="text-sm font-semibold text-amber-800">
+                    <?php echo e($operationHealth['stale']); ?> guia<?php echo e($operationHealth['stale'] === 1 ? '' : 's'); ?> sin actualizar en mas de 24 horas
+                </p>
+                <a href="<?php echo e(route('daily-tasks.index')); ?>" class="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-700">
+                    Actualizar
+                </a>
             </div>
+        <?php endif; ?>
 
-            <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Entregas</p>
-                <div class="mt-2 flex items-center gap-3">
-                    <?php if (isset($component)) { $__componentOriginal3418f766138f93001515fbf6377748f7 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal3418f766138f93001515fbf6377748f7 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.ring-gauge','data' => ['score' => $deliveryRingValue,'size' => 68,'stroke' => 8,'color' => $deliveryTone,'class' => 'shrink-0']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('ring-gauge'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['score' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($deliveryRingValue),'size' => 68,'stroke' => 8,'color' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($deliveryTone),'class' => 'shrink-0']); ?>
-                        <div class="grid h-12 w-12 place-items-center rounded-full bg-white">
-                            <span class="text-center text-xs font-black text-gray-950"><?php echo e($deliveryRate['total'] === 0 ? '-' : $deliveryRate['rate'].'%'); ?></span>
-                        </div>
-                     <?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal3418f766138f93001515fbf6377748f7)): ?>
-<?php $attributes = $__attributesOriginal3418f766138f93001515fbf6377748f7; ?>
-<?php unset($__attributesOriginal3418f766138f93001515fbf6377748f7); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal3418f766138f93001515fbf6377748f7)): ?>
-<?php $component = $__componentOriginal3418f766138f93001515fbf6377748f7; ?>
-<?php unset($__componentOriginal3418f766138f93001515fbf6377748f7); ?>
-<?php endif; ?>
-                    <div>
-                        <p class="text-sm font-bold text-gray-950"><?php echo e($deliveryRate['delivered']); ?> de <?php echo e($deliveryRate['total']); ?></p>
-                        <p class="text-xs font-semibold text-gray-500">Entregadas en <?php echo e($rangeLabel); ?></p>
-                    </div>
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <a href="<?php echo e(route('shipments.index')); ?>" class="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Guias creadas</p>
+                    <svg class="h-4 w-4 text-gray-300 transition group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                 </div>
-            </div>
-
-            <a href="<?php echo e(route('shipments.index', ['status' => 'created'])); ?>" class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:bg-gray-50">
-                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Preparacion</p>
-                <p class="mt-1.5 text-3xl font-black text-gray-950"><?php echo e($metrics['pending_print']); ?></p>
-                <div class="mt-2 h-2 rounded-full bg-gray-100">
-                    <div class="h-2 rounded-full bg-blue-700" style="width: <?php echo e(min(100, $metrics['pending_print'] * 12)); ?>%"></div>
-                </div>
-                <p class="mt-1.5 text-xs font-semibold text-gray-500">Guias por imprimir</p>
+                <p class="mt-3 text-4xl font-black text-gray-950"><?php echo e($metrics['shipments_today']); ?></p>
+                <p class="mt-2 text-sm font-medium text-gray-400"><?php echo e($rangeLabel); ?></p>
             </a>
 
-            <a href="<?php echo e(route('shipments.index', ['status' => 'on_route'])); ?>" class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:bg-gray-50">
-                <p class="text-xs font-black uppercase tracking-wider text-gray-500">En movimiento</p>
-                <p class="mt-1.5 text-3xl font-black text-gray-950"><?php echo e($metrics['in_transit']); ?></p>
-                <div class="mt-2 h-2 rounded-full bg-gray-100">
-                    <div class="h-2 rounded-full bg-emerald-600" style="width: <?php echo e(min(100, $metrics['in_transit'] * 10)); ?>%"></div>
-                </div>
-                <p class="mt-1.5 text-xs font-semibold text-gray-500">En ruta o bodega</p>
-            </a>
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Entregadas</p>
+                <p class="mt-3 text-4xl font-black <?php echo e($deliveryRate['total'] === 0 ? 'text-gray-300' : ($deliveryRate['rate'] >= 80 ? 'text-emerald-600' : ($deliveryRate['rate'] >= 50 ? 'text-amber-600' : 'text-red-600'))); ?>">
+                    <?php echo e($deliveryRate['total'] === 0 ? '-' : $deliveryRate['rate'].'%'); ?>
 
-            <a href="<?php echo e(route('daily-tasks.index')); ?>" class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:bg-gray-50">
-                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Sin movimiento</p>
-                <p class="mt-1.5 text-3xl font-black <?php echo e($operationHealth['stale'] > 0 ? 'text-amber-700' : 'text-gray-950'); ?>"><?php echo e($operationHealth['stale']); ?></p>
-                <div class="mt-2 h-2 rounded-full bg-gray-100">
-                    <div class="h-2 rounded-full bg-amber-500" style="width: <?php echo e(min(100, $operationHealth['stale'] * 18)); ?>%"></div>
-                </div>
-                <p class="mt-1.5 text-xs font-semibold text-gray-500">Mas de 24h quietas</p>
-            </a>
-        </section>
-
-        <?php if(! empty($alerts) || ! empty($inventoryAlerts['low']) || ! empty($inventoryAlerts['out'])): ?>
-            <div class="mt-3 flex flex-wrap gap-2">
-                <?php $__currentLoopData = $alerts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $alert): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <a href="<?php echo e($alert['route']); ?>" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-black shadow-sm hover:bg-white <?php echo e($alert['bg']); ?>">
-                        <svg class="h-4 w-4 <?php echo e($alert['color']); ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?php echo e($alert['icon']); ?>" />
-                        </svg>
-                        <span><?php echo e($alert['count']); ?> <?php echo e($alert['label']); ?></span>
-                    </a>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                <?php $__currentLoopData = $inventoryAlerts['out']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <a href="<?php echo e(route('inventory.index', ['stock' => 'out'])); ?>" class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-black text-red-800 shadow-sm hover:bg-red-100">
-                        Agotado: <?php echo e($p->name); ?>
-
-                    </a>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                <?php $__currentLoopData = $inventoryAlerts['low']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <a href="<?php echo e(route('inventory.index', ['stock' => 'low'])); ?>" class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-black text-amber-800 shadow-sm hover:bg-amber-100">
-                        Stock bajo: <?php echo e($p->name); ?> (<?php echo e($p->stock); ?>/<?php echo e($p->stock_minimum); ?>)
-                    </a>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-            </div>
-        <?php endif; ?>
-
-        <section class="mt-3 rounded-lg border p-4 shadow-sm <?php echo e($moneyTone['panel']); ?>">
-            <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wider <?php echo e($moneyTone['badge']); ?>"><?php echo e($moneySummary['label']); ?></span>
-                    <h2 class="mt-2 text-base font-black text-gray-950">Resumen de dinero</h2>
-                </div>
-                <a href="<?php echo e(route('shipments.index')); ?>" class="shrink-0 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-black text-gray-700 shadow-sm hover:bg-gray-50">Ver guias</a>
-            </div>
-            <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div class="rounded-lg border border-white/70 bg-white p-3">
-                    <p class="text-[11px] font-black uppercase tracking-wider text-gray-500">Creado en <?php echo e($rangeLabel); ?></p>
-                    <p class="mt-1 text-2xl font-black text-gray-950">$<?php echo e(number_format($moneySummary['createdValue'], 0, ',', '.')); ?></p>
-                </div>
-                <div class="rounded-lg border border-white/70 bg-white p-3">
-                    <p class="text-[11px] font-black uppercase tracking-wider text-gray-500">Entregado</p>
-                    <p class="mt-1 text-2xl font-black text-emerald-700">$<?php echo e(number_format($moneySummary['deliveredValue'], 0, ',', '.')); ?></p>
-                </div>
-                <div class="rounded-lg border border-white/70 bg-white p-3">
-                    <p class="text-[11px] font-black uppercase tracking-wider text-gray-500">Recaudo pendiente</p>
-                    <p class="mt-1 text-2xl font-black <?php echo e($moneySummary['collectionOpen'] > 0 ? 'text-amber-700' : 'text-gray-950'); ?>">$<?php echo e(number_format($moneySummary['collectionOpen'], 0, ',', '.')); ?></p>
-                </div>
-                <div class="rounded-lg border border-white/70 bg-white p-3">
-                    <p class="text-[11px] font-black uppercase tracking-wider text-gray-500">Dinero a vigilar</p>
-                    <p class="mt-1 text-2xl font-black <?php echo e($moneySummary['moneyToWatch'] > 0 ? 'text-red-700' : 'text-gray-950'); ?>">$<?php echo e(number_format($moneySummary['moneyToWatch'], 0, ',', '.')); ?></p>
-                </div>
-            </div>
-        </section>
-
-        <section class="mt-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-            <div class="flex items-center justify-between gap-2">
-                <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Estado de guias</h3>
-                <span class="text-xs font-bold text-gray-400"><?php echo e($chartStatusDistribution['total']); ?> en total</span>
-            </div>
-            <div class="mt-3">
-                <?php if (isset($component)) { $__componentOriginalf584b1043d16481e13254b25f367dc76 = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginalf584b1043d16481e13254b25f367dc76 = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.status-bar','data' => ['buckets' => $chartStatusBuckets['buckets'],'total' => $chartStatusBuckets['total']]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('charts.status-bar'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['buckets' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($chartStatusBuckets['buckets']),'total' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($chartStatusBuckets['total'])]); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginalf584b1043d16481e13254b25f367dc76)): ?>
-<?php $attributes = $__attributesOriginalf584b1043d16481e13254b25f367dc76; ?>
-<?php unset($__attributesOriginalf584b1043d16481e13254b25f367dc76); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginalf584b1043d16481e13254b25f367dc76)): ?>
-<?php $component = $__componentOriginalf584b1043d16481e13254b25f367dc76; ?>
-<?php unset($__componentOriginalf584b1043d16481e13254b25f367dc76); ?>
-<?php endif; ?>
+                </p>
+                <p class="mt-2 text-sm font-medium text-gray-400"><?php echo e($deliveryRate['delivered']); ?> de <?php echo e($deliveryRate['total']); ?> guias</p>
             </div>
 
-            <?php if($chartStatusDistribution['total'] > 0): ?>
-                <details class="mt-3 border-t border-gray-100 pt-2">
-                    <summary class="cursor-pointer text-xs font-bold text-gray-500 hover:text-gray-700">Ver el detalle de cada estado</summary>
-                    <div class="mt-2 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
-                        <?php $__currentLoopData = $chartStatusDistribution['rows']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <?php if($row['count'] <= 0) continue; ?>
-                            <div class="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-2.5 py-1.5">
-                                <div class="flex min-w-0 items-center gap-2">
-                                    <span class="h-2 w-2 shrink-0 rounded-sm" style="background: var(--viz-cat-<?php echo e($row['slot']); ?>)"></span>
-                                    <p class="truncate text-xs font-semibold text-gray-700"><?php echo e($row['label']); ?></p>
-                                </div>
-                                <span class="shrink-0 text-xs font-black text-gray-950"><?php echo e($row['count']); ?></span>
-                            </div>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </div>
-                </details>
-            <?php endif; ?>
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Dinero por cobrar</p>
+                <p class="mt-3 text-4xl font-black <?php echo e($moneySummary['collectionOpen'] > 0 ? 'text-gray-900' : 'text-gray-300'); ?>">$<?php echo e(number_format($moneySummary['collectionOpen'], 0, ',', '.')); ?></p>
+                <p class="mt-2 text-sm font-medium text-gray-400">Recaudo pendiente</p>
+            </div>
         </section>
 
         <?php
-            $shipmentsByDay = collect($chartShipmentsByDay['days'])->map(fn ($d) => [
+            $chartData = collect($chartShipmentsByDay['days'])->map(fn ($d) => [
                 'label' => $d['full'], 'sub' => ucfirst($d['label']).' '.$d['full'], 'value' => $d['count'],
-            ])->all();
-            $revenueByDay = collect($chartRevenueByDay['days'])->map(fn ($d) => [
-                'label' => $d['full'], 'sub' => ucfirst($d['label']).' '.$d['full'], 'value' => $d['revenue'],
-            ])->all();
-            $monthlyTrend = collect($chartMonthlyTrend['months'])->map(fn ($m) => [
-                'label' => $m['label'], 'value' => $m['count'],
             ])->all();
         ?>
 
-        <section class="mt-3 flex flex-1 flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                <div class="flex items-center justify-between gap-2 text-sm font-black text-gray-950">
-                    <span>Graficas y analisis</span>
-                    <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-700"><?php echo e($rangeLabel); ?></span>
-                </div>
-                <div class="mt-3 grid flex-1 min-w-0 gap-3" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); grid-auto-rows: 1fr;">
-                    <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
-                        <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Guias creadas</h3>
-                        <div class="mt-2 flex-1">
-                            <?php if (isset($component)) { $__componentOriginal7f5eee30baa85644e054dd78a51aa94c = $component; } ?>
+        <section class="mt-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between gap-2">
+                <h2 class="text-sm font-bold text-gray-900">Guias <?php echo e($rangeLabel); ?></h2>
+                <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                    <?php echo e(array_sum(array_column($chartData, 'value'))); ?> en total
+                </span>
+            </div>
+            <div class="mt-4">
+                <?php if (isset($component)) { $__componentOriginal7f5eee30baa85644e054dd78a51aa94c = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.column-chart','data' => ['data' => $shipmentsByDay,'color' => 'var(--viz-cat-1)','format' => 'number']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.column-chart','data' => ['data' => $chartData,'color' => '#2a78d6','format' => 'number']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
 <?php $component->withName('charts.column-chart'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
 <?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
 <?php endif; ?>
-<?php $component->withAttributes(['data' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($shipmentsByDay),'color' => 'var(--viz-cat-1)','format' => 'number']); ?>
+<?php $component->withAttributes(['data' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($chartData),'color' => '#2a78d6','format' => 'number']); ?>
 <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
 <?php if (isset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
@@ -332,98 +131,18 @@
 <?php $component = $__componentOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
 <?php unset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
 <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
-                        <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Ingresos por entregas</h3>
-                        <div class="mt-2 flex-1">
-                            <?php if (isset($component)) { $__componentOriginal7f5eee30baa85644e054dd78a51aa94c = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.column-chart','data' => ['data' => $revenueByDay,'color' => 'var(--viz-cat-2)','format' => 'currency']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('charts.column-chart'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['data' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($revenueByDay),'color' => 'var(--viz-cat-2)','format' => 'currency']); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
-<?php $attributes = $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
-<?php unset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
-<?php $component = $__componentOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
-<?php unset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
-<?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
-                        <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Tendencia mensual</h3>
-                        <div class="mt-2 flex-1">
-                            <?php if (isset($component)) { $__componentOriginal7f5eee30baa85644e054dd78a51aa94c = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.charts.column-chart','data' => ['data' => $monthlyTrend,'color' => 'var(--viz-primary)','format' => 'number']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
-<?php $component->withName('charts.column-chart'); ?>
-<?php if ($component->shouldRender()): ?>
-<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
-<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
-<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
-<?php endif; ?>
-<?php $component->withAttributes(['data' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($monthlyTrend),'color' => 'var(--viz-primary)','format' => 'number']); ?>
-<?php echo $__env->renderComponent(); ?>
-<?php endif; ?>
-<?php if (isset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
-<?php $attributes = $__attributesOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
-<?php unset($__attributesOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
-<?php endif; ?>
-<?php if (isset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c)): ?>
-<?php $component = $__componentOriginal7f5eee30baa85644e054dd78a51aa94c; ?>
-<?php unset($__componentOriginal7f5eee30baa85644e054dd78a51aa94c); ?>
-<?php endif; ?>
-                        </div>
-                    </div>
-
-                    <?php if(! empty($chartTopProducts)): ?>
-                        <div class="flex min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3">
-                            <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Productos mas enviados</h3>
-                            <div class="mt-2 grid flex-1 content-center gap-2.5">
-                                <?php $__currentLoopData = array_slice($chartTopProducts, 0, 5); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <div>
-                                        <div class="flex items-baseline justify-between gap-2">
-                                            <p class="truncate text-sm font-black text-gray-950" title="<?php echo e($p['name']); ?>"><?php echo e($p['name']); ?></p>
-                                            <span class="shrink-0 text-xs font-black text-gray-500"><?php echo e($p['count']); ?></span>
-                                        </div>
-                                        <div class="mt-1 h-2 rounded-full" style="background: var(--viz-grid)">
-                                            <div class="h-2 rounded-full" style="width: <?php echo e($p['pct']); ?>%; background: var(--viz-cat-1)"></div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </section>
+            </div>
+        </section>
     </div>
 
     <script>
         const rangeSelect = document.getElementById('dash-range');
         const datesDiv = document.getElementById('dash-dates');
-
         if (rangeSelect && datesDiv) {
             function toggleDates() {
-                if (rangeSelect.value === 'custom') {
-                    datesDiv.classList.remove('hidden');
-                    datesDiv.classList.add('flex');
-                } else {
-                    datesDiv.classList.add('hidden');
-                    datesDiv.classList.remove('flex');
-                }
+                datesDiv.classList.toggle('hidden', rangeSelect.value !== 'custom');
+                datesDiv.classList.toggle('flex', rangeSelect.value === 'custom');
             }
-
             rangeSelect.addEventListener('change', toggleDates);
             toggleDates();
         }
@@ -437,5 +156,4 @@
 <?php if (isset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54)): ?>
 <?php $component = $__componentOriginal9ac128a9029c0e4701924bd2d73d7f54; ?>
 <?php unset($__componentOriginal9ac128a9029c0e4701924bd2d73d7f54); ?>
-<?php endif; ?>
-<?php /**PATH C:\Users\Rci Shop\Herd\tusenvios_local\resources\views/dashboard.blade.php ENDPATH**/ ?>
+<?php endif; ?><?php /**PATH C:\Users\Rci Shop\Herd\tusenvios_local\resources\views/dashboard.blade.php ENDPATH**/ ?>

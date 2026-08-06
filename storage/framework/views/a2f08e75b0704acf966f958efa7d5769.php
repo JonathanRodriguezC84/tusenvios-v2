@@ -230,21 +230,21 @@
 <nav x-data="{ open: false }">
     <style id="te-logo-no-crop-v5">
         @media (min-width: 1024px) {
-            aside > div:first-child, aside .te-panel-logo-area { height: auto !important; min-height: 126px !important; padding: 16px 16px !important; overflow: visible !important; display: flex !important; align-items: center !important; justify-content: center !important; border-bottom: 1px solid #e5e7eb !important; background: transparent !important; }
-            aside > div:first-child a, aside .te-panel-logo-box { width: 12rem !important; max-width: 12rem !important; max-height: 6.5rem !important; display: flex !important; align-items: center !important; justify-content: center !important; overflow: visible !important; }
-            aside > div:first-child img, aside .te-panel-logo-img { width: auto !important; height: auto !important; max-width: 12rem !important; max-height: 6.5rem !important; object-fit: contain !important; background: transparent !important; box-shadow: none !important; display: block !important; }
+            aside > div:first-child, aside .te-panel-logo-area { height: auto !important; min-height: 80px !important; padding: 12px 16px !important; overflow: visible !important; display: flex !important; align-items: center !important; justify-content: center !important; border-bottom: 1px solid #e5e7eb !important; background: transparent !important; }
+            aside > div:first-child a, aside .te-panel-logo-box { width: 8rem !important; max-width: 8rem !important; max-height: 4rem !important; display: flex !important; align-items: center !important; justify-content: center !important; overflow: visible !important; }
+            aside > div:first-child img, aside .te-panel-logo-img { width: auto !important; height: auto !important; max-width: 8rem !important; max-height: 4rem !important; object-fit: contain !important; background: transparent !important; box-shadow: none !important; display: block !important; }
         }
         @media (max-width: 1023px) {
-            .te-panel-logo-mobile-box { width: 9.5rem !important; height: auto !important; min-height: 2.75rem !important; overflow: visible !important; }
-            .te-panel-logo-mobile-img, .fixed.inset-x-0.top-0 img { max-width: 9.5rem !important; max-height: 2.75rem !important; object-fit: contain !important; object-position: left center !important; }
+            .te-panel-logo-mobile-box { width: 7rem !important; height: auto !important; min-height: 2.25rem !important; overflow: visible !important; }
+            .te-panel-logo-mobile-img, .fixed.inset-x-0.top-0 img { max-width: 7rem !important; max-height: 2.25rem !important; object-fit: contain !important; object-position: left center !important; }
         }
     </style>
     <style id="te-client-logo-area-v4">
-        .te-panel-logo-area { min-height: 126px; padding: 16px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #e5e7eb; background: transparent; }
-        .te-panel-logo-box { width: 12rem; min-height: 3.5rem; max-width: 12rem; max-height: 6.5rem; display: flex; align-items: center; justify-content: center; overflow: visible; }
-        .te-panel-logo-img { display: block; width: auto; height: auto; max-width: 12rem; max-height: 6.5rem; object-fit: contain; object-position: center; }
-        .te-panel-logo-mobile-box { width: 9.5rem; min-height: 2.75rem; display: flex; align-items: center; justify-content: flex-start; overflow: visible; }
-        .te-panel-logo-mobile-img { display: block; width: 100%; height: 100%; max-width: 9.5rem; max-height: 2.75rem; object-fit: contain; object-position: left center; }
+        .te-panel-logo-area { min-height: 80px; padding: 12px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #e5e7eb; background: transparent; }
+        .te-panel-logo-box { width: 8rem; min-height: 2.5rem; max-width: 8rem; max-height: 4rem; display: flex; align-items: center; justify-content: center; overflow: visible; }
+        .te-panel-logo-img { display: block; width: auto; height: auto; max-width: 8rem; max-height: 4rem; object-fit: contain; object-position: center; }
+        .te-panel-logo-mobile-box { width: 7rem; min-height: 2.25rem; display: flex; align-items: center; justify-content: flex-start; overflow: visible; }
+        .te-panel-logo-mobile-img { display: block; width: 100%; height: 100%; max-width: 7rem; max-height: 2.25rem; object-fit: contain; object-position: left center; }
     </style>
     <style>
         .te-mobile-drawer-logout-v24 { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
@@ -254,7 +254,7 @@
         .te-panel-logo-area img, .te-panel-logo-mobile-box img { background: transparent !important; box-shadow: none !important; filter: none !important; }
         @media (max-width: 1023px) {
             .te-mobile-side-v21 { padding-bottom: 64px !important; }
-            .te-mobile-side-v21 > .flex-1 { flex: 0 1 auto !important; max-height: calc(100dvh - 126px - 136px) !important; }
+            .te-mobile-side-v21 > .flex-1 { flex: 0 1 auto !important; max-height: calc(100dvh - 80px - 136px) !important; }
             .te-mobile-side-v21 .te-sidebar-user-footer { margin-top: auto !important; padding-bottom: 76px !important; background: #ffffff !important; }
             .te-mobile-side-v21 .te-logout-button { display: flex !important; min-height: 44px !important; }
         }
