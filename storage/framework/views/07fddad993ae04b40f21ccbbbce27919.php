@@ -33,6 +33,9 @@
         <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js']); ?>
 
         
+        <link rel="stylesheet" href="<?php echo e(asset('css/app-custom.css')); ?>">
+
+        
         <style>
             @media (min-width: 1024px) {
                 .app-content-frame { padding-left: 12rem !important; }
@@ -41,27 +44,6 @@
                 .app-content-frame main [class~="py-8"], .app-content-frame main [class~="py-6"] { padding-top: 1rem; padding-bottom: 1rem; }
                 .app-content-frame [class~="p-5"] { padding: 1rem; }
             }
-        </style>
-
-        
-        <style>[x-cloak]{display:none!important}</style>
-        
-        <style>
-            :root {
-                --viz-surface: #ffffff; --viz-primary: #0b0b0b; --viz-secondary: #52514e; --viz-muted: #898781;
-                --viz-grid: #e1e0d9; --viz-axis: #c3c2b7; --viz-tooltip-bg: #0b0b0b; --viz-tooltip-text: #ffffff;
-                --viz-cat-1: #2a78d6; --viz-cat-2: #1baf7a; --viz-cat-3: #eda100; --viz-cat-4: #008300;
-                --viz-cat-5: #4a3aa7; --viz-cat-6: #e34948; --viz-cat-7: #e87ba4; --viz-cat-8: #eb6834;
-            }
-            .dark {
-                --viz-surface: #1f2937; --viz-primary: #ffffff; --viz-secondary: #c3c2b7; --viz-muted: #9ca3af;
-                --viz-grid: #2c2c2a; --viz-axis: #383835; --viz-tooltip-bg: #ffffff; --viz-tooltip-text: #0b0b0b;
-                --viz-cat-1: #3987e5; --viz-cat-2: #199e70; --viz-cat-3: #c98500; --viz-cat-4: #008300;
-                --viz-cat-5: #9085e9; --viz-cat-6: #e66767; --viz-cat-7: #d55181; --viz-cat-8: #d95926;
-            }
-            .ring-gauge-arc { stroke-dashoffset: var(--ring-gauge-offset, 0); animation: ring-gauge-fill 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-            @keyframes ring-gauge-fill { from { stroke-dashoffset: var(--ring-gauge-circumference, 0); } to { stroke-dashoffset: var(--ring-gauge-offset, 0); } }
-            @media (prefers-reduced-motion: reduce) { .ring-gauge-arc { animation: none; stroke-dashoffset: var(--ring-gauge-offset, 0); } }
         </style>
 
         
