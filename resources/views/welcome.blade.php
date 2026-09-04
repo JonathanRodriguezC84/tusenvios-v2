@@ -1,5 +1,11 @@
 <!doctype html>
-<html lang="es">
+<!-- 
+  design-taste-frontend configuration:
+  DESIGN_VARIANCE: 9
+  MOTION_INTENSITY: 2
+  VISUAL_DENSITY: 5
+-->
+<html lang="es" class="scroll-smooth">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,260 +13,727 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="Tus Envios">
-        <title>Tus Envios | Guias y etiquetas para emprendimientos</title>
+        <title>Tus Envios | Gestión de despachos y etiquetas de envío profesionales</title>
         @vite(['resources/css/app.css'])
+        
         <style>
-            :root{--brand-blue:#022a8c;--brand-blue-dark:#011f69;--brand-orange:#ff7a00;--ink:#07111f;--muted:#5f6b7a;--line:#dbe2ea;--soft:#f4f7fb}
-            *{box-sizing:border-box}
-            body{margin:0;background:#fff;color:var(--ink)}
-            a{color:inherit;text-decoration:none}
-            .site-header{position:sticky;top:0;z-index:20;border-bottom:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}
-            .container{width:min(1180px,calc(100% - 32px));margin:0 auto}
-            .header-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0}
-            .logo{display:inline-flex;align-items:center}
-            .logo img{width:168px;height:auto;display:block}
-            .nav{display:flex;align-items:center;gap:18px;color:#344054;font-size:14px;font-weight:750}
-            .nav-links{display:flex;align-items:center;gap:18px}
-            .nav a:hover{color:var(--brand-blue)}
-            .btn{display:inline-flex;min-height:44px;align-items:center;justify-content:center;gap:8px;border-radius:7px;border:1px solid transparent;padding:0 18px;font-weight:850;line-height:1;transition:transform .15s ease,background .15s ease,border .15s ease}
-            .btn:hover{transform:translateY(-1px)}
-            .btn-primary{background:var(--brand-blue);color:#fff;box-shadow:0 10px 22px rgba(2,42,140,.18)}
-            .btn-primary:hover{background:var(--brand-blue-dark)}
-            .btn-secondary{border-color:#cfd8e3;background:#fff;color:var(--ink)}
-            .btn-orange{background:var(--brand-orange);color:#fff;box-shadow:0 10px 22px rgba(255,122,0,.18)}
-            .hero{overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(circle at 12% 8%,rgba(255,122,0,.13),transparent 26%),linear-gradient(180deg,#fff 0%,#f6f9ff 100%)}
-            .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(420px,520px);gap:52px;align-items:center;padding:64px 0 58px}
-            .eyebrow{color:var(--brand-blue);font-size:13px;font-weight:950;letter-spacing:0;text-transform:uppercase}
-            h1{max-width:720px;margin:14px 0 0;font-size:clamp(36px,4.2vw,58px);line-height:1.04;font-weight:950;text-wrap:balance}
-            .hero-copy{max-width:650px;margin:22px 0 0;color:#405064;font-size:18px;line-height:1.7}
-            .hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
-            .trial-note{display:inline-flex;align-items:center;gap:10px;margin-top:20px;border:1px solid rgba(2,42,140,.2);border-radius:8px;background:#fff;padding:12px 14px;color:#263447;font-weight:750;box-shadow:0 12px 30px rgba(15,23,42,.06)}
-            .trial-note span{display:grid;width:28px;height:28px;place-items:center;border-radius:50%;background:var(--brand-orange);color:#fff;font-size:13px;font-weight:950}
-            .proof-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:28px}
-            .proof{border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.8);padding:14px;font-size:13px;font-weight:850;color:#263447}
-            .product-showcase{position:relative;display:grid;justify-items:center}
-            .showcase-card{width:min(100%,470px);border:1px solid #d6deea;border-radius:8px;background:#fff;padding:22px;box-shadow:0 24px 60px rgba(2,42,140,.13)}
-            .showcase-caption{margin-bottom:14px;color:#536071;font-size:13px;font-weight:850;text-transform:uppercase}
-            .label-demo{aspect-ratio:100/150;border:1px solid #cbd5e1;background:#fff;padding:18px;display:flex;flex-direction:column;gap:12px;font-weight:900;color:#020617}
-            .label-head{display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center}
-            .label-logo img{width:128px;height:auto;display:block}
-            .label-company{font-size:21px;line-height:1.1}
-            .label-company small{display:block;margin-top:4px;font-size:10px;line-height:1.35;text-transform:uppercase}
-            .social-line{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;border-bottom:1px solid #cbd5e1;padding:2px 0 10px;font-size:10px}
-            .social-line span{display:inline-flex;align-items:center;gap:5px}
-            .social-icon{display:grid;width:18px;height:18px;place-items:center;border-radius:999px;background:#020617;color:#fff;font-size:8px}
-            .guide-number{text-align:center;font-size:18px}
-            .barcode{height:74px;border-bottom:1px solid #111827;background:#fff;overflow:hidden}
-            .barcode svg{display:block;width:100%;height:100%}
-            .recipient-block{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:14px;align-items:center;border-bottom:1px solid #cbd5e1;padding:10px 0 14px}
-            .label-field{color:#334155;font-size:10px;line-height:1;text-transform:uppercase}
-            .recipient-name,.recipient-address{margin-top:4px;font-size:21px;line-height:1.05}
-            .recipient-small{margin-top:6px;font-size:14px;line-height:1.1}
-            .qr{width:86px;height:86px;display:grid;place-items:center;background:#fff;justify-self:end}
-            .qr img{display:block;width:100%;height:100%}
-            .label-observations{border-bottom:1px solid #cbd5e1;padding-bottom:12px;font-size:13px}
-            .meta-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-bottom:1px solid #cbd5e1;padding-bottom:10px;text-align:center}
-            .meta-row p{margin:0}.meta-label{color:#334155;font-size:10px}.meta-value{margin-top:6px;font-size:15px}
-            .label-footer{display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:auto;font-size:9px;text-align:center}
-            .section{padding:56px 0;border-bottom:1px solid var(--line);scroll-margin-top:90px}
-            .section-soft{background:var(--soft)}
-            .section-title{max-width:720px}
-            .section-title h2{margin:8px 0 0;font-size:clamp(30px,3.2vw,44px);line-height:1.05;font-weight:950;text-wrap:balance}
-            .section-title p{margin:14px 0 0;color:var(--muted);font-size:16px;line-height:1.7}
-            .steps-grid,.benefits-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:28px}
-            .card{border:1px solid var(--line);border-radius:8px;background:#fff;padding:20px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
-            .card-number{display:grid;width:32px;height:32px;place-items:center;border-radius:8px;background:#e8efff;color:var(--brand-blue);font-size:14px;font-weight:950}
-            .card h3{margin:14px 0 0;font-size:18px;line-height:1.25;font-weight:950}
-            .card p{margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.6}
-            .benefits-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
-            .benefit{border:1px solid #d9e2f0;border-radius:8px;background:#fff;padding:18px;min-height:132px}
-            .benefit strong{display:block;font-size:15px;line-height:1.25}
-            .benefit span{display:block;margin-top:10px;color:var(--muted);font-size:13px;line-height:1.5}
-            .audience-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:28px}
-            .audience-item{display:grid;min-height:112px;place-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:16px;text-align:center;font-weight:900;color:#263447}
-            .landing-icon{display:inline-grid;width:38px;height:38px;place-items:center;border-radius:8px;background:#eef4ff;color:var(--brand-blue)}
-            .landing-icon svg{width:22px;height:22px;stroke:currentColor}
-            .plans-grid{display:grid;grid-template-columns:minmax(0,760px);justify-content:center;gap:18px;margin-top:30px}
-            .plan{display:flex;min-height:420px;flex-direction:column;border:1px solid var(--line);border-radius:8px;background:#fff;padding:22px}
-            .plan-featured{border:2px solid var(--brand-blue);box-shadow:0 18px 44px rgba(2,42,140,.12)}
-            .plan-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-            .badge{border-radius:999px;background:#e8efff;color:var(--brand-blue);padding:6px 10px;font-size:11px;font-weight:950}
-            .plan h3{margin:0;font-size:22px;font-weight:950}
-            .plan-purpose{margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
-            .price{margin:20px 0 0;font-size:34px;line-height:1;font-weight:950}
-            .price small{color:var(--muted);font-size:13px;font-weight:800}
-            .plan ul{display:grid;gap:10px;margin:22px 0;padding:0;list-style:none;color:#344054;font-size:14px;line-height:1.45}
-            .plan li::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--brand-orange);vertical-align:1px}
-            .plan .btn{width:100%;margin-top:auto}
-            .trust-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:28px}
-            .trust{display:grid;align-content:start;gap:12px;min-height:120px;border:1px solid rgba(2,42,140,.16);border-radius:8px;background:#fff;padding:16px;color:#243248;font-size:14px;font-weight:850;line-height:1.4}
-            .faq-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:32px;align-items:start}
-            .faq-list{display:grid;gap:12px}
-            .cta-band{background:var(--brand-blue);color:#fff}
-            .cta-inner{display:flex;align-items:center;justify-content:space-between;gap:28px;padding:44px 0}
-            .cta-inner h2{font-size:clamp(28px,3.5vw,44px);line-height:1.05;font-weight:950;text-wrap:balance;margin:0}
-            .cta-inner p{margin:12px 0 0;color:rgba(255,255,255,.8);line-height:1.6}
-            .footer{background:#fff;border-top:1px solid var(--line)}
-            .footer-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 0;color:#5f6b7a;font-size:14px;font-weight:750}
-            .footer img{width:136px;height:auto}
-            .trust-row .trust{align-content:center;justify-items:center;text-align:center}
-            .trust-row .landing-icon{margin-left:auto;margin-right:auto}
-            .cta-band .btn{min-width:210px;padding-left:28px;padding-right:28px;white-space:nowrap}
-            .cta-inner{grid-template-columns:minmax(0,1fr) auto}
-            @media(min-width:981px){.cta-inner>div{max-width:780px}}
-            @media(max-width:980px){.nav-links{display:none}.hero-grid,.faq-grid{grid-template-columns:1fr}.product-showcase{order:-1}.benefits-grid,.trust-row{grid-template-columns:repeat(2,minmax(0,1fr))}.audience-grid,.plans-grid,.steps-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-            @media(max-width:640px){.container{width:min(100% - 24px,1180px)}.header-inner{align-items:center}.logo img{width:132px}.nav{gap:8px}.nav .btn-secondary{display:none}.btn{min-height:42px;padding:0 13px;font-size:13px}.hero-grid{gap:24px;padding:28px 0 36px}.showcase-card{padding:12px}.label-demo{padding:11px;gap:8px}.label-head{grid-template-columns:88px 1fr;gap:8px}.label-logo img{width:86px}.label-company{font-size:14px}.label-company small{font-size:7px}.guide-number{font-size:13px}.barcode{height:46px}.recipient-block{grid-template-columns:1fr 62px;gap:8px;padding:6px 0 9px}.recipient-name,.recipient-address{font-size:14px}.recipient-small,.meta-value{font-size:10px}.qr{width:58px;height:58px}.label-observations{font-size:9px}.social-line,.label-field,.meta-label,.label-footer{font-size:7px}.social-icon{width:14px;height:14px;font-size:6px}.proof-row,.benefits-grid,.audience-grid,.plans-grid,.steps-grid,.trust-row{grid-template-columns:1fr}.hero-actions,.cta-inner,.footer-inner{align-items:stretch;flex-direction:column}.hero-actions .btn,.cta-inner .btn{width:100%}.section{padding:40px 0}.plan{min-height:0}.site-header .header-inner{display:flex;align-items:center;justify-content:space-between;gap:8px}.site-header .logo{min-width:0;flex:1 1 auto}.site-header .logo img{width:clamp(104px,34vw,132px);max-width:100%;height:auto}.site-header .nav{display:flex;flex:0 0 auto;align-items:center;gap:6px}.site-header .nav .btn-secondary{display:inline-flex!important}.site-header .nav .btn{min-height:38px;border-radius:7px;padding:0 10px;font-size:12px;line-height:1;white-space:nowrap}.site-header .nav .btn-primary{padding-left:11px;padding-right:11px}}@media(max-width:380px){.site-header .logo img{width:96px}.site-header .nav .btn{padding-left:8px;padding-right:8px;font-size:11px}}
+            :root {
+                --brand-blue: #022a8c;
+                --brand-blue-dark: #011f69;
+                --brand-orange: #ff7a00;
+                --brand-orange-hover: #e06c00;
+                --emerald: #10b981;
+                --slate-950: #0f172a;
+                --slate-900: #1e293b;
+                --slate-600: #64748b;
+                --slate-100: #f1f5f9;
+                --white: #ffffff;
+                --bg-soft: #f8fafc;
+            }
+            body {
+                background-color: var(--white);
+                color: var(--slate-950);
+                margin: 0;
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                -webkit-font-smoothing: antialiased;
+            }
+            .container {
+                max-width: 1100px;
+                width: 100%;
+                margin: 0 auto;
+                padding: 0 20px;
+                box-sizing: border-box;
+            }
+
+            /* Header */
+            .header {
+                background: var(--white);
+                border-bottom: 1px solid var(--slate-100);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
+            .header-inner {
+                height: 70px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .logo img {
+                height: 54px;
+                width: auto;
+                display: block;
+            }
+            .nav-menu {
+                display: flex;
+                gap: 32px;
+            }
+            .nav-menu a {
+                color: var(--slate-900);
+                font-size: 14px;
+                font-weight: 500;
+                text-decoration: none;
+                transition: color 0.15s;
+            }
+            .nav-menu a:hover {
+                color: var(--brand-blue);
+            }
+            .auth-buttons {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 13.5px;
+                font-weight: 700;
+                padding: 10px 20px;
+                border-radius: 6px;
+                text-decoration: none;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                border: none;
+                cursor: pointer;
+                box-sizing: border-box;
+            }
+            .btn-primary {
+                background: var(--brand-blue);
+                color: var(--white);
+            }
+            .btn-primary:hover {
+                background: var(--brand-blue-dark);
+            }
+            .btn:active {
+                transform: scale(0.97);
+            }
+            .btn-orange {
+                background: var(--brand-orange);
+                color: var(--white);
+            }
+            .btn-orange:hover {
+                background: var(--brand-orange-hover);
+            }
+            .btn-secondary {
+                background: transparent;
+                color: var(--slate-900);
+            }
+            .btn-secondary:hover {
+                color: var(--brand-blue);
+            }
+
+            /* Hero (Split Screen) */
+            .hero {
+                background: var(--white);
+                padding: 70px 0 90px 0;
+            }
+            .hero-grid {
+                display: grid;
+                grid-template-columns: 1.15fr 1fr;
+                gap: 56px;
+                align-items: center;
+            }
+            .hero-text {
+                text-align: left;
+            }
+            .hero-text h1 {
+                font-size: 46px;
+                font-weight: 900;
+                color: var(--slate-950);
+                letter-spacing: -0.03em;
+                margin: 0 0 20px 0;
+                line-height: 1.15;
+            }
+            .hero-text h1 span.highlight {
+                color: var(--brand-orange);
+            }
+            .hero-text p {
+                font-size: 17.5px;
+                color: var(--slate-600);
+                margin: 0 0 36px 0;
+                line-height: 1.6;
+            }
+            .hero-actions {
+                display: flex;
+                justify-content: flex-start;
+                gap: 16px;
+            }
+
+            /* Dashboard Mockup (Front-facing, Flat Clean View) */
+            .hero-mockup {
+                position: relative;
+                width: 100%;
+            }
+            .mockup-front-image {
+                width: 100%;
+                height: auto;
+                border-radius: 14px;
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 20px 45px -10px rgba(2, 42, 140, 0.12), 
+                            0 10px 20px -5px rgba(0, 0, 0, 0.04);
+                transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+                display: block;
+            }
+            .hero-mockup:hover .mockup-front-image {
+                transform: translateY(-4px);
+                box-shadow: 0 28px 55px -12px rgba(2, 42, 140, 0.16), 
+                            0 12px 24px -6px rgba(0, 0, 0, 0.06);
+            }
+
+            /* Bento Grid Section */
+            .bento-section {
+                padding: 80px 0;
+                background: var(--bg-soft);
+                border-top: 1px solid var(--slate-100);
+                border-bottom: 1px solid var(--slate-100);
+            }
+            .section-header {
+                text-align: center;
+                margin-bottom: 56px;
+            }
+            .section-header h2 {
+                font-size: 32px;
+                font-weight: 900;
+                color: var(--slate-950);
+                margin: 0 0 12px 0;
+                letter-spacing: -0.02em;
+            }
+            .section-header p {
+                font-size: 16px;
+                color: var(--slate-600);
+                margin: 0;
+            }
+
+            /* Symmetrical Bento Grid (3 Columns) */
+            .bento-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+            }
+            .bento-card {
+                background: var(--white);
+                border: 1px solid var(--slate-100);
+                border-radius: 16px;
+                padding: 28px;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+            .app-icon-box {
+                width: 44px;
+                height: 44px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+            .bento-card h3 {
+                font-size: 18px;
+                font-weight: 800;
+                margin: 0 0 10px 0;
+                color: var(--slate-950);
+            }
+            .bento-card p {
+                font-size: 13.5px;
+                line-height: 1.55;
+                color: var(--slate-600);
+                margin: 0;
+            }
+
+            /* Steps Section */
+            .steps-section {
+                background: var(--white);
+                padding: 80px 0;
+                border-bottom: 1px solid var(--slate-100);
+            }
+            .steps-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+            }
+            .step-card {
+                padding: 28px;
+                border: 1px solid var(--slate-100);
+                border-radius: 12px;
+                background: var(--bg-soft);
+            }
+            .step-badge {
+                font-size: 11px;
+                font-weight: 800;
+                text-transform: uppercase;
+                color: var(--brand-orange);
+                margin-bottom: 12px;
+            }
+            .step-card h3 {
+                font-size: 17px;
+                font-weight: 800;
+                margin: 0 0 10px 0;
+            }
+            .step-card p {
+                font-size: 13.5px;
+                line-height: 1.55;
+                color: var(--slate-600);
+                margin: 0;
+            }
+
+            /* Pricing Section */
+            .pricing-section {
+                padding: 88px 0;
+                background: var(--white);
+            }
+            .pricing-box {
+                max-width: 580px;
+                margin: 0 auto;
+                background: var(--bg-soft);
+                border: 1px solid var(--slate-100);
+                border-radius: 16px;
+                padding: 40px;
+                box-sizing: border-box;
+            }
+            .pricing-title-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+            .pricing-title-row h3 {
+                font-size: 22px;
+                font-weight: 900;
+                margin: 0;
+            }
+            .trial-tag {
+                background: var(--brand-orange);
+                color: var(--white);
+                font-size: 10px;
+                font-weight: 800;
+                padding: 4px 10px;
+                border-radius: 6px;
+                text-transform: uppercase;
+            }
+            .pricing-cost {
+                font-size: 38px;
+                font-weight: 900;
+                color: var(--brand-blue);
+                margin: 20px 0;
+            }
+            .pricing-features-list {
+                list-style: none;
+                padding: 20px 0;
+                margin: 20px 0;
+                border-top: 1px solid var(--slate-100);
+                border-bottom: 1px solid var(--slate-100);
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+            }
+            .pricing-feature-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 13.5px;
+            }
+            .pricing-feature-item svg {
+                color: var(--emerald);
+                width: 16px;
+                height: 16px;
+                flex-shrink: 0;
+            }
+
+            /* FAQ Section */
+            .faq-section {
+                background: var(--bg-soft);
+                border-top: 1px solid var(--slate-100);
+                padding: 80px 0;
+            }
+            .faq-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+            }
+            .faq-item h3 {
+                font-size: 16px;
+                font-weight: 800;
+                margin: 0 0 8px 0;
+            }
+            .faq-item p {
+                font-size: 13.5px;
+                line-height: 1.6;
+                color: var(--slate-600);
+                margin: 0;
+            }
+
+            /* Footer */
+            .footer {
+                background: var(--slate-950);
+                color: #94a3b8;
+                padding: 48px 0;
+            }
+            .footer-inner {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .footer-logo img {
+                height: 44px;
+                opacity: 0.8;
+                filter: brightness(0) invert(1);
+            }
+            .footer-links {
+                display: flex;
+                gap: 24px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            .footer-links a {
+                color: #94a3b8;
+                text-decoration: none;
+            }
+            .footer-links a:hover {
+                color: var(--white);
+            }
+
+            /* Responsive */
+            @media (max-width: 992px) {
+                .hero {
+                    padding: 50px 0 60px 0;
+                }
+                .hero-grid {
+                    grid-template-columns: 1fr;
+                    text-align: center;
+                    gap: 40px;
+                }
+                .hero-text {
+                    text-align: center;
+                }
+                .hero-text h1 {
+                    font-size: 36px;
+                    margin: 0 auto 20px auto;
+                }
+                .hero-text p {
+                    margin: 0 auto 36px auto;
+                }
+                .hero-actions {
+                    justify-content: center;
+                }
+                .bento-grid {
+                    grid-template-columns: 1fr;
+                }
+                .steps-grid {
+                    grid-template-columns: 1fr;
+                }
+                .pricing-features-list {
+                    grid-template-columns: 1fr;
+                }
+                .faq-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 768px) {
+                .hero-text h1 {
+                    font-size: 30px;
+                }
+                .header-inner {
+                    height: 56px;
+                }
+                .nav-menu {
+                    display: none;
+                }
+                .footer-inner {
+                    flex-direction: column;
+                    gap: 20px;
+                    text-align: center;
+                }
+            }
         </style>
-        <link rel="icon" href="/favicon.ico?v=20260521v15" sizes="any">
     </head>
     <body>
-        <header class="site-header">
+        
+        <!-- Header -->
+        <header class="header">
             <div class="container header-inner">
-                <a href="/" class="logo" aria-label="Tus Envios">
+                <a href="#" class="logo">
                     <img src="{{ asset('images/logotusenvios.png') }}" alt="Tus Envios">
                 </a>
-                <nav class="nav" aria-label="Navegacion principal">
-                    <div class="nav-links">
-                        <a href="#como-funciona">Como funciona</a>
-                        <a href="#planes">Plan Emprende</a>
-                        <a href="#preguntas">Preguntas</a>
-                        <a href="{{ route('tracking.index') }}">Rastrear guia</a>
-                    </div>
-                    @auth
-                        <form method="POST" action="{{ route('logout') }}" style="margin:0">
-                            @csrf
-                            <input type="hidden" name="redirect_to" value="/login">
-                            <button type="submit" class="btn btn-secondary">Ingresar</button>
-                        </form>
-                        <form method="POST" action="{{ route('logout') }}" style="margin:0">
-                            @csrf
-                            <input type="hidden" name="redirect_to" value="/register">
-                            <button type="submit" class="btn btn-primary">Crear cuenta</button>
-                        </form>
-                    @else
-                        <a href="{{ route('login') }}" class="btn btn-secondary">Ingresar</a>
-                        <a href="{{ route('register') }}" class="btn btn-primary">Crear cuenta</a>
-                    @endauth
+                <nav class="nav-menu" aria-label="Navegación principal">
+                    <a href="#como-funciona">Cómo funciona</a>
+                    <a href="#planes">Precios</a>
+                    <a href="#preguntas">Ayuda</a>
                 </nav>
+                <div class="auth-buttons">
+                    @auth
+                        <a href="{{ route('dashboard') }}" class="btn btn-primary">
+                            Ir al panel
+                        </a>
+                    @else
+                        <a href="{{ route('login') }}" class="btn btn-secondary">
+                            Ingresar
+                        </a>
+                        <a href="{{ route('register') }}" class="btn btn-primary">
+                            Crear cuenta
+                        </a>
+                    @endauth
+                </div>
             </div>
         </header>
+
         <main>
+            <!-- Hero (Split Screen Layout) -->
             <section class="hero">
-                <div class="container hero-grid">
-                    <div>
-                        <p class="eyebrow">Plan Emprende para negocios locales</p>
-                        <h1>Organiza tus entregas locales sin volverte una transportadora.</h1>
-                        <p class="hero-copy">Tus Envios esta hecho para emprendedores que venden por WhatsApp, Instagram o tienda propia y despachan con mensajeria propia o aliados de confianza. Crea guias, imprime etiquetas con tu marca y lleva control de cada entrega desde un solo lugar.</p>
-                        <div class="hero-actions">
-                            <a href="{{ route('register') }}" class="btn btn-primary">Probar 10 guias gratis</a>
-                            <a href="#como-funciona" class="btn btn-secondary">Ver como funciona</a>
-                        </div>
-                        <div class="trial-note"><span>10</span><strong>Crea tus primeras 10 guias gratis. Luego activa tu plan mensual.</strong></div>
-                        <div class="proof-row" aria-label="Beneficios principales">
-                            <div class="proof">Para mensajeria propia o terceros</div>
-                            <div class="proof">Etiquetas con tu marca</div>
-                            <div class="proof">Pensado para emprendedores colombianos</div>
-                        </div>
-                    </div>
-                    <div class="product-showcase">
-                        <div class="showcase-card">
-                            <p class="showcase-caption">Asi se vera tu guia impresa</p>
-                            <div class="label-demo" aria-label="Etiqueta demo">
-                                <div class="label-head">
-                                    <div class="label-logo"><img src="{{ asset('images/logotusenvios.png') }}" alt="Logo demo"></div>
-                                    <div class="label-company">DULCE AROMA STORE<small>Bodega principal - Calle 100 #15-20<br>Chapinero / Bogota<br>Gracias por tu compra.</small></div>
-                                </div>
-                                <div class="social-line">
-                                    <span><span class="social-icon">WA</span>3001234567</span>
-                                    <span><span class="social-icon">IG</span>@dulcearomastore</span>
-                                </div>
-                                <div class="guide-number">DAS202600001</div>
-                                <div class="barcode real-barcode"><svg class="barcode-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 422 74" role="img" aria-label="Codigo de barras"><rect x="8" y="0" width="2" height="74" fill="#111827"/><rect x="15" y="0" width="2" height="74" fill="#111827"/><rect x="19" y="0" width="5" height="74" fill="#111827"/><rect x="26" y="0" width="5" height="74" fill="#111827"/><rect x="33" y="0" width="2" height="74" fill="#111827"/><rect x="37" y="0" width="2" height="74" fill="#111827"/><rect x="41" y="0" width="2" height="74" fill="#111827"/><rect x="45" y="0" width="5" height="74" fill="#111827"/><rect x="55" y="0" width="2" height="74" fill="#111827"/><rect x="59" y="0" width="5" height="74" fill="#111827"/><rect x="66" y="0" width="5" height="74" fill="#111827"/><rect x="73" y="0" width="2" height="74" fill="#111827"/><rect x="77" y="0" width="2" height="74" fill="#111827"/><rect x="84" y="0" width="2" height="74" fill="#111827"/><rect x="88" y="0" width="5" height="74" fill="#111827"/><rect x="95" y="0" width="2" height="74" fill="#111827"/><rect x="99" y="0" width="5" height="74" fill="#111827"/><rect x="106" y="0" width="2" height="74" fill="#111827"/><rect x="110" y="0" width="5" height="74" fill="#111827"/><rect x="120" y="0" width="2" height="74" fill="#111827"/><rect x="124" y="0" width="2" height="74" fill="#111827"/><rect x="128" y="0" width="5" height="74" fill="#111827"/><rect x="138" y="0" width="2" height="74" fill="#111827"/><rect x="142" y="0" width="2" height="74" fill="#111827"/><rect x="146" y="0" width="5" height="74" fill="#111827"/><rect x="153" y="0" width="2" height="74" fill="#111827"/><rect x="157" y="0" width="2" height="74" fill="#111827"/><rect x="164" y="0" width="5" height="74" fill="#111827"/><rect x="171" y="0" width="5" height="74" fill="#111827"/><rect x="178" y="0" width="2" height="74" fill="#111827"/><rect x="182" y="0" width="2" height="74" fill="#111827"/><rect x="186" y="0" width="5" height="74" fill="#111827"/><rect x="196" y="0" width="2" height="74" fill="#111827"/><rect x="200" y="0" width="2" height="74" fill="#111827"/><rect x="204" y="0" width="5" height="74" fill="#111827"/><rect x="211" y="0" width="2" height="74" fill="#111827"/><rect x="215" y="0" width="5" height="74" fill="#111827"/><rect x="225" y="0" width="5" height="74" fill="#111827"/><rect x="232" y="0" width="2" height="74" fill="#111827"/><rect x="236" y="0" width="2" height="74" fill="#111827"/><rect x="240" y="0" width="2" height="74" fill="#111827"/><rect x="244" y="0" width="2" height="74" fill="#111827"/><rect x="251" y="0" width="5" height="74" fill="#111827"/><rect x="258" y="0" width="5" height="74" fill="#111827"/><rect x="265" y="0" width="2" height="74" fill="#111827"/><rect x="269" y="0" width="2" height="74" fill="#111827"/><rect x="273" y="0" width="2" height="74" fill="#111827"/><rect x="280" y="0" width="5" height="74" fill="#111827"/><rect x="287" y="0" width="5" height="74" fill="#111827"/><rect x="294" y="0" width="2" height="74" fill="#111827"/><rect x="298" y="0" width="2" height="74" fill="#111827"/><rect x="302" y="0" width="2" height="74" fill="#111827"/><rect x="309" y="0" width="5" height="74" fill="#111827"/><rect x="316" y="0" width="5" height="74" fill="#111827"/><rect x="323" y="0" width="2" height="74" fill="#111827"/><rect x="327" y="0" width="2" height="74" fill="#111827"/><rect x="331" y="0" width="2" height="74" fill="#111827"/><rect x="338" y="0" width="5" height="74" fill="#111827"/><rect x="345" y="0" width="5" height="74" fill="#111827"/><rect x="352" y="0" width="2" height="74" fill="#111827"/><rect x="356" y="0" width="5" height="74" fill="#111827"/><rect x="363" y="0" width="2" height="74" fill="#111827"/><rect x="370" y="0" width="2" height="74" fill="#111827"/><rect x="374" y="0" width="2" height="74" fill="#111827"/><rect x="378" y="0" width="5" height="74" fill="#111827"/><rect x="385" y="0" width="2" height="74" fill="#111827"/><rect x="392" y="0" width="2" height="74" fill="#111827"/><rect x="396" y="0" width="5" height="74" fill="#111827"/><rect x="403" y="0" width="5" height="74" fill="#111827"/><rect x="410" y="0" width="2" height="74" fill="#111827"/></svg></div>
-                                <div class="recipient-block">
-                                    <div>
-                                        <div class="label-field">Nombre</div><div class="recipient-name">SOFIA CARDENAS</div>
-                                        <div class="label-field" style="margin-top:8px;">Direccion</div><div class="recipient-address">CALLE 140 #12-44</div>
-                                        <div class="recipient-small">CEDRITOS / BOGOTA</div>
-                                        <div class="recipient-small">3203332211</div>
-                                    </div>
-                                    <div class="qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=174x174&margin=14&data=DAS202600001" alt="QR" width="174" height="174"></div>
-                                </div>
-                                <div class="label-observations"><div class="label-field">Observaciones</div><div style="margin-top:6px;">ENTREGAR EN HORARIO DE OFICINA</div></div>
-                                <div class="meta-row">
-                                    <div><p class="meta-label">Zona</p><p class="meta-value">NORTE</p></div>
-                                    <div><p class="meta-label">Piezas</p><p class="meta-value">1</p></div>
-                                    <div><p class="meta-label">Recaudo</p><p class="meta-value">$74.000</p></div>
-                                </div>
-                                <div class="label-footer"><span>TUSENVIOS.COM.CO</span><span>DAS202600001</span><span>2026-05-19 10:24</span></div>
+                <div class="container">
+                    <div class="hero-grid">
+                        <div class="hero-text">
+                            <h1>Gestiona tus despachos locales desde <span class="highlight">un solo lugar</span></h1>
+                            <p>Sencillo, rápido y con tu propia marca. Automatiza tus envíos e imprime etiquetas profesionales.</p>
+                            <div class="hero-actions">
+                                <a href="{{ route('register') }}" class="btn btn-primary" style="padding: 12px 28px; font-size: 14.5px;">Comienza ahora, es gratis</a>
                             </div>
                         </div>
+                        <div class="hero-mockup">
+                            <img src="{{ asset('images/dashboard_front.jpg') }}" alt="Tus Envíos Dashboard" class="mockup-front-image">
+                        </div>
                     </div>
                 </div>
             </section>
-            <section id="como-funciona" class="section">
-                <div class="container"><div class="section-title"><p class="eyebrow">Como funciona</p><h2>De pedido recibido a entrega organizada, sin complicarte.</h2><p>El flujo esta pensado para negocios que hoy trabajan con domiciliarios propios, mensajeros aliados o servicios locales de terceros.</p></div>
-                <div class="steps-grid">
-                    <article class="card"><span class="card-number">1</span><h3>Crea tu marca</h3><p>Sube logo, WhatsApp, redes sociales y el mensaje que ira en tus etiquetas.</p></article>
-                    <article class="card"><span class="card-number">2</span><h3>Registra la guia</h3><p>Escribe cliente, direccion, producto, observaciones y valor a recaudar.</p></article>
-                    <article class="card"><span class="card-number">3</span><h3>Entrega y controla</h3><p>Imprime una o varias etiquetas, asigna tu operacion local y consulta tus envios desde computador o celular.</p></article>
-                </div></div>
-            </section>
-            <section class="section section-soft">
-                <div class="container"><div class="section-title"><p class="eyebrow">Por que ayuda</p><h2>Tu emprendimiento se ve mas ordenado desde la primera entrega.</h2><p>En Colombia existen grandes transportadoras como Interrapidisimo, Coordinadora y Envia. Tus Envios empieza donde muchos negocios realmente estan: entregas locales, mensajeria propia y terceros cercanos. Luego podremos sumar convenios con esas transportadoras como valor agregado.</p></div>
-                <div class="benefits-grid">
-                    <div class="benefit"><strong>Tu marca se ve mas profesional.</strong><span>Cada paquete sale con logo, datos claros y una etiqueta consistente.</span></div>
-                    <div class="benefit"><strong>Ahorras tiempo creando guias repetidas.</strong><span>Guarda productos frecuentes y evita escribir lo mismo una y otra vez.</span></div>
-                    <div class="benefit"><strong>Tus clientes reciben paquetes mejor identificados.</strong><span>Direccion, telefono, zona y observaciones quedan faciles de leer.</span></div>
-                    <div class="benefit"><strong>Puedes trabajar desde el celular.</strong><span>Crea, revisa e imprime cuando lo necesites desde el navegador.</span></div>
-                    <div class="benefit"><strong>No necesitas operar como transportadora.</strong><span>Empieza simple con guias, etiquetas, zonas y control basico de tus entregas.</span></div>
-                </div></div>
-            </section>
-            <section class="section">
-                <div class="container"><div class="section-title"><p class="eyebrow">Para quien es</p><h2>Hecho para negocios que venden todos los dias y necesitan verse mejor.</h2></div>
-                <div class="audience-grid">
-                    <div class="audience-item"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 4 5 6 3 10l4 2v8h10v-8l4-2-2-4-3-2-2.5 2h-3L8 4Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Tiendas de ropa</span></div>
-                    <div class="audience-item"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12h16v8H4v-8Z" stroke-width="2" stroke-linejoin="round"/><path d="M6 12V9h12v3M8 9V6m4 3V6m4 3V6M7 16h.01M12 16h.01M17 16h.01" stroke-width="2" stroke-linecap="round"/></svg></span><span>Reposteria</span></div>
-                    <div class="audience-item"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3ZM19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9L19 14ZM5 14l.9 2.1L8 17l-2.1.9L5 20l-.9-2.1L2 17l2.1-.9L5 14Z" stroke-width="2" stroke-linejoin="round"/></svg></span><span>Cosmetica</span></div>
-                    <div class="audience-item"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 8h12l1 12H5L6 8Z" stroke-width="2" stroke-linejoin="round"/><path d="M9 8a3 3 0 0 1 6 0" stroke-width="2" stroke-linecap="round"/></svg></span><span>Accesorios</span></div>
-                    <div class="audience-item"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10h16v10H4V10ZM3 7h18v3H3V7Z" stroke-width="2" stroke-linejoin="round"/><path d="M12 7v13M8.5 7C7 7 6 6.2 6 5.2S7 3.5 8.2 4.1C9.4 4.7 10.4 6 12 7c1.6-1 2.6-2.3 3.8-2.9C17 3.5 18 4.2 18 5.2S17 7 15.5 7" stroke-width="2" stroke-linecap="round"/></svg></span><span>Detalles y regalos</span></div>
-                    <div class="audience-item"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke-width="2" stroke-linejoin="round"/><path d="M10 18h4" stroke-width="2" stroke-linecap="round"/></svg></span><span>Ventas por WhatsApp</span></div>
-                </div></div>
-            </section>
-            <section id="planes" class="section section-soft">
-                <div class="container"><div class="section-title"><p class="eyebrow">Plan unico</p><h2>Un solo plan para empezar simple: Emprende.</h2><p>La prueba no se pierde por dias. Usas tus primeras guias cuando realmente tengas pedidos y luego activas una mensualidad clara.</p></div>
-                <div class="plans-grid">
-                    <article class="plan plan-featured"><div class="plan-top"><div><h3>Emprende</h3><p class="plan-purpose">Para negocios locales que quieren ordenar sus entregas sin depender de un sistema complejo.</p></div><span class="badge">10 guias gratis</span></div><p class="price">$19.900 <small>/ mes</small></p><ul><li>Etiquetas y guias ilimitadas al activar</li><li>Logo, redes y mensaje personalizado en cada etiqueta</li><li>Productos frecuentes para crear guias mas rapido</li><li>Impresion individual o por lote</li><li>Control de entregas para mensajeria propia o terceros</li><li>Base lista para futuras alianzas con transportadoras nacionales</li></ul><a href="{{ route('register') }}" class="btn btn-primary">Probar gratis</a></article>
-                </div></div>
-            </section>
-            <section class="section">
-                <div class="container"><div class="section-title"><p class="eyebrow">Confianza</p><h2>Simple para empezar, serio para operar.</h2></div>
-                <div class="trust-row">
-                    <div class="trust"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7.5 8.5c-2 0-3.5 1.5-3.5 3.5s1.5 3.5 3.5 3.5c1.6 0 2.8-1 4.5-3.5 1.7-2.5 2.9-3.5 4.5-3.5 2 0 3.5 1.5 3.5 3.5s-1.5 3.5-3.5 3.5c-1.6 0-2.8-1-4.5-3.5-1.7-2.5-2.9-3.5-4.5-3.5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Sin limite de etiquetas al activar tu plan.</span></div>
-                    <div class="trust"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 7h10M7 12h10M7 17h6" stroke-width="2" stroke-linecap="round"/><path d="M5 4h14v16H5V4Z" stroke-width="2" stroke-linejoin="round"/></svg></span><span>Un solo plan, sin enredos para elegir.</span></div>
-                    <div class="trust"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M20 13 13 20 4 11V4h7l9 9Z" stroke-width="2" stroke-linejoin="round"/><path d="M8 8h.01" stroke-width="3" stroke-linecap="round"/></svg></span><span>Compatible con varios tamanos de etiquetas, incluyendo 100 x 150 mm.</span></div>
-                    <div class="trust"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 5h13v10H3V5Z" stroke-width="2" stroke-linejoin="round"/><path d="M8 19h7M11 15v4M17 9h4v10h-4V9Z" stroke-width="2" stroke-linejoin="round"/></svg></span><span>Funciona desde celular y computador.</span></div>
-                    <div class="trust"><span class="landing-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3Z" stroke-width="2"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" stroke-width="2"/></svg></span><span>Tus datos quedan organizados.</span></div>
-                </div></div>
-            </section>
-            <section id="preguntas" class="section section-soft">
-                <div class="container faq-grid">
-                    <div class="section-title"><p class="eyebrow">Preguntas frecuentes</p><h2>Lo importante antes de empezar.</h2><p>Tus Envios esta pensado para negocios pequenos que necesitan imprimir etiquetas y organizar pedidos sin montar un sistema complejo.</p></div>
-                    <div class="faq-list">
-                        <article class="card"><h3>Tiene limite de etiquetas?</h3><p>No. Al activar el plan Emprende puedes crear e imprimir guias y etiquetas sin limite.</p></article>
-                        <article class="card"><h3>Que pasa despues de las 10 guias gratis?</h3><p>Puedes seguir entrando a tu cuenta y revisar lo creado. Para crear nuevas guias debes activar el plan mensual.</p></article>
-                        <article class="card"><h3>Funciona con Interrapidisimo, Coordinadora o Envia?</h3><p>Hoy esta pensado para mensajeria propia o terceros locales. La idea es que mas adelante podamos sumar convenios con grandes transportadoras como valor agregado.</p></article>
-                        <article class="card"><h3>Puedo usar mi logo y redes?</h3><p>Si. Puedes subir logo, WhatsApp, Instagram, Facebook, TikTok, pagina web y mensaje para la etiqueta.</p></article>
+
+            <!-- Bento Grid Section -->
+            <section class="bento-section">
+                <div class="container">
+                    <div class="section-header">
+                        <h2>Todo lo que ofrece Tus Envíos</h2>
+                        <p>Una cuadrícula modular, limpia y compacta enfocada al 100% en las características del sistema.</p>
+                    </div>
+
+                    <div class="bento-grid">
+                        
+                        <!-- Card 1: Productos rápidos -->
+                        <div class="bento-card">
+                            <div>
+                                <div class="app-icon-box" style="background: rgba(245, 158, 11, 0.08);">
+                                    <svg style="width:24px; height:24px; color:#d97706;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                </div>
+                                <h3>Productos rápidos</h3>
+                                <p>Guarda tus artículos estrella con precios y pesos predefinidos para agregarlos a cualquier etiqueta en un instante.</p>
+                            </div>
+                            <!-- Clean CSS/HTML Product table markup -->
+                            <div style="margin-top: 20px; font-size: 11px; border: 1px solid var(--slate-100); border-radius: 8px; overflow: hidden; background: var(--bg-soft);">
+                                <div style="display: flex; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--slate-100); font-weight: 700; background: #fff;">
+                                    <span>Producto</span>
+                                    <span>Stock</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 6px 10px;">
+                                    <span>Termo TermoPro</span>
+                                    <span style="color: var(--emerald); font-weight: 700;">14 u</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 6px 10px; border-top: 1px solid var(--slate-100);">
+                                    <span>Audífonos Air</span>
+                                    <span style="color: var(--emerald); font-weight: 700;">8 u</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Etiquetas Pro -->
+                        <div class="bento-card">
+                            <div>
+                                <div class="app-icon-box" style="background: rgba(37, 99, 235, 0.08);">
+                                    <svg style="width:24px; height:24px; color:var(--brand-blue);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <h3>Etiquetas listas</h3>
+                                <p>Genera plantillas PDF listas para impresión en papel clásico o formato autoadhesivo térmico profesional de 100 x 150 mm.</p>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Despacho flexible -->
+                        <div class="bento-card">
+                            <div>
+                                <div class="app-icon-box" style="background: rgba(234, 88, 12, 0.08);">
+                                    <svg style="width:24px; height:24px; color:var(--brand-orange);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1" />
+                                    </svg>
+                                </div>
+                                <h3>Despacho flexible</h3>
+                                <p>Organiza la ruta con tus mensajeros de confianza o asigna los despachos a tus aliados logísticos locales de forma simple.</p>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Historial de guías -->
+                        <div class="bento-card">
+                            <div>
+                                <div class="app-icon-box" style="background: rgba(14, 165, 233, 0.08);">
+                                    <svg style="width:24px; height:24px; color:#0284c7;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                                <h3>Historial de guías</h3>
+                                <p>Consulta estados de entrega, reportes históricos de recaudos contra entrega y datos financieros desde tu panel.</p>
+                            </div>
+                            <!-- Clean CSS/HTML Guia log markup -->
+                            <div style="margin-top: 20px; font-size: 11px; border: 1px solid var(--slate-100); border-radius: 8px; overflow: hidden; background: #fff;">
+                                <div style="display: flex; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--slate-100); align-items: center;">
+                                    <span style="font-weight: 700;">Guía #1002</span>
+                                    <span style="background: rgba(16, 185, 129, 0.1); color: var(--emerald); padding: 2px 6px; border-radius: 4px; font-weight: 700;">Entregado</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 6px 10px; align-items: center;">
+                                    <span style="font-weight: 700;">Guía #1003</span>
+                                    <span style="background: rgba(37, 99, 235, 0.1); color: var(--brand-blue); padding: 2px 6px; border-radius: 4px; font-weight: 700;">En camino</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 5: Marca propia -->
+                        <div class="bento-card">
+                            <div>
+                                <div class="app-icon-box" style="background: rgba(244, 63, 94, 0.08);">
+                                    <svg style="width:24px; height:24px; color:#e11d48;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21" />
+                                    </svg>
+                                </div>
+                                <h3>Tu marca destacada</h3>
+                                <p>Sube tu logotipo corporativo, número de WhatsApp e Instagram para que se agreguen en cada etiqueta automáticamente.</p>
+                            </div>
+                        </div>
+
+                        <!-- Card 6: Inventario -->
+                        <div class="bento-card">
+                            <div>
+                                <div class="app-icon-box" style="background: rgba(16, 185, 129, 0.08);">
+                                    <svg style="width:24px; height:24px; color:var(--emerald);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2" />
+                                    </svg>
+                                </div>
+                                <h3>Stock sincronizado</h3>
+                                <p>Evita vender unidades agotadas. La plataforma descuenta stock de tu catálogo al emitir la guía de envío física.</p>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </section>
-            <section class="cta-band">
-                <div class="container cta-inner"><div><p class="eyebrow" style="color:rgba(255,255,255,.78)">Listo para probar</p><h2>Empieza hoy con tu primera etiqueta personalizada.</h2><p>Crea tus primeras 10 guias gratis. Luego activa tu plan mensual cuando quieras seguir creando.</p></div><a href="{{ route('register') }}" class="btn btn-orange">Crear cuenta gratis</a></div>
+
+            <!-- Steps Section -->
+            <section id="como-funciona" class="steps-section">
+                <div class="container">
+                    <div class="steps-header">
+                        <h2>Despacha de forma eficiente en 3 pasos</h2>
+                    </div>
+                    <div class="steps-grid">
+                        <!-- Step 1 -->
+                        <div class="step-card">
+                            <div class="step-badge">Paso 1</div>
+                            <h3>Configura tu marca</h3>
+                            <p>Sube tu logotipo y tus redes de contacto que irán impresas en cada guía que despaches.</p>
+                        </div>
+                        <!-- Step 2 -->
+                        <div class="step-card">
+                            <div class="step-badge">Paso 2</div>
+                            <h3>Genera la guía</h3>
+                            <p>Ingresa la dirección del destinatario y selecciona tus productos de catálogo en segundos.</p>
+                        </div>
+                        <!-- Step 3 -->
+                        <div class="step-card">
+                            <div class="step-badge">Paso 3</div>
+                            <h3>Imprime y despacha</h3>
+                            <p>Imprime la etiqueta autoadhesiva, pégala en el paquete y contrólalo en tu panel administrativo.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pricing Section -->
+            <section id="planes" class="pricing-section">
+                <div class="container">
+                    <div class="steps-header">
+                        <h2>Un solo plan con todo incluido</h2>
+                    </div>
+
+                    @php $featuredPlan = $plans->first(); @endphp
+                    <div class="pricing-box">
+                        <div class="pricing-title-row">
+                            <h3>Plan {{ $featuredPlan?->name ?: 'Emprende' }}</h3>
+                            <span class="trial-tag">10 guías gratis</span>
+                        </div>
+                        <div class="pricing-cost">
+                            ${{ number_format($featuredPlan?->monthly_price ?? 19900, 0, ',', '.') }} <span style="font-size: 14px; color: var(--slate-600); font-weight: 500;">/ mes</span>
+                        </div>
+                        <ul class="pricing-features-list">
+                            <li class="pricing-feature-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                Guías ilimitadas mensuales
+                            </li>
+                            <li class="pricing-feature-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                Etiquetas térmicas con tu logo
+                            </li>
+                            <li class="pricing-feature-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                Catálogo de productos rápidos
+                            </li>
+                            <li class="pricing-feature-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                Control simple de inventario
+                            </li>
+                            <li class="pricing-feature-item">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                Historial de guías y reportes
+                            </li>
+                        </ul>
+                        <div style="margin-top: 28px;">
+                            <a href="{{ route('register') }}" class="btn btn-primary" style="width: 100%; height: 44px;">Empezar mi prueba gratis</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section id="preguntas" class="faq-section">
+                <div class="container">
+                    <div class="steps-header" style="margin-bottom: 56px;">
+                        <h2>Preguntas frecuentes</h2>
+                    </div>
+                    <div class="faq-grid">
+                        <div class="faq-item">
+                            <h3>¿Tiene límites de etiquetas?</h3>
+                            <p>No. Con tu plan activo puedes emitir e imprimir todas las etiquetas térmicas que requiera la logística diaria de tu tienda.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3>¿Qué sucede al acabar las guías gratis?</h3>
+                            <p>Conservas el acceso para consultar los reportes. Para emitir nuevas etiquetas térmicas, debes activar la suscripción mensual.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3>¿Se integra con transportadoras nacionales?</h3>
+                            <p>Tus Envíos está diseñado para despachos con domiciliarios y mensajería local propia o aliada. La integración con envíos nacionales está en desarrollo.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3>¿Puedo usar mi logo propio?</h3>
+                            <p>Sí, la etiqueta autoadhesiva final llevará tu logo, número de WhatsApp corporativo e Instagram.</p>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
+
+        <!-- Footer -->
         <footer class="footer">
             <div class="container footer-inner">
-                <div><img src="{{ asset('images/logotusenvios.png') }}" alt="Tus Envios"><div>Etiquetas y guias para emprendimientos</div></div>
-                <div style="display:flex;flex-wrap:wrap;gap:16px"><a href="{{ route('tracking.index') }}">Rastrear guia</a><a href="{{ route('login') }}">Ingresar</a><a href="{{ route('register') }}" style="color:var(--brand-blue)">Crear cuenta</a></div>
+                <div class="footer-info">
+                    <div class="footer-logo">
+                        <img src="{{ asset('images/logotusenvios.png') }}" alt="Tus Envios">
+                    </div>
+                    <p class="footer-desc">Etiquetas y guías profesionales para emprendimientos colombianos.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="{{ route('login') }}">Ingresar</a>
+                    <a href="{{ route('register') }}" style="color: var(--brand-orange);">Crear cuenta</a>
+                </div>
+            </div>
+            <div class="footer-copyright">
+                &copy; {{ date('Y') }} Tus Envíos. Todos los derechos reservados.
             </div>
         </footer>
     </body>

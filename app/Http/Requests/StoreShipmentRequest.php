@@ -38,7 +38,7 @@ class StoreShipmentRequest extends FormRequest
             'payment_method' => ['required', 'string', 'max:50'],
             'collection_value' => ['nullable', 'numeric', 'min:0'],
             'zone' => ['nullable', 'string', 'max:255'],
-            'recipient_notes' => ['nullable', 'string', 'max:1000'],
+            'recipient_notes' => ['nullable', 'string', 'max:90'],
         ];
     }
 }

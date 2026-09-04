@@ -49,6 +49,7 @@
             <table class="admin-table min-w-full text-sm">
                 <thead>
                     <tr>
+                        <th width="60">Logo</th>
                         <th>Negocio</th>
                         <th>Plan</th>
                         <th>Pago</th>
@@ -64,6 +65,15 @@
                             $plan = $subscription?->plan;
                         @endphp
                         <tr>
+                            <td>
+                                @if ($client->logo_path)
+                                    <img src="{{ \Illuminate\Support\Facades\Storage::url($client->logo_path) }}" alt="{{ $client->name }}" class="h-10 w-10 rounded-md border border-gray-200 object-contain bg-white p-0.5">
+                                @else
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs font-black uppercase text-gray-400">
+                                        {{ strtoupper(substr($client->name, 0, 2)) }}
+                                    </div>
+                                @endif
+                            </td>
                             <td>
                                 <p class="font-semibold text-gray-950"><a href="{{ route('admin.clients.show', $client) }}" class="hover:text-blue-700">{{ $client->name }}</a></p>
                                 <p class="mt-1 text-xs text-gray-500">{{ $client->email ?: 'Sin correo' }} / {{ $client->phone ?: 'Sin telefono' }}</p>
@@ -99,7 +109,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center text-gray-500">No hay clientes para mostrar.</td></tr>
+                        <tr><td colspan="7" class="text-center text-gray-500">No hay clientes para mostrar.</td></tr>
                     @endforelse
                 </tbody>
             </table>

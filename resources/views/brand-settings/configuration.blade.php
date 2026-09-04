@@ -51,15 +51,6 @@
             padding: 1rem !important;
         }
 
-        .configuration-save-card {
-            min-height: 72px;
-            align-items: center;
-        }
-
-        .configuration-save-card button {
-            min-width: 210px;
-        }
-
         .settings-checkbox {
             width: 18px !important;
             height: 18px !important;
@@ -154,46 +145,59 @@
         }
 
         .brand-palette-preview-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: .65rem;
+            align-items: stretch;
         }
 
-        .brand-preview-button {
+        .brand-palette-preview-row > * {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .brand-preview-button,
+        .brand-preview-selected,
+        .brand-preview-pill,
+        .brand-preview-save {
             border-radius: .45rem;
+            font-weight: 800;
+            padding: .65rem .5rem;
+            min-height: 44px;
+        }
+
+        .brand-preview-button,
+        .brand-preview-save {
             background: var(--preview-color);
             color: var(--preview-text);
-            font-weight: 800;
-            padding: .65rem .9rem;
+        }
+
+        .brand-preview-save {
+            border: 0;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: .85rem;
         }
 
         .brand-preview-selected {
             border: 1px solid var(--preview-color);
-            border-radius: .45rem;
             background: color-mix(in srgb, var(--preview-color) 10%, white);
             color: var(--preview-color);
-            font-weight: 850;
-            padding: .55rem .75rem;
+            cursor: pointer;
+            user-select: none;
         }
 
         .brand-preview-pill {
             border-radius: 999px;
             background: color-mix(in srgb, var(--preview-color) 14%, white);
             color: var(--preview-color);
-            font-weight: 850;
-            padding: .4rem .65rem;
         }
 
         @media (min-width: 1024px) {
             .configuration-form-grid {
                 grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
-            }
-        }
-
-        @media (max-width: 1023px) {
-            .configuration-save-card button {
-                width: 100%;
             }
         }
 
@@ -235,10 +239,6 @@
 
     <div class="py-6">
         <div class="mx-auto w-full max-w-7xl px-4 sm:px-5 lg:px-6">
-            @if (session('status'))
-                <div class="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{{ session('status') }}</div>
-            @endif
-
             @if ($errors->any())
                 <div class="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">Revisa los campos marcados antes de guardar.</div>
             @endif
@@ -385,17 +385,13 @@
                             <p class="text-xs font-black uppercase text-gray-500">Vista rapida</p>
                             <div class="brand-palette-preview-row">
                                 <span class="brand-preview-button">Boton principal</span>
-                                <span class="brand-preview-selected">Seleccion activa</span>
-                                <span class="brand-preview-pill">Estado</span>
+                                <span class="brand-preview-selected" onclick="document.getElementById('brand-color-custom-picker').click()" title="Usar este color como seleccion">Seleccion activa</span>
+                                <button type="submit" class="brand-preview-save" style="background: var(--preview-color); color: var(--preview-text);">
+                                    Guardar configuracion
+                                </button>
                             </div>
                         </div>
                     </section>
-
-                    <div class="configuration-save-card flex justify-end rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <button class="rounded-md bg-blue-700 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-800">
-                            Guardar configuracion
-                        </button>
-                    </div>
                 </div>
 </form>
 
@@ -573,7 +569,6 @@
         .configuration-form-grid,
         .configuration-column,
         .configuration-card,
-        .configuration-save-card,
         .brand-palette-grid,
         .brand-palette-preview,
         .store-logo-preview {
@@ -582,8 +577,7 @@
             min-width: 0;
         }
 
-        .configuration-card,
-        .configuration-save-card {
+        .configuration-card {
             overflow: hidden;
         }
 
@@ -624,8 +618,7 @@
                 width: 100%;
             }
 
-            .configuration-card,
-            .configuration-save-card {
+            .configuration-card {
                 width: 100%;
                 padding: 1rem;
             }
@@ -664,10 +657,6 @@
                 display: grid !important;
                 grid-template-columns: minmax(0, 1fr);
                 gap: 0.5rem;
-            }
-
-            .configuration-save-card button {
-                width: 100%;
             }
         }
     </style>
@@ -763,19 +752,10 @@
 
         .brand-preview-button,
         .brand-preview-selected,
-        .brand-preview-pill {
+        .brand-preview-pill,
+        .brand-preview-save {
             padding-top: 0.45rem !important;
             padding-bottom: 0.45rem !important;
-        }
-
-        .configuration-save-card {
-            min-height: 0 !important;
-            padding: 0.75rem 1rem !important;
-        }
-
-        .configuration-save-card button {
-            padding-top: 0.65rem !important;
-            padding-bottom: 0.65rem !important;
         }
     }
 </style>

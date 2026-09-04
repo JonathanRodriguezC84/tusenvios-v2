@@ -100,6 +100,129 @@
             </div>
         </section>
 
+        {{-- Operacion --}}
+        <section class="admin-card p-5">
+            <h3 class="text-sm font-black uppercase text-gray-500">Operacion</h3>
+            <div class="mt-4 grid grid-cols-2 gap-3">
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p class="text-xs font-semibold uppercase text-gray-500">Guias del mes</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-950">{{ $operationMetrics['month_count'] }}</p>
+                </div>
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p class="text-xs font-semibold uppercase text-emerald-700">Recaudo recibido</p>
+                    <p class="mt-1 text-lg font-bold text-emerald-800">${{ number_format($operationMetrics['collection_received'], 0, ',', '.') }}</p>
+                </div>
+                <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p class="text-xs font-semibold uppercase text-amber-700">Recaudo por cobrar</p>
+                    <p class="mt-1 text-lg font-bold text-amber-800">${{ number_format($operationMetrics['collection_pending'], 0, ',', '.') }}</p>
+                </div>
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p class="text-xs font-semibold uppercase text-gray-500">Valor total guiado</p>
+                    <p class="mt-1 text-lg font-bold text-gray-950">${{ number_format($operationMetrics['totals']['value'], 0, ',', '.') }}</p>
+                </div>
+            </div>
+
+            <div class="mt-4 border-t border-gray-100 pt-3 grid gap-1.5 text-sm">
+                @foreach ($operationMetrics['groups'] as $key => $group)
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="font-semibold text-gray-700">{{ $group['label'] }}</span>
+                        <span class="text-gray-950 font-bold">{{ $group['count'] }} guias</span>
+                    </div>
+                @endforeach
+                <div class="flex items-center justify-between border-t border-gray-100 pt-1.5 text-sm">
+                    <span class="font-semibold text-gray-950">Total</span>
+                    <span class="text-gray-950 font-bold">{{ $operationMetrics['totals']['count'] }} guias</span>
+                </div>
+            </div>
+        </section>
+
+        {{-- Ultimas guias --}}
+        <section class="admin-card p-5 lg:col-span-2">
+            <h3 class="text-sm font-black uppercase text-gray-500">Ultimas guias ({{ $clientShipments->count() }})</h3>
+            @if ($clientShipments->count())
+                <div class="mt-3 overflow-x-auto">
+                    <table class="admin-table min-w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Guia</th>
+                                <th>Cliente</th>
+                                <th>Destino</th>
+                                <th>Estado</th>
+                                <th>Recaudo</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($clientShipments as $shipment)
+                                @php
+                                    $groupKey = \App\Models\Shipment::statusGroupKey($shipment->status);
+                                    $badge = match ($groupKey) {
+                                        'delivered' => 'bg-emerald-100 text-emerald-800',
+                                        'returned' => 'bg-orange-100 text-orange-700',
+                                        'cancelled' => 'bg-gray-200 text-gray-800',
+                                        default => 'bg-blue-100 text-blue-800',
+                                    };
+                                    $city = $shipment->recipient_city ?: ($shipment->recipient_locality ?: ($shipment->zone ?: '—'));
+                                @endphp
+                                <tr>
+                                    <td class="font-mono font-semibold text-gray-950">{{ $shipment->guide_number }}</td>
+                                    <td>
+                                        <p class="font-semibold text-gray-900">{{ $shipment->recipient_name }} {{ $shipment->recipient_lastname }}</p>
+                                        <p class="text-xs text-gray-500">{{ $shipment->recipient_phone }}</p>
+                                    </td>
+                                    <td class="text-gray-700">{{ $city }}</td>
+                                    <td><span class="rounded-full px-2.5 py-0.5 text-xs font-bold {{ $badge }}">{{ $operationMetrics['groups'][$groupKey]['label'] ?? $shipment->status }}</span></td>
+                                    <td class="font-semibold text-gray-950">${{ number_format($shipment->collection_value, 0, ',', '.') }}</td>
+                                    <td class="text-gray-500">{{ $shipment->created_at->format('d/m/y H:i') }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <p class="mt-4 text-sm text-gray-500">Este cliente aun no tiene guias.</p>
+            @endif
+        </section>
+
+        {{-- Usuarios de la tienda --}}
+        <section class="admin-card p-5 lg:col-span-2">
+            <h3 class="text-sm font-black uppercase text-gray-500">Usuarios de la tienda ({{ $clientUsers->count() }})</h3>
+            @if ($clientUsers->count())
+                <div class="mt-3 overflow-x-auto">
+                    <table class="admin-table min-w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Correo</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($clientUsers as $user)
+                                <tr>
+                                    <td class="font-semibold text-gray-950">{{ $user->name }}</td>
+                                    <td class="text-gray-500">{{ $user->email }}</td>
+                                    <td>
+                                        <span class="rounded-full px-2.5 py-0.5 text-xs font-bold {{ $user->role === 'tenant_admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700' }}">
+                                            {{ $user->role }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="rounded-full px-2.5 py-0.5 text-xs font-bold {{ $user->status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' }}">
+                                            {{ $user->status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <p class="mt-4 text-sm text-gray-500">Este cliente no tiene usuarios registrados.</p>
+            @endif
+        </section>
+
         {{-- API Token --}}
         <section class="admin-card p-5">
             <h3 class="text-sm font-black uppercase text-gray-500">API Token</h3>

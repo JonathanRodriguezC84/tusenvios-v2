@@ -18,23 +18,35 @@ class DailyTaskController extends Controller
         $cards = collect($this->taskDefinitions())
             ->map(function (array $task) use ($user) {
                 $query = $this->queryFor($user, $task);
-                $shipments = (clone $query)
-                    ->with(['affiliatedCompany', 'courier'])
-                    ->latest('updated_at')
-                    ->take(5)
-                    ->get();
 
                 return array_merge($task, [
                     'count' => (clone $query)->count(),
-                    'shipments' => $shipments,
-                    'route' => $this->taskRoute($task),
+                    'route' => route('shipments.index', ['task' => $task['key']]),
                 ]);
             })
             ->values();
 
+        // Resumen sobre guias unicas: una guia puede coincidir en varias
+        // tareas, se conserva la de mayor prioridad.
+        $priorityMap = [
+            'issues' => 1,
+            'stale' => 2,
+            'route' => 3,
+            'preparation' => 4,
+            'pending_print' => 5,
+        ];
+        $pendingShipments = collect();
+        foreach ($cards->sortBy(fn (array $card) => $priorityMap[$card['key']] ?? 9)->values() as $card) {
+            foreach ($this->queryFor($user, $card)->pluck('id') as $shipmentId) {
+                if (! $pendingShipments->has($shipmentId)) {
+                    $pendingShipments->put($shipmentId, $priorityMap[$card['key']] ?? 9);
+                }
+            }
+        }
+
         $summary = [
-            'total' => $cards->sum('count'),
-            'urgent' => $cards->whereIn('key', ['issues', 'stale'])->sum('count'),
+            'total' => $pendingShipments->count(),
+            'urgent' => $pendingShipments->filter(fn (int $order) => $order <= 2)->count(),
             'printedToday' => Shipment::query()
                 ->visibleTo($user)
                 ->where('status', 'printed')
@@ -47,40 +59,24 @@ class DailyTaskController extends Controller
                 ->count(),
         ];
 
-        $startCard = $cards->first(fn (array $card) => $card['count'] > 0);
-        $startShipment = $startCard ? $startCard['shipments']->first() : null;
-        $fallbackUrl = $user->canCreateShipments() ? route('shipments.create') : route('shipments.index');
-        $startUrl = $startShipment
-            ? route('shipments.show', ['shipment' => $startShipment, 'daily' => 1])
-            : ($startCard ? $startCard['route'] : $fallbackUrl);
-
         $assistantMessage = $this->assistantMessage($summary);
         $summaryText = $this->summaryText($cards, $summary);
         $dailyMode = $this->dailyMode($summary);
         $modeContent = $this->modeContent($dailyMode, $summary);
-        $visibleCards = $dailyMode === 'all_clear'
-            ? collect()
-            : $cards->filter(fn (array $card) => $card['count'] > 0)->values();
 
-        $statusLabels = [
-            'created' => 'Por imprimir',
-            'printed' => 'Impresa',
-            'in_warehouse' => 'En bodega',
-            'in_sorting' => 'En clasificacion',
-            'assigned' => 'Asignada',
-            'on_route' => 'En camino',
-            'delivered' => 'Entregada',
-            'failed_delivery' => 'Novedad',
-            'rescheduled' => 'Reprogramada',
-            'return_pending' => 'Por devolver',
-            'returned' => 'Devuelta',
-            'cancelled' => 'Cancelada',
-        ];
+        $fallbackUrl = $user->canCreateShipments() ? route('shipments.create') : route('shipments.index');
+        $startShipment = Shipment::query()
+            ->visibleTo($user)
+            ->whereIn('status', Shipment::DAILY_PENDING_STATUSES)
+            ->latest('updated_at')
+            ->first();
+        $startUrl = $startShipment
+            ? route('shipments.show', ['shipment' => $startShipment, 'daily' => 1])
+            : $fallbackUrl;
 
         return view('daily-tasks.index', compact(
-            'visibleCards',
+            'cards',
             'summary',
-            'statusLabels',
             'startUrl',
             'assistantMessage',
             'summaryText',
@@ -146,15 +142,6 @@ class DailyTaskController extends Controller
             ->visibleTo($user)
             ->whereIn('status', $task['statuses'])
             ->when($task['stale'] ?? false, fn ($query) => $query->where('updated_at', '<=', now()->subDay()));
-    }
-
-    private function taskRoute(array $task): string
-    {
-        if (count($task['statuses']) === 1) {
-            return route('shipments.index', ['status' => $task['statuses'][0]]);
-        }
-
-        return route('shipments.index');
     }
 
     private function assistantMessage(array $summary): string

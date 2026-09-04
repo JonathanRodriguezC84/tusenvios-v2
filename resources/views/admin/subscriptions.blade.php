@@ -42,10 +42,12 @@
                 <thead>
                     <tr>
                         <th>Cliente</th>
+                        <th>Uso</th>
                         <th>Plan</th>
-                        <th>Estado y vigencia</th>
-                        <th>Pagos</th>
-                        <th width="80">Acciones</th>
+                        <th>Estado</th>
+                        <th>Vigencia</th>
+                        <th>Ultimo pago</th>
+                        <th width="240">Pago / acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,11 +64,15 @@
                             <td>
                                 <p class="font-semibold text-gray-950">{{ $tenant?->name ?: 'Cliente eliminado' }}</p>
                                 <p class="text-xs text-gray-500">{{ $tenant?->email ?: 'Sin correo' }}</p>
-                                <div class="mt-1 flex items-center gap-3 text-3xs text-gray-400">
-                                    <span>{{ $tenant?->shipments_count ?? 0 }} guias</span>
-                                    <span>{{ $tenant?->users_count ?? 0 }} usuarios</span>
-                                    <span>{{ $tenant?->status ?? '?' }}</span>
-                                </div>
+                            </td>
+
+                            {{-- USO --}}
+                            <td>
+                                <span class="font-semibold text-gray-950">{{ $tenant?->shipments_count ?? 0 }}</span>
+                                <span class="text-xs text-gray-500"> guias · </span>
+                                <span class="font-semibold text-gray-950">{{ $tenant?->users_count ?? 0 }}</span>
+                                <span class="text-xs text-gray-500"> usuarios</span>
+                                <span class="mt-1 block text-3xs {{ $tenant?->status === 'active' ? 'text-emerald-700' : 'text-red-600' }}">{{ $tenant?->status ?? '?' }}</span>
                             </td>
 
                             {{-- PLAN --}}
@@ -83,26 +89,28 @@
                                     <p class="text-xs font-semibold text-amber-600">Gratuito</p>
                                 @endif
                                 @if ($s->isTrial())
-                                    <p class="mt-0.5 text-3xs font-semibold text-blue-700">🧪 Prueba: {{ $s->trial_guide_used }}/{{ $s->trial_guide_limit }}</p>
+                                    <p class="mt-0.5 text-3xs font-semibold text-blue-700">Prueba: {{ $s->trial_guide_used }}/{{ $s->trial_guide_limit }}</p>
                                 @endif
                             </td>
 
-                            {{-- ESTADO Y VIGENCIA --}}
+                            {{-- ESTADO --}}
                             <td>
-                                <div class="flex flex-wrap items-center gap-1.5">
-                                    @if ($isOverdue)
-                                        <span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">Vencida</span>
-                                    @elseif ($isDueSoon)
-                                        <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Por vencer</span>
-                                    @elseif ($s->status === 'active')
-                                        <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">Activa</span>
-                                    @elseif ($s->status === 'paused')
-                                        <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">Pausada</span>
-                                    @else
-                                        <span class="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">{{ $s->status }}</span>
-                                    @endif
-                                </div>
-                                <div class="mt-1.5 grid grid-cols-2 gap-x-3 text-xs">
+                                @if ($isOverdue)
+                                    <span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">Vencida</span>
+                                @elseif ($isDueSoon)
+                                    <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">Por vencer</span>
+                                @elseif ($s->status === 'active')
+                                    <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">Activa</span>
+                                @elseif ($s->status === 'paused')
+                                    <span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700">Pausada</span>
+                                @else
+                                    <span class="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">{{ $s->status }}</span>
+                                @endif
+                            </td>
+
+                            {{-- VIGENCIA --}}
+                            <td>
+                                <div class="grid grid-cols-2 gap-x-3 text-xs">
                                     <div>
                                         <p class="text-gray-400">Inicio</p>
                                         <p class="font-semibold text-gray-700">{{ $s->starts_at?->format('d/m/Y') ?: '—' }}</p>
@@ -114,7 +122,7 @@
                                 </div>
                             </td>
 
-                            {{-- PAGOS --}}
+                            {{-- ULTIMO PAGO --}}
                             <td>
                                 @if ($lp)
                                     <div class="flex items-center gap-2">
@@ -123,23 +131,16 @@
                                     </div>
                                     <p class="text-3xs text-gray-400 mt-0.5">{{ $lp->provider }} · {{ $lp->reference }}</p>
                                     @if ($lp->payment_url)
-                                        <a href="{{ $lp->payment_url }}" target="_blank" class="text-3xs font-semibold text-blue-700 hover:underline">Abrir link de pago</a>
+                                        <a href="{{ $lp->payment_url }}" target="_blank" class="mt-0.5 block text-3xs font-semibold text-blue-700 hover:underline">Abrir link de pago</a>
                                     @endif
                                 @else
-                                    <p class="text-xs text-gray-400">Sin pagos registrados</p>
+                                    <p class="text-xs text-gray-400">Sin pagos</p>
                                 @endif
-
-                                <form method="POST" action="{{ route('admin.subscriptions.manual-payment', $s) }}" class="mt-1.5 flex items-center gap-1" onsubmit="return confirm('Registrar pago manual?')">
-                                    @csrf
-                                    <input name="amount" type="number" min="0" value="{{ $s->plan?->monthly_price ?? 0 }}" class="w-20 rounded border-gray-300 text-xs shadow-sm focus:border-blue-700 focus:ring-blue-700" placeholder="$">
-                                    <input name="notes" placeholder="Nota" class="w-24 rounded border-gray-300 text-xs shadow-sm focus:border-blue-700 focus:ring-blue-700">
-                                    <button class="rounded bg-blue-700 px-2 py-1 text-3xs font-semibold text-white hover:bg-blue-800">Pagar</button>
-                                </form>
                             </td>
 
-                            {{-- ACCIONES --}}
+                            {{-- PAGO MANUAL + ACCIONES --}}
                             <td>
-                                <div class="flex gap-1">
+                                <div class="flex gap-1 mb-1.5">
                                     <form method="POST" action="{{ route('admin.payment-links.create', $s) }}">
                                         @csrf
                                         <button title="Generar link de pago" class="rounded border border-gray-300 bg-white p-1.5 text-gray-500 hover:bg-gray-50">
@@ -150,10 +151,15 @@
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </button>
                                 </div>
+                                <form method="POST" action="{{ route('admin.subscriptions.manual-payment', $s) }}" class="flex items-center gap-1" onsubmit="return confirm('Registrar pago manual?')">
+                                    @csrf
+                                    <input name="amount" type="number" min="0" value="{{ $s->plan?->monthly_price ?? 0 }}" class="w-24 rounded border-gray-300 text-xs shadow-sm focus:border-blue-700 focus:ring-blue-700" placeholder="$">
+                                    <button class="whitespace-nowrap rounded bg-blue-700 px-2.5 py-1 text-3xs font-semibold text-white hover:bg-blue-800">Pagar</button>
+                                </form>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center text-gray-500 py-10">No hay suscripciones para los filtros seleccionados.</td></tr>
+                        <tr><td colspan="7" class="text-center text-gray-500 py-10">No hay suscripciones para los filtros seleccionados.</td></tr>
                     @endforelse
                 </tbody>
             </table>

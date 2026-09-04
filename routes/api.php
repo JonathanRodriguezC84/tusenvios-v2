@@ -21,6 +21,8 @@ Route::prefix('v1')->middleware('api.tenant')->group(function () {
     Route::get('/my/shipments', [ShipmentApiController::class, 'index']);
     Route::post('/my/shipments', [ShipmentApiController::class, 'store']);
     Route::get('/my/shipments/{shipment}', [ShipmentApiController::class, 'show']);
+    Route::post('/my/products/sync-stock', [\App\Http\Controllers\Api\ProductApiController::class, 'syncStock']);
+    Route::post('/my/products/sync-catalog', [\App\Http\Controllers\Api\ProductApiController::class, 'syncCatalog']);
 });
 
 // ─── Público ───

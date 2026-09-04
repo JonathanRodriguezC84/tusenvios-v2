@@ -7,7 +7,9 @@ use App\Policies\ShipmentPolicy;
 use App\Policies\InventoryProductPolicy;
 use App\Policies\QuickProductPolicy;
 use App\Policies\UserPolicy;
+use App\Policies\NotePolicy;
 use App\Models\User;
+use App\Models\Note;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -18,6 +20,7 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\InventoryProduct' => InventoryProductPolicy::class,
         'App\Models\QuickProduct' => QuickProductPolicy::class,
         'App\Models\User' => UserPolicy::class,
+        'App\Models\Note' => NotePolicy::class,
     ];
 
     public function boot(): void

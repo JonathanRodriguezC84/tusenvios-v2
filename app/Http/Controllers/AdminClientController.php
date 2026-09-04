@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Shipment;
 use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
@@ -40,7 +41,21 @@ class AdminClientController extends Controller
         $tenant->load(['currentSubscription.plan', 'subscriptions' => fn ($q) => $q->latest()->limit(5)]);
         $plans = SubscriptionPlan::orderBy('monthly_price')->get();
 
-        return view('admin.client-detail', compact('tenant', 'plans'));
+        $clientUsers = $tenant->users()->orderBy('name')->get();
+        $clientShipments = $tenant->shipments()
+            ->with('creator')
+            ->latest()
+            ->take(30)
+            ->get();
+        $operationMetrics = $this->operationMetrics($tenant);
+
+        return view('admin.client-detail', compact(
+            'tenant',
+            'plans',
+            'clientUsers',
+            'clientShipments',
+            'operationMetrics'
+        ));
     }
 
     public function createClient(): \Illuminate\View\View
@@ -98,6 +113,80 @@ class AdminClientController extends Controller
             'password' => bcrypt($validated['admin_password']),
             'role' => 'tenant_admin',
         ]);
+
+        // --- INICIO DE AUTOCREADO DE INVENTARIO DESDE OMS ---
+        try {
+            $omsEnvPath = '/home/rcicomco/public_html/oms.rci.com.co/.env';
+            if (file_exists($omsEnvPath)) {
+                $omsDbHost = '127.0.0.1';
+                $omsDbPort = '3306';
+                $omsDbName = '';
+                $omsDbUser = '';
+                $omsDbPass = '';
+
+                $lines = file($omsEnvPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                foreach ($lines as $line) {
+                    if (strpos($line, '=') !== false && strpos($line, '#') !== 0) {
+                        list($key, $value) = explode('=', $line, 2);
+                        $key = trim($key);
+                        $value = trim($value, " \t\n\r\0\x0B\"'");
+                        if ($key === 'DB_DATABASE') $omsDbName = $value;
+                        if ($key === 'DB_USERNAME') $omsDbUser = $value;
+                        if ($key === 'DB_PASSWORD') $omsDbPass = $value;
+                        if ($key === 'DB_HOST') $omsDbHost = $value;
+                        if ($key === 'DB_PORT') $omsDbPort = $value;
+                    }
+                }
+
+                if (!empty($omsDbName)) {
+                    $dsn = "mysql:host={$omsDbHost};port={$omsDbPort};dbname={$omsDbName};charset=utf8mb4";
+                    $omsPdo = new \PDO($dsn, $omsDbUser, $omsDbPass);
+                    $omsPdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+
+                    // Leer las referencias y el stock de bodega_principal del OMS
+                    $stmt = $omsPdo->query('
+                        SELECT r.sku, r.name, r.cost_price, r.sale_price, s.quantity
+                        FROM `references` r
+                        JOIN `stocks` s ON r.id = s.reference_id
+                        WHERE s.channel = "bodega_principal"
+                    ');
+                    $omsItems = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                    foreach ($omsItems as $item) {
+                        $cost = $item['cost_price'] ?: 8000;
+                        $price = 0; // El precio de venta debe ser $0 por defecto
+                        $stock = $item['quantity'] ?: 0;
+
+                        // Insertar en quick_products (Productos Rápidos)
+                        \App\Models\QuickProduct::create([
+                            'tenant_id' => $tenant->id,
+                            'name' => $item['name'],
+                            'sku' => $item['sku'],
+                            'package_type' => 'package',
+                            'cost' => $cost,
+                            'price' => $price,
+                            'stock' => $stock,
+                            'status' => 'active'
+                        ]);
+
+                        // Insertar en inventory_products (Inventario Completo)
+                        \App\Models\InventoryProduct::create([
+                            'tenant_id' => $tenant->id,
+                            'name' => $item['name'],
+                            'sku' => $item['sku'],
+                            'price' => $price,
+                            'cost' => $cost,
+                            'stock' => $stock,
+                            'stock_minimum' => 5,
+                            'status' => 'active'
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error auto-seeding products from OMS for Tenant {$tenant->id}: " . $e->getMessage());
+        }
+        // --- FIN DE AUTOCREADO DE INVENTARIO DESDE OMS ---
 
         return redirect()->route('admin.clients.show', $tenant)->with('status', 'Cliente creado correctamente.');
     }
@@ -172,6 +261,41 @@ class AdminClientController extends Controller
         ]);
 
         return back()->with('status', 'Billetera actualizada. Saldo: $' . number_format($tenant->balance, 0, ',', '.'));
+    }
+
+    private function operationMetrics(Tenant $tenant): array
+    {
+        $rows = Shipment::query()
+            ->where('tenant_id', $tenant->id)
+            ->selectRaw('status, COUNT(*) as total, COALESCE(SUM(collection_value), 0) as value')
+            ->groupBy('status')
+            ->get();
+
+        $groups = [];
+        foreach (Shipment::STATUS_GROUPS as $key => $group) {
+            $groups[$key] = ['label' => $group['label'], 'count' => 0, 'value' => 0];
+        }
+
+        $totals = ['count' => 0, 'value' => 0];
+
+        foreach ($rows as $row) {
+            $groupKey = Shipment::statusGroupKey($row->status);
+            $groups[$groupKey]['count'] += (int) $row->total;
+            $groups[$groupKey]['value'] += (float) $row->value;
+            $totals['count'] += (int) $row->total;
+            $totals['value'] += (float) $row->value;
+        }
+
+        return [
+            'groups' => $groups,
+            'totals' => $totals,
+            'collection_pending' => $groups['on_route']['value'],
+            'collection_received' => $groups['delivered']['value'],
+            'month_count' => Shipment::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('created_at', '>=', now()->startOfMonth())
+                ->count(),
+        ];
     }
 
     private function clientQuery(array $filters = [])

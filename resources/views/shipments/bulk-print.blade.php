@@ -171,8 +171,14 @@
                     <div class="label-recipient">
                         <div><span>NOMBRE</span><strong>{{ $shipment->recipient_name }} {{ $shipment->recipient_lastname }}</strong></div>
                         <div><span>DIRECCION</span><strong class="big">{{ $shipment->recipient_address }}</strong></div>
-                        <div><span>BARRIO / LOCALIDAD</span><strong>{{ $shipment->recipient_neighborhood ?: 'SIN BARRIO' }} / {{ $shipment->recipient_locality ?: 'SIN LOCALIDAD' }}</strong></div>
+                        <div class="label-contact">
+                        <div><span>BARRIO</span><strong>{{ $shipment->recipient_neighborhood ?: 'SIN BARRIO' }}</strong></div>
+                        <div><span>CIUDAD</span><strong>{{ $shipment->recipient_locality ?: 'SIN CIUDAD' }}</strong></div>
+                    </div>
+                        <div class="label-contact">
                         <div><span>TELEFONO</span><strong>{{ $shipment->recipient_phone }}</strong></div>
+                        <div><span>WHATSAPP</span><strong>{{ $shipment->recipient_alt_phone ?: 'SIN WHATSAPP' }}</strong></div>
+                    </div>
                     </div>
                     <div class="label-qr">{!! \App\Support\QrCode::svg($shipment->barcodeValue(), 3) !!}</div>
                 </section>
@@ -184,7 +190,7 @@
                 @endif
 
                 <section class="label-metas">
-                    <div><span>ZONA</span><strong>{{ $shipment->zone ?: 'SIN ZONA' }}</strong></div>
+                    <div><span>LOCALIDAD</span><strong>{{ $shipment->recipient_city ?: 'SIN LOCALIDAD' }}</strong></div>
                     <div><span>PIEZAS</span><strong>{{ $shipment->pieces }}</strong></div>
                     <div><span>RECAUDO</span><strong>${{ number_format($shipment->collection_value, 0, ',', '.') }}</strong></div>
                 </section>

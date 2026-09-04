@@ -113,6 +113,14 @@ class BrandSettingController extends Controller
             return $user->affiliatedCompany()->with('tenant')->first();
         }
 
-        return $user->tenant;
+        if ($user->tenant) {
+            return $user->tenant;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return \App\Models\Tenant::query()->orderBy('id')->first();
+        }
+
+        return null;
     }
 }

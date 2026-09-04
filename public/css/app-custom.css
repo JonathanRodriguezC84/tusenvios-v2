@@ -230,6 +230,8 @@ textarea {
 .dark .text-gray-500 { color: var(--te-text-muted) !important; }
 .dark .text-gray-600 { color: var(--te-text-muted) !important; }
 .dark .text-gray-700 { color: var(--te-text) !important; }
+.dark .text-gray-800 { color: var(--te-text) !important; }
+.dark .text-slate-800 { color: var(--te-text) !important; }
 .dark .text-gray-900 { color: var(--te-text) !important; }
 .dark .text-gray-950 { color: var(--te-text) !important; }
 .dark aside { background-color: var(--te-surface) !important; border-color: var(--te-border) !important; }
@@ -247,8 +249,10 @@ textarea {
 .dark .bg-indigo-50 { background-color: #1e1b4b !important; }
 .dark .text-blue-700 { color: #93c5fd !important; }
 .dark .text-blue-800 { color: #60a5fa !important; }
+.dark .text-blue-900 { color: #93c5fd !important; }
 .dark .text-emerald-700 { color: #6ee7b7 !important; }
 .dark .text-emerald-800 { color: #34d399 !important; }
+.dark .text-emerald-900 { color: #6ee7b7 !important; }
 .dark .text-red-700 { color: #fca5a5 !important; }
 .dark .text-red-800 { color: #f87171 !important; }
 .dark .text-amber-700 { color: #fcd34d !important; }
@@ -257,6 +261,7 @@ textarea {
 .dark .border-amber-200 { border-color: #78350f !important; }
 .dark .border-emerald-200 { border-color: #064e3b !important; }
 .dark .border-blue-200 { border-color: #1e3a5f !important; }
+.dark .border-slate-200 { border-color: var(--te-border) !important; }
 .dark .bg-gray-200 { background-color: #1e293b !important; }
 .dark .text-gray-400 { color: #64748b !important; }
 .dark .text-gray-300 { color: #94a3b8 !important; }
@@ -275,3 +280,96 @@ textarea {
 .dark .configuration-card,
 .dark .configuration-save-card { background-color: var(--te-surface) !important; border-color: var(--te-border) !important; }
 .dark .store-logo-preview { background-color: var(--te-bg) !important; border-color: var(--te-border) !important; }
+
+/* Tareas diarias: contadores y titulo legibles en modo oscuro */
+.dark .te-count-pill { background-color: #1f2937 !important; border-color: #374151 !important; color: #f9fafb !important; }
+.dark .te-count-pill-danger { color: #fca5a5 !important; }
+.dark .te-mode-title { color: #ffffff !important; }
+
+.dark .qp-btn-secondary {
+    border-color: #374151;
+    background: #1f2937;
+    color: #93c5fd;
+}
+
+.dark .qp-btn-secondary:hover {
+    background: #263246;
+}
+
+.dark .qp-btn-danger {
+    border-color: #7f1d1d;
+    background: #450a0a;
+    color: #fca5a5;
+}
+
+.dark .qp-btn-danger:hover {
+    background: #5f1111;
+}
+
+.dark .qp-product-card,
+.dark .qp-icon-btn {
+    border-color: #374151;
+    background: #1f2937;
+}
+
+.dark .qp-action-panel {
+    border-color: #374151;
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
+.dark .qp-field {
+    border-color: #374151;
+    background: #111827;
+    color: #f9fafb;
+}
+
+.dark .qp-row:hover {
+    background: #1f2937;
+}
+
+.dark .qp-mobile-label {
+    color: #9ca3af;
+}
+
+/* Valores de resumen legibles en modo oscuro */
+.dark .te-stat-value { color: #ffffff !important; }
+.te-stat-value { font-size: 1.25rem !important; line-height: 1.75rem !important; }
+@media (min-width: 640px) {
+    .te-stat-value { font-size: 1.5rem !important; line-height: 2rem !important; }
+}
+
+/* ============================================================================
+   UNIFICACION TIPOGRAFICA (v1)
+   Escala coherente de pesos y tamanos para todo el app autenticado.
+   Fuente unica: Inter (var --te-font-family). Se aplica por clases globales,
+   sin tocar cada vista. Se respeta la escala base de Tailwind; solo se fija
+   linea/altura y se recorta la rama gruesa de pesos.
+   ========================================================================== */
+
+/* 1) Pesos: unica rama gruesa en 700 (titulos, tarjetas, cifras).
+   - normal 400 | medium 500 | semibold 600 | bold 700                       */
+[class~="font-extrabold"] { font-weight: 700 !important; }
+[class~="font-black"]     { font-weight: 700 !important; }
+[class~="font-extrabold"][class~="text-gray-900"],
+[class~="font-black"][class~="text-gray-900"] { font-weight: 700 !important; }
+
+/* 2) Tamanos y altura de linea uniformes para la escala principal. */
+[class~="text-3xs"] { font-size: 0.6rem;   line-height: 0.8rem; }
+[class~="text-2xs"] { font-size: 0.65rem;  line-height: 0.9rem; }
+[class~="text-xs"]  { font-size: 0.75rem;  line-height: 1rem; }
+[class~="text-sm"]  { font-size: 0.875rem; line-height: 1.25rem; }
+[class~="text-base"]{ font-size: 1rem;     line-height: 1.5rem; }
+[class~="text-lg"]  { font-size: 1.125rem; line-height: 1.75rem; }
+[class~="text-xl"]  { font-size: 1.25rem;  line-height: 1.75rem; }
+[class~="text-2xl"] { font-size: 1.5rem;   line-height: 2rem; }
+[class~="text-3xl"] { font-size: 1.875rem; line-height: 2.25rem; }
+
+/* 3) El texto base hereda el peso normal de forma explicita. */
+body {
+    font-weight: 400;
+}
+
+/* 4) Los encabezados nativos (h1-h6) usan siempre negrita de titulo. */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+}

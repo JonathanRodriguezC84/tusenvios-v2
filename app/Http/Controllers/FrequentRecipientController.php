@@ -43,10 +43,84 @@ class FrequentRecipientController extends Controller
         $recipients = $query
             ->orderByDesc('use_count')
             ->orderByDesc('updated_at')
-            ->paginate(20)
+            ->paginate(10)
             ->withQueryString();
 
-        return view('recipients.index', compact('recipients', 'filters', 'summary'));
+        $cityToDepartment = \App\Models\City::query()
+            ->join('departments', 'departments.id', '=', 'cities.department_id')
+            ->select('cities.name as city', 'departments.name as dep')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->city => $row->dep]);
+
+        return view('recipients.index', compact('recipients', 'filters', 'summary', 'cityToDepartment'));
+    }
+
+    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $user = Auth::user();
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $query = $this->recipientQuery($user, $filters)
+            ->orderByDesc('use_count')
+            ->orderByDesc('updated_at');
+
+        $cityToDepartment = \App\Models\City::query()
+            ->join('departments', 'departments.id', '=', 'cities.department_id')
+            ->select('cities.name as city', 'departments.name as dep')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->city => $row->dep]);
+
+        $fileName = 'clientes-frecuentes-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query, $cityToDepartment) {
+            $handle = fopen('php://output', 'w');
+
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            fputcsv($handle, [
+                'Nombre',
+                'Apellido',
+                'Documento',
+                'Telefono',
+                'Telefono alterno',
+                'Direccion',
+                'Barrio',
+                'Localidad',
+                'Ciudad',
+                'Departamento',
+                'Usos',
+                'Notas',
+                'Ultima actualizacion',
+            ]);
+
+            $query->chunk(200, function ($recipients) use ($handle, $cityToDepartment) {
+                foreach ($recipients as $recipient) {
+                    $cityName = $recipient->city ?: $recipient->locality;
+
+                    fputcsv($handle, [
+                        $recipient->name,
+                        $recipient->lastname,
+                        $recipient->document,
+                        $recipient->phone,
+                        $recipient->alt_phone,
+                        $recipient->address,
+                        $recipient->neighborhood,
+                        $recipient->locality,
+                        $recipient->city,
+                        $cityToDepartment[$cityName] ?? '',
+                        $recipient->use_count,
+                        $recipient->notes,
+                        $recipient->updated_at->format('Y-m-d H:i:s'),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     public function search(Request $request): \Illuminate\Http\JsonResponse
@@ -136,10 +210,12 @@ class FrequentRecipientController extends Controller
 
     private function recipientPayload(FrequentRecipient $recipient): array
     {
+        [$name, $lastname] = $recipient->normalizedNameParts();
+
         return [
             'id' => $recipient->id,
-            'name' => $recipient->name,
-            'lastname' => $recipient->lastname,
+            'name' => $name,
+            'lastname' => $lastname,
             'document' => $recipient->document,
             'phone' => $recipient->phone,
             'alt_phone' => $recipient->alt_phone,

@@ -23,6 +23,57 @@ class Shipment extends Model
         'cancelled' => [],
     ];
 
+    /**
+     * Agrupacion de estados visible para el plan Emprende: los 12 estados
+     * internos se muestran en 3 grupos. El flujo interno (STATUS_FLOW y la
+     * linea de tiempo) conserva los estados reales.
+     */
+    public const STATUS_GROUPS = [
+        'on_route' => ['label' => 'En camino', 'statuses' => ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled']],
+        'delivered' => ['label' => 'Entregada', 'statuses' => ['delivered']],
+        'returned' => ['label' => 'Devuelta', 'statuses' => ['return_pending', 'returned']],
+        'cancelled' => ['label' => 'Cancelada', 'statuses' => ['cancelled']],
+    ];
+
+    /**
+     * Estados que componen la jornada de Tareas Diarias (guia pendiente).
+     */
+    public const DAILY_PENDING_STATUSES = [
+        'created', 'printed', 'in_warehouse', 'in_sorting', 'assigned',
+        'on_route', 'failed_delivery', 'rescheduled', 'return_pending',
+    ];
+
+    public static function statusGroupKey(string $status): string
+    {
+        foreach (self::STATUS_GROUPS as $key => $group) {
+            if (in_array($status, $group['statuses'], true)) {
+                return $key;
+            }
+        }
+
+        return $status;
+    }
+
+    public static function statusGroupLabel(string $status): string
+    {
+        foreach (self::STATUS_GROUPS as $group) {
+            if (in_array($status, $group['statuses'], true)) {
+                return $group['label'];
+            }
+        }
+
+        return $status;
+    }
+
+    public static function statusesForFilter($status): array
+    {
+        if (isset(self::STATUS_GROUPS[$status])) {
+            return self::STATUS_GROUPS[$status]['statuses'];
+        }
+
+        return [(string) $status];
+    }
+
     protected $fillable = [
         'tenant_id',
         'affiliated_company_id',
@@ -130,7 +181,25 @@ class Shipment extends Model
 
     public function canTransitionTo(string $status): bool
     {
-        return in_array($status, self::STATUS_FLOW[$this->status] ?? [], true);
+        if (in_array($status, self::STATUS_FLOW[$this->status] ?? [], true)) {
+            return true;
+        }
+
+        // Plan Emprende: la vista solo muestra 3 grupos. Permite saltar
+        // directamente entre grupos (ej. En camino -> Entregada / Devuelta),
+        // pero una guia entregada o devuelta queda cerrada.
+        $fromGroup = self::statusGroupKey($this->status);
+
+        if ($fromGroup === 'on_route' && self::statusGroupKey($status) !== 'on_route') {
+            return true;
+        }
+
+        // Volver a "Por imprimir" desde cualquier guia en operacion no cerrada.
+        if ($status === 'created' && $fromGroup === 'on_route' && $this->status !== 'created') {
+            return true;
+        }
+
+        return false;
     }
 
     public function nextScanStatusFor(User $user): ?string

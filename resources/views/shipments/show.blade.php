@@ -31,6 +31,12 @@
         'cancelled' => 'Cancelada',
     ];
 
+    $groupLabels = [
+        'delivered' => 'Entregada',
+        'returned' => 'Devuelta',
+        'on_route' => 'En camino',
+    ];
+
     $inventoryMovementLabels = [
         'shipment' => 'Descuento por guia',
         'restock' => 'Reposicion por cancelacion',
@@ -315,32 +321,24 @@
                                         <input type="hidden" name="daily_mode" value="1">
                                     @endif
                                     <button class="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
-                                        Marcar como {{ strtolower($statusLabels[$nextStatus] ?? $nextStatus) }}
+                                        Marcar como {{ strtolower($groupLabels[$nextStatus] ?? $statusLabels[$nextStatus] ?? $nextStatus) }}
                                     </button>
                                 </form>
                             @endforeach
+
+                            @if (Auth::user()->canEditShipments() && $shipment->canBeCancelled())
+                                <form id="confirm-cancel-shipment-form" method="POST" action="{{ route('shipments.cancel', $shipment) }}" class="grid gap-2 border-t border-gray-100 pt-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <textarea name="notes" rows="2" placeholder="Motivo de cancelacion (opcional)" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-gray-700 focus:ring-gray-700"></textarea>
+                                    <button type="button" class="w-full rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50" onclick="document.getElementById('confirm-cancel-shipment').classList.remove('hidden')">
+                                        Cancelar guia
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </section>
-                @endif
-
-                @if (Auth::user()->canEditShipments() && $shipment->canBeCancelled())
-                    <section class="rounded-lg border border-blue-200 bg-white p-5 shadow-sm">
-                        <p class="text-xs font-black uppercase tracking-wider text-blue-800">Cancelar</p>
-                        <form id="cancel-shipment-form" method="POST" action="{{ route('shipments.cancel', $shipment) }}" class="mt-3 grid gap-3">
-                            @csrf
-                            @method('PATCH')
-                            <textarea name="notes" rows="2" placeholder="Motivo de cancelacion" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-700 focus:ring-blue-700"></textarea>
-                            <button type="button" class="rounded-md bg-blue-800 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800" onclick="document.getElementById('confirm-cancel-shipment').classList.remove('hidden')">
-                                Cancelar guia
-                            </button>
-                        </form>
-                    </section>
                     <x-confirmation-modal id="confirm-cancel-shipment" title="Cancelar guia" message="Se cancelara la guia {{ $shipment->guide_number }}. Esta accion no se puede deshacer." confirmText="Cancelar guia" cancelText="Mantener guia" />
-                    <script>
-                        document.getElementById('confirm-cancel-shipment-form')?.addEventListener('click', function(e) {
-                            document.getElementById('cancel-shipment-form').submit();
-                        });
-                    </script>
                 @endif
             </aside>
         </div>

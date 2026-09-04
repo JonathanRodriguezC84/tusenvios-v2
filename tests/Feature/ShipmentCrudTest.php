@@ -201,4 +201,57 @@ class ShipmentCrudTest extends TestCase
         $response->assertOk();
         $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
     }
+
+    public function test_creates_shipment_with_quick_product_and_deducts_stock(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'superadmin',
+            'status' => 'active',
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $quickProduct = \App\Models\QuickProduct::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'PRODUCTO RAPIDO TEST',
+            'sku' => 'QR000001',
+            'package_type' => 'merchandise',
+            'price' => 15000,
+            'stock' => 10,
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('shipments.store'), [
+            'sender_name' => 'Sender Name',
+            'sender_phone' => '3001234567',
+            'sender_address' => 'Address 123',
+            'recipient_name' => 'Recipient Name',
+            'recipient_lastname' => 'Lastname',
+            'recipient_phone' => '3007654321',
+            'recipient_address' => 'Address 456',
+            'recipient_neighborhood' => 'Neighborhood',
+            'recipient_locality' => 'Locality',
+            'package_type' => 'package',
+            'pieces' => 1,
+            'payment_method' => 'cash',
+            'inventory_items' => json_encode([
+                ['id' => $quickProduct->id, 'type' => 'quick', 'quantity' => 2]
+            ]),
+        ]);
+
+        $response->assertRedirect(route('shipments.index'));
+        
+        // Assert stock was decremented
+        $this->assertEquals(8, $quickProduct->fresh()->stock);
+
+        // Assert snapshot was saved
+        $shipment = Shipment::latest()->first();
+        $this->assertNotNull($shipment->inventory_snapshot);
+        $snapshot = $shipment->inventory_snapshot;
+        $this->assertCount(1, $snapshot);
+        $this->assertEquals('PRODUCTO RAPIDO TEST', $snapshot[0]['name']);
+        $this->assertEquals('QR000001', $snapshot[0]['sku']);
+        $this->assertEquals(2, $snapshot[0]['quantity']);
+        $this->assertEquals('quick', $snapshot[0]['type']);
+    }
 }

@@ -61,6 +61,24 @@ class BulkStatusUpdateTest extends TestCase
     {
         $shipment = Shipment::factory()->create([
             'tenant_id' => $this->tenant->id,
+            'status' => 'delivered',
+        ]);
+
+        $response = $this->actingAs($this->user)->patch(route('shipments.bulk-status'), [
+            'shipment_ids' => [$shipment->id],
+            'status' => 'printed',
+        ]);
+
+        $response->assertSessionHas('status');
+
+        $fresh = $shipment->fresh();
+        $this->assertEquals('delivered', $fresh->status);
+    }
+
+    public function test_bulk_status_allows_group_jump_in_emprende_plan(): void
+    {
+        $shipment = Shipment::factory()->create([
+            'tenant_id' => $this->tenant->id,
             'status' => 'created',
         ]);
 
@@ -72,7 +90,7 @@ class BulkStatusUpdateTest extends TestCase
         $response->assertSessionHas('status');
 
         $fresh = $shipment->fresh();
-        $this->assertEquals('created', $fresh->status);
+        $this->assertEquals('delivered', $fresh->status);
     }
 
     public function test_bulk_status_requires_valid_shipment_ids(): void

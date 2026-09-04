@@ -49,6 +49,7 @@ class AdminSettingsController extends Controller
     public function exportActivity(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $this->authorize('access-admin');
+        abort_unless(auth()->user()->isSuperAdmin(), 403, 'Solo el superadmin puede exportar la actividad.');
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],

@@ -1,11 +1,61 @@
 @php
     $prefillRecipient = $prefillRecipient ?? null;
+    $prefillName = $prefillName ?? null;
+    $prefillLastname = $prefillLastname ?? null;
+    $prefillDepartmentId = $prefillDepartmentId ?? null;
+    $prefillLocality = $prefillLocality ?? null;
     $prefillQuickProduct = $prefillQuickProduct ?? null;
     $prefillQuickProductPayload = $prefillQuickProduct ? [
         'name' => $prefillQuickProduct->name,
         'package_type' => $prefillQuickProduct->package_type,
         'price' => (int) $prefillQuickProduct->price,
     ] : null;
+
+    $previewBrand = $previewBrand ?? [
+        'name' => 'Tus Envios',
+        'logo_path' => null,
+        'color' => '#022a8c',
+        'whatsapp' => null,
+        'instagram' => null,
+        'facebook' => null,
+        'tiktok' => null,
+        'website' => 'tusenvios.com.co',
+        'message' => 'Gracias por tu compra.',
+        'phone' => '',
+        'address' => '',
+        'neighborhood' => '',
+        'locality' => '',
+        'template' => 'classic',
+    ];
+    $previewTemplate = in_array(($previewBrand['template'] ?? 'classic'), ['classic', 'modern', 'advance'], true) ? $previewBrand['template'] : 'classic';
+    $previewGuideNumber = $previewGuideNumber ?? 'XXX-0000-00000';
+    $previewLogoUrl = $previewBrand['logo_path'] ? \Illuminate\Support\Facades\Storage::url($previewBrand['logo_path']) : null;
+
+    $previewSocials = collect([
+        ['type' => 'whatsapp', 'value' => $previewBrand['whatsapp'] ?? null],
+        ['type' => 'instagram', 'value' => $previewBrand['instagram'] ?? null],
+        ['type' => 'facebook', 'value' => $previewBrand['facebook'] ?? null],
+        ['type' => 'tiktok', 'value' => $previewBrand['tiktok'] ?? null],
+    ])->filter(fn ($s) => filled($s['value']))->values();
+
+    if (!function_exists('tusDisplayName')) {
+        function tusDisplayName($name) {
+            $n = strtoupper(trim($name ?? ''));
+            $m = null;
+            if (preg_match('/IP(?:HONE)?\s*(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI)?)/', $n, $mm)) $m = $mm[1];
+            elseif (preg_match('/(?:PARA\s+)?(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI))\b/', $n, $mm)) $m = $mm[1];
+            elseif (preg_match('/\b(\d{2,})\b/', $n, $mm)) $m = $mm[1];
+            if (!$m) return $n;
+            $m = trim(preg_replace('/\s+/', ' ', $m));
+            preg_match('/(AZUL|ROJO|NEGRO|BLANCO|VERDE|ROSADO|MORADO|AMARILLO|TRANSPARENTE|NARANJA|GRIS|DORADO|CELESTE)/', $n, $cm);
+            preg_match('/(DIAMANTE|ELECTRO|SILICONA|CARCAZA|TPU|ACRILICO|DEGRADE)/', $n, $dm);
+            $out = 'IP ' . $m;
+            if (!empty($cm[1])) $out .= ' ' . $cm[1];
+            if (!empty($dm[1]) && strpos($out, $dm[1]) === false) $out .= ' ' . $dm[1];
+            if ($out === 'IP ' . $m) return $n;
+            return $out;
+        }
+    }
 @endphp
 
 <x-app-layout>
@@ -17,8 +67,8 @@
         />
     </x-slot>
 
-    <div class="h-full flex flex-col p-3 lg:p-5" x-data="shipmentCreateForm()" x-init="init()">
-        <form method="POST" action="{{ route('shipments.store') }}" class="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 te-create-form">
+    <div class="h-full flex flex-col p-3 lg:p-4" x-data="shipmentCreateForm()" x-init="init()">
+        <form method="POST" action="{{ route('shipments.store') }}" class="te-create-form flex-1 grid grid-cols-1 gap-3 lg:h-full lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
             @csrf
 
             <input type="hidden" name="service_type" value="{{ old('service_type', 'standard') }}">
@@ -40,36 +90,20 @@
                 @endforeach
             </select>
 
-            <div class="min-w-0 space-y-3">
-                <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p class="text-xs font-black uppercase tracking-wider text-blue-700">Crear guia</p>
-                            <h2 class="text-lg font-black text-gray-950">Completa la guia en 2 pasos</h2>
-                        </div>
-                        <div class="grid grid-cols-2 gap-1.5 text-xs font-black" aria-label="Pasos para crear guia">
-                            <template x-for="step in steps" :key="step.key">
-                                <span class="rounded-lg border border-blue-100 bg-blue-50 px-2 py-2 text-center text-blue-800" x-text="step.short"></span>
-                            </template>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="te-step-columns">
             {{-- COLUMN 1: Customer Info --}}
-            <div data-step-panel="client" class="te-create-column rounded-xl border border-gray-200 shadow-sm bg-white p-4">
+            <div data-step-panel="client" class="te-create-col te-col-client rounded-xl border border-gray-200 shadow-sm bg-white p-4">
                 @if ($errors->any())
                     <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{{ $errors->first('inventory_items') ?: $errors->first() ?: 'Revisa los campos antes de guardar.' }}</div>
                 @endif
 
                 <div>
-                    <h3 class="text-sm font-black text-gray-950">1. Datos del cliente</h3>
+                    <h3 class="text-[13px] font-black uppercase tracking-wider text-gray-950">Datos del cliente</h3>
                     <p class="mt-0.5 text-xs font-semibold text-gray-500">Solo necesitamos nombre, telefono y direccion para empezar.</p>
                 </div>
                 <div class="grid sm:grid-cols-2 gap-3">
                     <div class="relative" x-data="recipientAutocomplete()" x-init="init()">
                         <label class="block text-xs font-semibold text-gray-600 mb-0.5">Nombres</label>
-                        <input name="recipient_name" x-model="preview.recipient" value="{{ old('recipient_name', $prefillRecipient?->name) }}" required class="uppercase w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <input id="recipient_name" name="recipient_name" x-model="preview.recipient" value="{{ old('recipient_name', $prefillName) }}" required class="uppercase w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                         <div id="recipient-suggestions" x-show="showSuggestions && suggestions.length > 0" @click.away="showSuggestions = false" class="absolute z-50 left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg" style="display:none">
                             <template x-for="s in suggestions" :key="s.id">
                                 <button type="button" @click="fillRecipient(s)" class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none">
@@ -84,15 +118,18 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-0.5">Apellidos</label>
-                        <input name="recipient_lastname" value="{{ old('recipient_lastname', $prefillRecipient?->lastname) }}" required class="uppercase w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <input id="recipient_lastname" name="recipient_lastname" value="{{ old('recipient_lastname', $prefillLastname) }}" required class="uppercase w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-0.5">Telefono</label>
-                    <div class="flex gap-1.5">
-                        <select class="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm bg-gray-50"><option value="57">🇨🇴 +57</option></select>
-                        <input name="recipient_phone" value="{{ old('recipient_phone', $prefillRecipient?->phone) }}" required inputmode="tel" class="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Telefono">
+                <div class="grid sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Telefono</label>
+                        <input id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone', $prefillRecipient?->phone) }}" required inputmode="tel" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Telefono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Whatsapp</label>
+                        <input name="recipient_alt_phone" value="{{ old('recipient_alt_phone', $prefillRecipient?->alt_phone) }}" inputmode="tel" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Whatsapp">
                     </div>
                 </div>
 
@@ -107,21 +144,16 @@
                         <select name="recipient_department" id="recipient_department" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm bg-white" onchange="loadCities(this.value)">
                             <option value="">Seleccionar</option>
                             @foreach ($departments as $dept)
-                                <option value="{{ $dept->id }}" @selected(old('recipient_department') == $dept->id)>{{ $dept->name }}</option>
+                                <option value="{{ $dept->id }}" @selected((old('recipient_department') ?? $prefillDepartmentId) == $dept->id)>{{ $dept->name }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-0.5">Ciudad</label>
                         <select id="recipient_locality" name="recipient_locality" x-model="preview.locality" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-white">
-                            <option value="">Selecciona un departamento</option>
+                            <option value="">Seleccionar</option>
                         </select>
                     </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-0.5">Direccion</label>
-                    <input name="recipient_address" x-model="preview.address" value="{{ old('recipient_address', $prefillRecipient?->address) }}" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Calle, carrera, complementos">
                 </div>
 
                 <div class="grid sm:grid-cols-2 gap-3">
@@ -130,16 +162,29 @@
                         <input id="recipient_neighborhood" name="recipient_neighborhood" value="{{ old('recipient_neighborhood', $prefillRecipient?->neighborhood) }}" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Notas entrega</label>
-                        <textarea name="recipient_notes" rows="1" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">{{ old('recipient_notes', $prefillRecipient?->notes) }}</textarea>
+                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Localidad</label>
+                        <select id="recipient_city" name="recipient_city" x-model="preview.city" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-white">
+                            <option value="">Seleccionar</option>
+                        </select>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-0.5">Direccion</label>
+                    <input id="recipient_address" name="recipient_address" x-model="preview.address" value="{{ old('recipient_address', $prefillRecipient?->address) }}" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Calle, carrera, complementos">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-0.5">Observaciones</label>
+                    <textarea id="recipient_notes" name="recipient_notes" rows="1" maxlength="90" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">{{ old('recipient_notes', $prefillRecipient?->notes) }}</textarea>
+                    <p class="mt-0.5 text-right text-[10px] font-bold text-gray-400"><span id="recipient_notes_count">0</span>/90</p>
                 </div>
             </div>
 
             {{-- COLUMN 2: Products + Config --}}
-            <div data-step-panel="product" class="te-create-column rounded-xl border border-gray-200 shadow-sm bg-white p-4">
+            <div data-step-panel="product" class="te-create-col te-col-product rounded-xl border border-gray-200 shadow-sm bg-white p-4">
                 <div>
-                    <h3 class="text-sm font-black text-gray-950">2. Producto, cobro y envio</h3>
+                    <h3 class="text-[13px] font-black uppercase tracking-wider text-gray-950">Producto, cobro y envio</h3>
                     <p class="mt-0.5 text-xs font-semibold text-gray-500">Elige el producto y confirma cuanto debe pagar el cliente.</p>
                 </div>
 
@@ -163,6 +208,16 @@
                     @endif
                 @else
                     {{-- Emprende: Quick products --}}
+                    @php
+                        $serializedProducts = $quickProducts->map(fn($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'sku' => $p->sku,
+                            'package_type' => $p->package_type,
+                            'price' => (int) $p->price,
+                            'stock' => (int) $p->stock,
+                        ])->values()->toArray();
+                    @endphp
                     <div class="rounded-lg border border-blue-100 bg-blue-50 p-3">
                         <div class="flex items-start justify-between gap-3">
                             <div>
@@ -171,28 +226,115 @@
                             </div>
                             <a href="{{ route('quick-products.index') }}" class="shrink-0 rounded-md bg-white px-2.5 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100">Editar</a>
                         </div>
-                        <div class="mt-3 flex gap-2">
-                            <select id="quick_product_select" class="flex-1 rounded-lg border border-blue-200 px-3 py-1.5 text-sm bg-white">
+                        <div class="mt-3 relative" x-data="{
+                            open: false,
+                            search: '',
+                            products: {{ json_encode($serializedProducts) }},
+                            init() {
+                                const btn = document.getElementById('add_quick_product');
+                                if (btn) {
+                                    btn.addEventListener('click', () => {
+                                        setTimeout(() => {
+                                            this.search = '';
+                                        }, 50);
+                                    });
+                                }
+                            },
+                            get filteredProducts() {
+                                if (!this.search) return this.products;
+                                const nc = v => (v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+                                const needle = nc(this.search);
+                                if (!needle) return this.products;
+                                const scored = this.products.map(p => {
+                                    const hay = nc(p.name + ' ' + (p.sku||''));
+                                    let score = 999;
+                                    if (hay.includes(needle)) score = 0;
+                                    else if (needle.includes(hay)) score = 1;
+                                    else { let i=0, ok=true; for(const ch of needle){ const idx=hay.indexOf(ch,i); if(idx===-1){ ok=false; break; } i=idx+1; } if(ok) score=2; }
+                                    return {p, score};
+                                }).filter(x=>x.score<999).sort((a,b)=>a.score-b.score || a.p.name.localeCompare(b.p.name)).map(x=>x.p);
+                                return scored;
+                            },
+                            displayName(name){
+                                const n=(name||'').toUpperCase().trim();
+                                let m=n.match(/IP(?:HONE)?\s*(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI)?)/);
+                                if(!m){ const m2=n.match(/(?:PARA\s+)?(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI))\b/); if(m2) m=[m2[0],m2[1]]; }
+                                if(!m) return n;
+                                const colors=n.match(/(AZUL|ROJO|NEGRO|BLANCO|VERDE|ROSADO|MORADO|AMARILLO|TRANSPARENTE|NARANJA|GRIS|DORADO|CELESTE)/);
+                                const mats=n.match(/(DIAMANTE|ELECTRO|SILICONA|CARCAZA|TPU|ACRILICO|DEGRADE)/);
+                                let out=`IP ${m[1].replace(/\s+/g,' ').trim()}`;
+                                if(colors) out+=` ${colors[1]}`;
+                                if(mats && !out.includes(mats[1])) out+=` ${mats[1]}`;
+                                if(out===`IP ${m[1].replace(/\s+/g,' ').trim()}`) return n;
+                                return out;
+                            },
+                            selectProduct(product) {
+                                this.search = product.name;
+                                this.open = false;
+                                
+                                const select = document.getElementById('quick_product_select');
+                                if (select) {
+                                    select.value = product.name;
+                                    for (let i = 0; i < select.options.length; i++) {
+                                        if (select.options[i].value === product.name) {
+                                            select.selectedIndex = i;
+                                            break;
+                                        }
+                                    }
+                                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            }
+                        }" @click.away="open = false">
+                            <div class="flex gap-2 w-full">
+                                <div style="position: relative;" class="flex-1 min-w-0">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Buscar producto frecuente..." 
+                                        x-model="search"
+                                        @focus="open = true"
+                                        @keydown.escape="open = false"
+                                        class="w-full min-w-0 rounded-lg border border-blue-200 pl-3 pr-8 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-blue-300"
+                                    />
+                                    <button type="button" @click="open = !open; $event.stopPropagation()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; padding: 0;" class="text-blue-400 focus:outline-none">
+                                        <svg style="width: 16px; height: 16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <button type="button" id="add_quick_product" class="rounded-lg bg-blue-700 w-8 h-8 text-sm font-bold text-white hover:bg-blue-800 shrink-0 flex items-center justify-center">+</button>
+                            </div>
+
+                            <select id="quick_product_select" class="hidden">
                                 <option value="">Producto frecuente...</option>
                                 @foreach ($quickProducts as $product)
-                                    <option value="{{ $product->name }}" data-package-type="{{ $product->package_type }}" data-price="{{ (int) $product->price }}">{{ $product->name }} @if ((float) $product->price > 0)- ${{ number_format((float) $product->price, 0, ',', '.') }}@endif</option>
+                                    <option value="{{ $product->name }}" data-id="{{ $product->id }}" data-sku="{{ $product->sku }}" data-package-type="{{ $product->package_type }}" data-price="{{ (int) $product->price }}" data-stock="{{ (int) $product->stock }}">{{ $product->name }} ({{ $product->stock ?? 0 }} UND)</option>
                                 @endforeach
                             </select>
-                            <button type="button" id="add_quick_product" class="rounded-lg bg-blue-700 w-8 h-8 text-sm font-bold text-white hover:bg-blue-800 shrink-0 flex items-center justify-center">+</button>
-                        </div>
-                        <div class="mt-3 grid gap-2 sm:grid-cols-2">
-                            @foreach ($quickProducts->take(4) as $product)
-                                <button
-                                    type="button"
-                                    class="te-quick-product-card rounded-lg border border-blue-100 bg-white p-2 text-left hover:border-blue-300 hover:bg-blue-50"
-                                    data-name="{{ $product->name }}"
-                                    data-package-type="{{ $product->package_type }}"
-                                    data-price="{{ (int) $product->price }}"
-                                >
-                                    <span class="block truncate text-sm font-black text-gray-950">{{ $product->name }}</span>
-                                    <span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ $product->package_type === 'document' ? 'Documento' : ($product->package_type === 'package' ? 'Paquete' : 'Mercancia') }} @if ((float) $product->price > 0)- ${{ number_format((float) $product->price, 0, ',', '.') }}@endif</span>
-                                </button>
-                            @endforeach
+
+                            <div 
+                                x-show="open" 
+                                x-transition
+                                class="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg py-0.5 text-xs"
+                                style="display: none;"
+                            >
+                                <template x-if="filteredProducts.length === 0">
+                                    <div class="px-3 py-1.5 text-gray-500 text-[11px]">No se encontraron productos</div>
+                                </template>
+                                <template x-for="p in filteredProducts" :key="p.id">
+                                    <button 
+                                        type="button" 
+                                        @mousedown="selectProduct(p)"
+                                        class="w-full text-left px-2 py-0.5 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none flex justify-between items-center"
+                                    >
+                                        <div class="min-w-0 flex-1">
+                                            <span class="font-semibold text-gray-800" style="font-size:9px" x-text="p.name"></span>
+                                        </div>
+                                        <div class="shrink-0 flex items-center gap-1.5" style="font-size:9px">
+                                            <span class="bg-blue-50 text-blue-700 px-1 py-0.5 rounded font-bold" style="font-size:9px" x-text="p.stock + ' UND'"></span>
+                                        </div>
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 @endif
@@ -221,7 +363,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Valor envio ($)</label>
+                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Valor envio ($) (Opcional)</label>
                         <input id="shipping_value" name="shipping_value" x-model.number="preview.shipping" type="number" min="0" step="100" value="{{ old('shipping_value', 0) }}" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                     </div>
                     <div>
@@ -231,76 +373,63 @@
                 </div>
             </div>
 
+            {{-- COLUMN 3: Resumen / checklist --}}
+            <div class="te-create-col te-col-preview rounded-xl border border-gray-200 shadow-sm bg-white p-4 flex flex-col min-h-0">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <h3 class="text-[13px] font-black uppercase tracking-wider text-gray-950">Resumen de la guia</h3>
+                        <p class="mt-0.5 text-xs font-semibold text-gray-500">Verifica los datos antes de crear.</p>
+                    </div>
+                    <span id="te-ready-percent" class="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-black text-blue-800">0%</span>
+                </div>
+                <p id="te-ready-label" class="mt-1.5 text-[11px] font-bold text-blue-900">Completa los datos clave para habilitar la guia.</p>
+                <div class="mt-1.5 h-1.5 rounded-full bg-gray-100">
+                    <div id="te-ready-bar" class="h-1.5 rounded-full bg-blue-700 transition-all duration-300" style="width: 0%"></div>
                 </div>
 
-            </div>
+                {{-- RESUMEN: checklist de datos para crear la guia --}}
+                <div class="mt-2 space-y-1 text-xs">
+                    <div data-resume-item="client" class="te-resume-item">
+                        <span class="te-resume-check">✓</span>
+                        <span class="te-resume-label">Cliente</span>
+                        <span id="res-client-name" class="te-resume-value">Sin datos</span>
+                    </div>
 
-            {{-- COLUMN 3: Summary + Submit --}}
-            <div class="te-create-column te-summary-column rounded-xl border border-gray-200 shadow-sm bg-white p-4 lg:sticky lg:top-5 lg:self-start">
-                <h3 class="text-xs font-bold text-gray-900 uppercase tracking-wider">Resumen</h3>
-                <div class="rounded-lg border border-blue-100 bg-blue-50 p-3">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-xs font-black uppercase tracking-wider text-blue-700">Preparacion</p>
-                            <p id="te-ready-label" class="mt-1 text-sm font-black text-blue-950">Completa los datos clave</p>
-                        </div>
-                        <span id="te-ready-percent" class="rounded-full bg-white px-2 py-0.5 text-xs font-black text-blue-700">0%</span>
+                    <div data-resume-item="address" class="te-resume-item">
+                        <span class="te-resume-check">✓</span>
+                        <span class="te-resume-label">Direccion</span>
+                        <span id="res-address" class="te-resume-value">Sin datos</span>
                     </div>
-                    <div class="mt-3 h-2 rounded-full bg-white">
-                        <div id="te-ready-bar" class="h-2 rounded-full bg-blue-700" style="width: 0%"></div>
-                    </div>
-                    <div class="mt-3 grid gap-2 text-xs font-bold">
-                        <div data-ready-item="client" class="flex items-center justify-between gap-2 rounded-md bg-white px-2.5 py-2 text-gray-500">
-                            <span>Cliente y telefono</span>
-                            <span class="te-ready-dot text-gray-400">Pendiente</span>
-                        </div>
-                        <div data-ready-item="address" class="flex items-center justify-between gap-2 rounded-md bg-white px-2.5 py-2 text-gray-500">
-                            <span>Direccion y ciudad</span>
-                            <span class="te-ready-dot text-gray-400">Pendiente</span>
-                        </div>
-                        <div data-ready-item="tariff" class="flex items-center justify-between gap-2 rounded-md bg-white px-2.5 py-2 text-gray-500">
-                            <span>Tarifa de envio</span>
-                            <span class="te-ready-dot text-gray-400">Pendiente</span>
-                        </div>
-                        <div data-ready-item="product" class="flex items-center justify-between gap-2 rounded-md bg-white px-2.5 py-2 text-gray-500">
-                            <span>Producto</span>
-                            <span class="te-ready-dot text-gray-400">Pendiente</span>
-                        </div>
-                        <div data-ready-item="money" class="flex items-center justify-between gap-2 rounded-md bg-white px-2.5 py-2 text-gray-500">
-                            <span>Cobro y envio</span>
-                            <span class="te-ready-dot text-gray-400">Pendiente</span>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <p class="text-xs font-black uppercase tracking-wider text-gray-500">Vista rapida</p>
-                    <div class="mt-2 grid gap-2 text-sm">
-                        <div>
-                            <p class="text-xs font-bold text-gray-500">Producto</p>
-                            <p id="te-summary-product" class="truncate font-black text-gray-950">Sin producto agregado</p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-500">Destino</p>
-                            <p id="te-summary-destination" class="truncate font-semibold text-gray-700">Sin destinatario</p>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-500">Zona / tarifa</p>
-                            <p id="te-summary-zone" class="truncate font-semibold text-gray-700">Sin tarifa asignada</p>
-                        </div>
+                    <div data-resume-item="product" class="te-resume-item">
+                        <span class="te-resume-check">✓</span>
+                        <span class="te-resume-label">Producto</span>
+                        <span id="res-products" class="te-resume-value">Sin productos</span>
+                    </div>
+
+                    <div data-resume-item="tariff" class="te-resume-item">
+                        <span class="te-resume-check">✓</span>
+                        <span class="te-resume-label">Tarifa</span>
+                        <span id="res-zone" class="te-resume-value">Sin zona</span>
+                    </div>
+
+                    <div data-resume-item="money" class="te-resume-item">
+                        <span class="te-resume-check">✓</span>
+                        <span class="te-resume-label">Cobro</span>
+                        <span id="res-collection" class="te-resume-value">$0</span>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100 text-sm">
+                <div class="rounded-lg border border-gray-200 bg-gray-50 text-sm">
                     <div class="flex justify-between px-3 py-2">
                         <span class="text-gray-600">Recaudo</span>
                         <span class="font-bold" x-text="money(preview.collection)">$0</span>
                     </div>
-                    <div class="flex justify-between px-3 py-2">
+                    <div class="flex justify-between border-t border-gray-100 px-3 py-2">
                         <span class="text-gray-600">Envio</span>
                         <span class="font-bold" x-text="money(preview.shipping)">$0</span>
                     </div>
-                    <div class="flex justify-between px-3 py-2 bg-emerald-50 font-bold text-emerald-700">
+                    <div class="flex justify-between rounded-b-lg bg-emerald-50 px-3 py-2 font-bold text-emerald-700">
                         <span>Total</span>
                         <span x-text="money((preview.collection || 0) + (preview.shipping || 0))">$0</span>
                     </div>
@@ -310,13 +439,9 @@
                     Si es contraentrega, confirma el valor a recaudar antes de crear la guia.
                 </div>
 
-                <div class="mt-auto rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-bold text-gray-600 lg:hidden">
-                    Completa los pasos de la izquierda y confirma la guia.
+                <div class="mt-auto pt-3">
+                    <button class="w-full rounded-lg bg-blue-700 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-800">Crear guia</button>
                 </div>
-
-                <button class="hidden lg:block w-full rounded-lg bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800 shadow-sm mt-4">
-                    Crear guia
-                </button>
             </div>
 
             {{-- Mobile bottom bar --}}
@@ -340,69 +465,85 @@
 
     <style>
         [x-cloak] { display: none !important; }
-        @media (min-width: 1024px) {
-            .te-create-form { grid-template-columns: minmax(0, 1fr) 320px !important; }
-        }
-        .te-step-columns {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(320px, 1fr));
-            gap: 0.75rem;
-            align-items: stretch;
-            overflow-x: auto;
-            padding-bottom: 0.25rem;
-            scroll-snap-type: x proximity;
-        }
-        .te-create-column {
+
+        .te-create-col {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
             min-width: 0;
         }
-        .te-step-columns > [data-step-panel] {
-            min-width: 0;
-            height: 100%;
-            scroll-snap-align: start;
-        }
-        .te-summary-column {
-            gap: 0.75rem;
-        }
+
         @media (min-width: 1024px) {
-            .te-step-columns {
-                grid-auto-rows: max(calc(100vh - 13.75rem), 49rem);
-            }
-            .te-create-column {
-                min-height: max(calc(100vh - 13.75rem), 49rem);
-            }
-            .te-summary-column {
-                margin-top: 5.15rem;
-            }
+            .te-create-form { height: 100%; min-height: 0; }
+            .te-create-col { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+            .te-create-col::-webkit-scrollbar { width: 8px; }
+            .te-create-col::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+            .te-create-col::-webkit-scrollbar-track { background: transparent; }
         }
-        @media (max-width: 1023px) {
-            .te-step-columns {
-                grid-template-columns: 1fr;
-                overflow-x: visible;
-                scroll-snap-type: none;
-            }
-            .te-create-column {
-                min-height: 0;
-            }
-            .te-summary-column {
-                margin-top: 0;
-            }
-        }
+
         @media (min-width: 1024px) and (max-width: 1535px) {
-            .te-step-columns .sm\:grid-cols-2,
-            .te-step-columns .sm\:grid-cols-3 {
-                grid-template-columns: minmax(0, 1fr) !important;
-            }
+            .te-create-col .sm\:grid-cols-2 { grid-template-columns: minmax(0, 1fr) !important; }
         }
+
         #product_lines { display: grid; gap: 6px; }
-#product_lines .te-product-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 60px 30px; gap: 4px; align-items: center; }
+        #product_lines .te-product-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 60px 30px; gap: 4px; align-items: center; }
         #product_lines .te-product-row input { width: 100%; height: 34px; border-radius: 6px; padding: 4px 8px; font-size: 13px; border: 1px solid #d1d5db; }
         #product_lines .te-product-row input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.12); outline: none; }
         #product_lines .te-product-row button { width: 30px; height: 34px; border-radius: 6px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1px solid #d1d5db; background: white; color: #6b7280; cursor: pointer; }
         #product_lines .te-product-row button:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
         .te-products-head { display: grid; grid-template-columns: minmax(0, 1fr) 80px 60px 30px; gap: 4px; margin: 6px 0 4px; color: #6b7280; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+
+        /* Resumen: checklist de datos */
+        .te-resume-item {
+            display: grid;
+            grid-template-columns: 18px 72px minmax(0, 1fr);
+            gap: 6px;
+            align-items: center;
+            padding: 5px 8px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #ffffff;
+            transition: border-color .18s ease, background .18s ease;
+        }
+        .te-resume-check {
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #e5e7eb;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .te-resume-label {
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .02em;
+            text-transform: uppercase;
+            color: #9ca3af;
+            white-space: nowrap;
+        }
+        .te-resume-value {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #111827;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+        .te-resume-ok { border-color: #a7f3d0; background: #f0fdf6; }
+        .te-resume-ok .te-resume-check { background: #059669; }
+        .dark .te-resume-item { border-color: #374151; background: #1f2937; }
+        .dark .te-resume-check { background: #4b5563; }
+        .dark .te-resume-label { color: #9ca3af; }
+        .dark .te-resume-value { color: #f3f4f6; }
+        .dark .te-resume-ok { border-color: #065f46; background: #064e3b; }
+        .dark .te-resume-ok .te-resume-check { background: #34d399; }
     </style>
 
     <script>
@@ -417,7 +558,10 @@
             errorsExist: @json($errors->any()),
             oldRecipientDepartment: @json(old('recipient_department')),
             oldRecipientLocality: @json(old('recipient_locality')),
-            oldRecipientName: @json(old('recipient_name', $prefillRecipient?->name ?? '')),
+            oldRecipientCity: @json(old('recipient_city', $prefillRecipient?->city ?? '')),
+            prefillDepartmentId: @json($prefillDepartmentId),
+            prefillLocality: @json($prefillLocality),
+            oldRecipientName: @json(old('recipient_name', $prefillName ?? '')),
             oldRecipientAddress: @json(old('recipient_address', $prefillRecipient?->address ?? '')),
             oldLocality: @json(old('recipient_locality', $prefillRecipient?->locality ?? $prefillRecipient?->city ?? '')),
             oldContentDesc: @json(old('content_description', '')),

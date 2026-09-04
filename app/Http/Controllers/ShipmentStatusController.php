@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shipment;
+use App\Models\User;
 use App\Models\ShipmentEvent;
 use App\Http\Requests\BulkUpdateShipmentStatusRequest;
 use App\Http\Requests\UpdateShipmentStatusRequest;
@@ -24,6 +25,21 @@ class ShipmentStatusController extends Controller
         }
 
         $shipment->update(['status' => $validated['status']]);
+
+        if ($validated['status'] === 'cancelled') {
+            app(ShipmentController::class)->restoreInventoryForShipment($shipment);
+
+            // Notificar al OMS en tiempo real para devolución inmediata de stock
+            dispatch(function () {
+                try {
+                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.rci.com.co/cron/sync-tusenvios');
+                    $omsToken = env('OMS_CRON_TOKEN', 'te_cron_secret_rci_2026');
+                    \Illuminate\Support\Facades\Http::timeout(5)->get($omsUrl, ['token' => $omsToken]);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Real-time OMS cancel notification failed: " . $e->getMessage());
+                }
+            })->afterResponse();
+        }
 
         ShipmentEvent::query()->create([
             'shipment_id' => $shipment->id,
@@ -82,6 +98,17 @@ class ShipmentStatusController extends Controller
 
             app(ShipmentController::class)->restoreInventoryForShipment($shipment);
 
+            // Notificar al OMS en tiempo real para devolución inmediata de stock
+            dispatch(function () {
+                try {
+                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.rci.com.co/cron/sync-tusenvios');
+                    $omsToken = env('OMS_CRON_TOKEN', 'te_cron_secret_rci_2026');
+                    \Illuminate\Support\Facades\Http::timeout(5)->get($omsUrl, ['token' => $omsToken]);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Real-time OMS cancel notification failed: " . $e->getMessage());
+                }
+            })->afterResponse();
+
             ShipmentEvent::query()->create([
                 'shipment_id' => $shipment->id,
                 'user_id' => Auth::id(),
@@ -118,6 +145,10 @@ class ShipmentStatusController extends Controller
 
             $shipment->update(['status' => $validated['status']]);
 
+            if ($validated['status'] === 'cancelled') {
+                app(ShipmentController::class)->restoreInventoryForShipment($shipment);
+            }
+
             ShipmentEvent::query()->create([
                 'shipment_id' => $shipment->id,
                 'user_id' => Auth::id(),
@@ -140,5 +171,16 @@ class ShipmentStatusController extends Controller
         return redirect()
             ->route('shipments.index', $request->query())
             ->with('status', $message);
+    }
+
+    /**
+     * Siguiente guia pendiente de la jornada despues de actualizar la actual.
+     */
+    private function nextDailyPendingShipment(User $user, int $currentShipmentId): ?Shipment
+    {
+        return app(ShipmentController::class)
+            ->dailyPendingShipmentQuery($user)
+            ->where('id', '>', $currentShipmentId)
+            ->first();
     }
 }

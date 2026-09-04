@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [PreventBackAfterLogout::class]);
+        $middleware->validateCsrfTokens(except: [
+            'logout',
+        ]);
         $middleware->alias([
             'active.user' => EnsureUserIsActive::class,
             'api.key' => ApiKeyMiddleware::class,
@@ -28,5 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            return redirect()->route('login')->withErrors(['session' => 'Tu sesión ha expirado por inactividad. Por favor, inicia sesión de nuevo.']);
+        });
     })->create();

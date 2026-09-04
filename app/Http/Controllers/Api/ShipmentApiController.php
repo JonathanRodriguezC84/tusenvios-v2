@@ -70,6 +70,17 @@ class ShipmentApiController extends Controller
             return $shipment;
         });
 
+        // Sincronización en tiempo real inmediata con el OMS RCI / NatiCase
+        dispatch(function () {
+            try {
+                $omsUrl = env('OMS_SYNC_URL', 'https://oms.rci.com.co/cron/sync-tusenvios');
+                $omsToken = env('OMS_CRON_TOKEN', 'te_cron_secret_rci_2026');
+                \Illuminate\Support\Facades\Http::timeout(5)->get($omsUrl, ['token' => $omsToken]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Real-time OMS sync notification from API failed: " . $e->getMessage());
+            }
+        })->afterResponse();
+
         return response()->json([
             'success' => true,
             'guide_number' => $shipment->guide_number,

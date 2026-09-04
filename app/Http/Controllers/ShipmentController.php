@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\Builder;
 use App\Support\Audit;
 use App\Models\FrequentRecipient;
 use App\Jobs\SendWhatsAppNotification;
@@ -27,10 +28,12 @@ use App\Jobs\SendWhatsAppNotification;
 class ShipmentController extends Controller
 {
     public function index(Request $request): \Illuminate\View\View
-    {
+{
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'product' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'string', 'max:50'],
+            'task' => ['nullable', 'string', 'max:50'],
             'settlement_status' => ['nullable', 'in:pending,closed,paid'],
             'zone' => ['nullable', 'string', 'max:120'],
             'delivery_zone_id' => ['nullable', 'integer', 'exists:delivery_zones,id'],
@@ -39,7 +42,7 @@ class ShipmentController extends Controller
 
         $shipments = $this->filteredShipments($filters)
             ->latest()
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
         $shipmentSummary = $this->shipmentSummaryForFilters($filters);
         $couriers = User::query()
@@ -53,11 +56,13 @@ class ShipmentController extends Controller
         return view('shipments.index', compact('shipments', 'filters', 'shipmentSummary', 'couriers', 'deliveryZones'));
     }
 
-    public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+public function export(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'product' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'string', 'max:50'],
+            'task' => ['nullable', 'string', 'max:50'],
             'settlement_status' => ['nullable', 'in:pending,closed,paid'],
             'zone' => ['nullable', 'string', 'max:120'],
             'delivery_zone_id' => ['nullable', 'integer', 'exists:delivery_zones,id'],
@@ -128,7 +133,9 @@ class ShipmentController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'product' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'string', 'max:50'],
+            'task' => ['nullable', 'string', 'max:50'],
             'settlement_status' => ['nullable', 'in:pending,closed,paid'],
             'zone' => ['nullable', 'string', 'max:120'],
             'delivery_zone_id' => ['nullable', 'integer', 'exists:delivery_zones,id'],
@@ -155,7 +162,7 @@ class ShipmentController extends Controller
         return Shipment::query()
             ->with(['affiliatedCompany', 'courier', 'deliveryZone', 'settlementItems.settlement'])
             ->visibleTo(Auth::user())
-            ->when($filters['search'] ?? null, function ($query, $search) {
+->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $normalized = strtoupper(trim($search));
                     $compact = str_replace('-', '', $normalized);
@@ -170,7 +177,30 @@ class ShipmentController extends Controller
                         ->orWhereHas('affiliatedCompany', fn ($query) => $query->where('name', 'like', "%{$search}%"));
                 });
             })
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['product'] ?? null, function ($query, $product) {
+                $query->where(function ($query) use ($product) {
+                    $query
+                        ->where('content_description', 'like', "%{$product}%")
+                        ->orWhere('inventory_snapshot', 'like', "%{$product}%");
+                });
+            })
+            ->when($filters['task'] ?? null, function ($query, $task) {
+                $statuses = match ($task) {
+                    'issues' => ['failed_delivery', 'rescheduled', 'return_pending'],
+                    'pending_print' => ['created'],
+                    'preparation' => ['printed', 'in_warehouse', 'in_sorting', 'assigned'],
+                    'route' => ['on_route'],
+                    'stale' => ['created', 'printed', 'in_warehouse', 'in_sorting', 'assigned', 'on_route', 'failed_delivery', 'rescheduled', 'return_pending'],
+                    default => [],
+                };
+
+                $query->whereIn('status', $statuses);
+
+                if ($task === 'stale') {
+                    $query->where('updated_at', '<=', now()->subDay());
+                }
+            })
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->whereIn('status', Shipment::statusesForFilter($status)))
             ->when(($filters['settlement_status'] ?? null) === 'pending', function ($query) {
                 $query
                     ->whereNotNull('affiliated_company_id')
@@ -256,10 +286,11 @@ class ShipmentController extends Controller
 
     private function shipmentStatusShortcuts(array $filters): array
     {
-        $baseFilters = collect($filters)->except('status')->all();
+$baseFilters = collect($filters)->except(['status', 'task'])->all();
         $base = $this->filteredShipments($baseFilters);
         $countFor = fn (array $statuses) => (clone $base)->whereIn('status', $statuses)->count();
         $currentStatus = request('status');
+        $currentTask = request('task');
 
         $shortcuts = [
             [
@@ -271,44 +302,44 @@ class ShipmentController extends Controller
             ],
             [
                 'label' => 'Por imprimir',
-                'description' => 'Etiquetas pendientes',
+                'description' => 'Listas para etiqueta',
                 'status' => 'created',
                 'count' => $countFor(['created']),
-                'tone' => 'blue',
-            ],
-            [
-                'label' => 'Preparacion',
-                'description' => 'Bodega y alistamiento',
-                'status' => 'printed',
-                'count' => $countFor(['printed', 'in_warehouse', 'in_sorting', 'assigned']),
                 'tone' => 'amber',
             ],
             [
                 'label' => 'En camino',
-                'description' => 'Rutas abiertas',
+                'description' => 'Guias en operacion',
                 'status' => 'on_route',
-                'count' => $countFor(['on_route']),
+                'count' => $countFor(Shipment::statusesForFilter('on_route')),
                 'tone' => 'blue',
-            ],
-            [
-                'label' => 'Novedades',
-                'description' => 'Necesitan accion',
-                'status' => 'failed_delivery',
-                'count' => $countFor(['failed_delivery', 'rescheduled', 'return_pending']),
-                'tone' => 'red',
             ],
             [
                 'label' => 'Entregadas',
                 'description' => 'Cerradas con exito',
                 'status' => 'delivered',
-                'count' => $countFor(['delivered']),
+                'count' => $countFor(Shipment::statusesForFilter('delivered')),
                 'tone' => 'emerald',
+            ],
+            [
+                'label' => 'Devueltas',
+                'description' => 'Sin entrega exitosa',
+                'status' => 'returned',
+                'count' => $countFor(Shipment::statusesForFilter('returned')),
+                'tone' => 'gray',
+            ],
+            [
+                'label' => 'Canceladas',
+                'description' => 'Guias anuladas',
+                'status' => 'cancelled',
+                'count' => $countFor(Shipment::statusesForFilter('cancelled')),
+                'tone' => 'slate',
             ],
         ];
 
-        return collect($shortcuts)
+return collect($shortcuts)
             ->map(function (array $shortcut) use ($currentStatus) {
-                $routeParams = request()->except(['page', 'status']);
+                $routeParams = request()->except(['page', 'status', 'task']);
                 if ($shortcut['status']) {
                     $routeParams['status'] = $shortcut['status'];
                 }
@@ -342,7 +373,7 @@ class ShipmentController extends Controller
         ['presets' => $senderPresets, 'companyDefaults' => $companySenderPresetKeys] = $this->senderPresetData($tenant, $companies);
         $quickProducts = $this->quickProductsForUser();
         $inventoryProducts = $this->inventoryProductsForUser();
-        $prefillRecipient = null;
+$prefillRecipient = null;
         $prefillQuickProduct = null;
 
         if ($request->filled('recipient')) {
@@ -358,15 +389,72 @@ class ShipmentController extends Controller
                 ->first();
         }
 
+        [$prefillName, $prefillLastname] = $prefillRecipient?->normalizedNameParts() ?? [null, null];
+
+        $prefillLocality = $prefillRecipient?->city ?? $prefillRecipient?->locality;
+        $prefillDepartmentId = null;
+        if ($prefillLocality) {
+            $normalized = static function (string $value): string {
+                $value = strtolower(trim($value));
+                $value = strtr($value, [
+                    'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+                    'ñ' => 'n', 'ü' => 'u',
+                ]);
+
+                return $value;
+            };
+            $target = $normalized($prefillLocality);
+            $cities = \App\Models\City::query()->get(['name', 'department_id']);
+            $exact = $cities->first(fn ($city) => $normalized($city->name) === $target);
+            $prefix = $cities->first(fn ($city) => str_starts_with($normalized($city->name), $target));
+            $prefillDepartmentId = ($exact ?? $prefix)?->department_id;
+        }
+
         if ($request->filled('quick_product')) {
             $prefillQuickProduct = $quickProducts
                 ->firstWhere('id', $request->integer('quick_product'));
         }
 
-        $useInventory = Auth::user()->canUseInventory();
+$useInventory = Auth::user()->canUseInventory();
         $planCode = $useInventory ? 'fundador' : 'emprende';
 
-        return view('shipments.create', compact('companies', 'departments', 'deliveryZones', 'deliveryZoneSuggestions', 'companyTerms', 'senderPresets', 'companySenderPresetKeys', 'quickProducts', 'inventoryProducts', 'useInventory', 'planCode', 'prefillRecipient', 'prefillQuickProduct'));
+        $previewBrand = collect([$companies->first(), $tenant])
+            ->map(fn ($source) => $source?->brandData())
+            ->filter()
+            ->first() ?? [
+                'name' => 'Tus Envios',
+                'logo_path' => null,
+                'color' => '#022a8c',
+                'whatsapp' => null,
+                'instagram' => null,
+                'facebook' => null,
+                'tiktok' => null,
+                'website' => 'tusenvios.com.co',
+                'message' => 'Gracias por tu compra.',
+                'phone' => '',
+                'address' => '',
+                'neighborhood' => '',
+                'locality' => '',
+                'template' => 'classic',
+            ];
+
+        $previewTemplate = in_array($previewBrand['template'] ?? 'classic', ['classic', 'modern', 'advance'], true) ? $previewBrand['template'] : 'classic';
+
+        $prefix = $tenant ? $this->guidePrefix(null, $tenant) : 'TE';
+        $baseGuide = $prefix.now()->format('Y');
+        $lastGuide = Shipment::query()
+            ->where('tenant_id', $tenant?->id)
+            ->whereNotNull('guide_number')
+            ->orderByDesc('id')
+            ->value('guide_number');
+
+        if ($lastGuide && preg_match('/^(.*?)(\d{5,6})$/', $lastGuide, $matches)) {
+            $previewGuideNumber = $matches[1].str_pad((int) $matches[2] + 1, strlen($matches[2]), '0', STR_PAD_LEFT);
+        } else {
+            $previewGuideNumber = $baseGuide.'-'.str_pad('1', 5, '0', STR_PAD_LEFT);
+        }
+
+        return view('shipments.create', compact('companies', 'departments', 'deliveryZones', 'deliveryZoneSuggestions', 'companyTerms', 'senderPresets', 'companySenderPresetKeys', 'quickProducts', 'inventoryProducts', 'useInventory', 'planCode', 'prefillRecipient', 'prefillName', 'prefillLastname', 'prefillDepartmentId', 'prefillLocality', 'prefillQuickProduct', 'previewBrand', 'previewTemplate', 'previewGuideNumber'));
     }
 
     public function store(StoreShipmentRequest $request): \Illuminate\Http\RedirectResponse
@@ -441,6 +529,17 @@ Audit::log('shipment.created', $shipment, "Guia {$shipment->guide_number} creada
             SendWhatsAppNotification::dispatch($shipment, 'created');
 
             $this->reserveInventoryForShipment($shipment, $inventoryItems);
+
+            // Sincronización en tiempo real inmediata con el OMS RCI / NatiCase
+            dispatch(function () {
+                try {
+                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.rci.com.co/cron/sync-tusenvios');
+                    $omsToken = env('OMS_CRON_TOKEN', 'te_cron_secret_rci_2026');
+                    \Illuminate\Support\Facades\Http::timeout(5)->get($omsUrl, ['token' => $omsToken]);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Real-time OMS sync notification failed: " . $e->getMessage());
+                }
+            })->afterResponse();
 
             return $shipment;
         });
@@ -588,10 +687,6 @@ return $this->inventoryQueryForUser()
 
     private function inventoryItemsFromRequest(Request $request): array
     {
-        if (! Auth::user()->canUseInventory()) {
-            return [];
-        }
-
         $rawItems = json_decode((string) $request->input('inventory_items', '[]'), true);
 
         if (! is_array($rawItems)) {
@@ -603,18 +698,28 @@ return $this->inventoryQueryForUser()
         foreach ($rawItems as $item) {
             $productId = (int) ($item['id'] ?? 0);
             $quantity = (int) ($item['quantity'] ?? 0);
+            $type = $item['type'] ?? 'inventory';
 
             if ($productId <= 0 || $quantity <= 0) {
                 continue;
             }
 
-            $items[$productId] = ($items[$productId] ?? 0) + $quantity;
+            if ($type === 'inventory' && ! Auth::user()->canUseInventory()) {
+                continue;
+            }
+
+            $key = "{$type}_{$productId}";
+            if (! isset($items[$key])) {
+                $items[$key] = [
+                    'id' => $productId,
+                    'type' => $type,
+                    'quantity' => 0,
+                ];
+            }
+            $items[$key]['quantity'] += $quantity;
         }
 
-        return collect($items)
-            ->map(fn ($quantity, $productId) => ['id' => (int) $productId, 'quantity' => (int) $quantity])
-            ->values()
-            ->all();
+        return array_values($items);
     }
 
     public function reserveInventoryForShipment(Shipment $shipment, array $inventoryItems): void
@@ -626,52 +731,98 @@ return $this->inventoryQueryForUser()
         $snapshot = [];
 
         foreach ($inventoryItems as $item) {
-            $product = $this->inventoryQueryForUser()
-                ->where('id', $item['id'])
-                ->lockForUpdate()
-                ->first();
+            $type = $item['type'] ?? 'inventory';
 
-            if (! $product) {
-                throw ValidationException::withMessages([
-                    'inventory_items' => 'Uno de los productos de inventario ya no esta disponible. Actualiza la pagina y vuelve a seleccionarlo.',
+            if ($type === 'quick') {
+                $user = Auth::user();
+                $tenantId = $user->tenant_id ?: Tenant::query()->where('subdomain', 'demo-tus-envios')->value('id');
+
+                $product = QuickProduct::query()
+                    ->where('id', $item['id'])
+                    ->where('status', 'active')
+                    ->when(
+                        $user->role === 'affiliate' && $user->affiliated_company_id,
+                        fn ($query) => $query->where('affiliated_company_id', $user->affiliated_company_id),
+                        fn ($query) => $query->where('tenant_id', $tenantId)->whereNull('affiliated_company_id')
+                    )
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $product) {
+                    throw ValidationException::withMessages([
+                        'inventory_items' => 'Uno de los productos frecuentes ya no esta disponible. Actualiza la pagina.',
+                    ]);
+                }
+
+                if ($product->stock < $item['quantity']) {
+                    throw ValidationException::withMessages([
+                        'inventory_items' => "No hay stock suficiente para {$product->name}. Disponible: {$product->stock}.",
+                    ]);
+                }
+
+                $product->decrement('stock', $item['quantity']);
+                $product->refresh();
+
+                $snapshot[] = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
+                    'category' => 'quick',
+                    'cost' => (float) $product->cost,
+                    'price' => (float) $product->price,
+                    'quantity' => (int) $item['quantity'],
+                    'stock_after' => (int) $product->stock,
+                    'type' => 'quick',
+                ];
+            } else {
+                $product = $this->inventoryQueryForUser()
+                    ->where('id', $item['id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $product) {
+                    throw ValidationException::withMessages([
+                        'inventory_items' => 'Uno de los productos de inventario ya no esta disponible. Actualiza la pagina y vuelve a seleccionarlo.',
+                    ]);
+                }
+
+                if ($product->status !== 'active') {
+                    throw ValidationException::withMessages([
+                        'inventory_items' => "{$product->name} esta pausado en inventario. Activalo antes de crear la guia.",
+                    ]);
+                }
+
+                if ($product->stock < $item['quantity']) {
+                    throw ValidationException::withMessages([
+                        'inventory_items' => "No hay stock suficiente para {$product->name}. Disponible: {$product->stock}.",
+                    ]);
+                }
+
+                $product->decrement('stock', $item['quantity']);
+                $product->refresh();
+
+                $snapshot[] = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
+                    'category' => $product->category,
+                    'cost' => (float) $product->cost,
+                    'price' => (float) $product->price,
+                    'quantity' => (int) $item['quantity'],
+                    'stock_after' => (int) $product->stock,
+                    'type' => 'inventory',
+                ];
+
+                $product->movements()->create([
+                    'tenant_id' => $product->tenant_id,
+                    'affiliated_company_id' => $product->affiliated_company_id,
+                    'shipment_id' => $shipment->id,
+                    'type' => 'shipment',
+                    'quantity_delta' => -1 * $item['quantity'],
+                    'stock_after' => $product->stock,
+                    'notes' => "Descuento por guia {$shipment->guide_number}",
                 ]);
             }
-
-            if ($product->status !== 'active') {
-                throw ValidationException::withMessages([
-                    'inventory_items' => "{$product->name} esta pausado en inventario. Activalo antes de crear la guia.",
-                ]);
-            }
-
-            if ($product->stock < $item['quantity']) {
-                throw ValidationException::withMessages([
-                    'inventory_items' => "No hay stock suficiente para {$product->name}. Disponible: {$product->stock}.",
-                ]);
-            }
-
-            $product->decrement('stock', $item['quantity']);
-            $product->refresh();
-
-            $snapshot[] = [
-                'id' => $product->id,
-                'name' => $product->name,
-                'sku' => $product->sku,
-                'category' => $product->category,
-                'cost' => (float) $product->cost,
-                'price' => (float) $product->price,
-                'quantity' => (int) $item['quantity'],
-                'stock_after' => (int) $product->stock,
-            ];
-
-            $product->movements()->create([
-                'tenant_id' => $product->tenant_id,
-                'affiliated_company_id' => $product->affiliated_company_id,
-                'shipment_id' => $shipment->id,
-                'type' => 'shipment',
-                'quantity_delta' => -1 * $item['quantity'],
-                'stock_after' => $product->stock,
-                'notes' => "Descuento por guia {$shipment->guide_number}",
-            ]);
         }
 
         if ($snapshot) {
@@ -682,34 +833,47 @@ return $this->inventoryQueryForUser()
     public function restoreInventoryForShipment(Shipment $shipment): void
     {
         if ($shipment->inventoryMovements()->where('type', 'restock')->exists()) {
-            return;
+            // Already restocked inventory products
+        } else {
+            $movements = $shipment->inventoryMovements()
+                ->where('type', 'shipment')
+                ->with('product')
+                ->get();
+
+            foreach ($movements as $movement) {
+                $product = $movement->product;
+
+                if (! $product) {
+                    continue;
+                }
+
+                $restoreQuantity = abs((int) $movement->quantity_delta);
+                $product->increment('stock', $restoreQuantity);
+                $product->refresh();
+
+                $product->movements()->create([
+                    'tenant_id' => $product->tenant_id,
+                    'affiliated_company_id' => $product->affiliated_company_id,
+                    'shipment_id' => $shipment->id,
+                    'type' => 'restock',
+                    'quantity_delta' => $restoreQuantity,
+                    'stock_after' => $product->stock,
+                    'notes' => "Reposicion por cancelacion de guia {$shipment->guide_number}",
+                ]);
+            }
         }
 
-        $movements = $shipment->inventoryMovements()
-            ->where('type', 'shipment')
-            ->with('product')
-            ->get();
-
-        foreach ($movements as $movement) {
-            $product = $movement->product;
-
-            if (! $product) {
-                continue;
+        $snapshot = $shipment->inventory_snapshot;
+        if (is_array($snapshot)) {
+            foreach ($snapshot as $item) {
+                $type = $item['type'] ?? 'inventory';
+                if ($type === 'quick') {
+                    $product = QuickProduct::query()->find($item['id']);
+                    if ($product) {
+                        $product->increment('stock', (int) $item['quantity']);
+                    }
+                }
             }
-
-            $restoreQuantity = abs((int) $movement->quantity_delta);
-            $product->increment('stock', $restoreQuantity);
-            $product->refresh();
-
-            $product->movements()->create([
-                'tenant_id' => $product->tenant_id,
-                'affiliated_company_id' => $product->affiliated_company_id,
-                'shipment_id' => $shipment->id,
-                'type' => 'restock',
-                'quantity_delta' => $restoreQuantity,
-                'stock_after' => $product->stock,
-                'notes' => "Reposicion por cancelacion de guia {$shipment->guide_number}",
-            ]);
         }
     }
 
@@ -897,11 +1061,30 @@ private function normalizeShipmentText(array $validated): array
             ->orderBy('name')
             ->get();
 $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
+        if ($shipment->status && $shipment->canTransitionTo('delivered') && ! in_array('delivered', $nextStatuses, true)) {
+            $nextStatuses[] = 'delivered';
+        }
+        if ($shipment->status && $shipment->canTransitionTo('returned') && ! in_array('returned', $nextStatuses, true)) {
+            $nextStatuses[] = 'returned';
+        }
         $printFormats = $this->printFormats();
         $isDailyMode = $request->boolean('daily');
         $dailyPendingCount = $isDailyMode ? $this->dailyPendingShipmentQuery(Auth::user())->count() : 0;
 
         return view('shipments.show', compact('shipment', 'couriers', 'nextStatuses', 'printFormats', 'isDailyMode', 'dailyPendingCount'));
+    }
+
+    /**
+     * Guias pendientes de la jornada activa de Tareas Diarias,
+     * ordenadas para trabajar la mas antigua primero.
+     */
+    public function dailyPendingShipmentQuery(User $user): Builder
+    {
+        return Shipment::query()
+            ->visibleTo($user)
+            ->whereIn('status', Shipment::DAILY_PENDING_STATUSES)
+            ->orderBy('updated_at')
+            ->orderBy('id');
     }
 
     public function edit(Shipment $shipment): \Illuminate\View\View

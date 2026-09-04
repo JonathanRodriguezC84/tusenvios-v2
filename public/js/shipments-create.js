@@ -163,7 +163,6 @@
         var collect = document.querySelector('[name="collection_value"]');
         var quickSelect = document.getElementById('quick_product_select');
         var quickBtn = document.getElementById('add_quick_product');
-        var quickCards = document.querySelectorAll('.te-quick-product-card');
         var packageType = document.getElementById('package_type');
         var invSelect = document.getElementById('inventory_product_select');
         var invBtn = document.getElementById('add_inventory_product');
@@ -172,6 +171,7 @@
         function up(v) { return String(v || '').toLocaleUpperCase('es-CO'); }
         function money(v) { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(v || 0)); }
         function esc(v) { return String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        var PAYMENT_LABELS = { cash: 'CONTADO', credit: 'CREDITO', cod: 'CONTRAENTREGA', bank: 'BANCO' };
         var form = lines.closest('form');
 
         function fieldValue(name) {
@@ -184,15 +184,61 @@
             if (el) el.textContent = value;
         }
 
-        function updateReadyItem(key, ready) {
-            var item = document.querySelector('[data-ready-item="' + key + '"]');
+        function updateResumeItem(key, ready) {
+            var item = document.querySelector('[data-resume-item="' + key + '"]');
             if (!item) return;
-            var dot = item.querySelector('.te-ready-dot');
-            item.className = 'flex items-center justify-between gap-2 rounded-md px-2.5 py-2 ' + (ready ? 'bg-emerald-50 text-emerald-800' : 'bg-white text-gray-500');
-            if (dot) {
-                dot.textContent = ready ? 'Listo' : 'Pendiente';
-                dot.className = 'te-ready-dot ' + (ready ? 'text-emerald-700' : 'text-gray-400');
+            item.classList.toggle('te-resume-ok', ready);
+        }
+
+        function refreshPreview() {
+            function v(id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; }
+            function place(id, raw, fallback) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = String(raw || '').trim() || fallback;
             }
+
+            /* Cliente */
+            var rname = [v('recipient_name'), v('recipient_lastname')].filter(Boolean).join(' ');
+            var phone = v('recipient_phone');
+            place('res-client-name', [rname, phone ? '· ' + phone : ''].join(' ').toLocaleUpperCase('es-CO'), 'Sin datos');
+
+            /* Direccion */
+            place('res-address', [
+                v('recipient_address'),
+                [v('recipient_neighborhood'), v('recipient_locality')].filter(Boolean).join(' / '),
+            ].filter(Boolean).join(' · ').toLocaleUpperCase('es-CO'), 'Sin datos');
+
+            /* Productos */
+            var rows = lines.querySelectorAll('.te-product-row');
+            var names = [];
+            rows.forEach(function (row) {
+                var n = row.querySelector('.te-product-name');
+                var q = row.querySelector('.te-product-quantity');
+                var name = up(n ? n.value : '');
+                var qv = Math.max(Number(q ? q.value || 1 : 1), 1);
+                if (!name) return;
+                names.push(name + (qv > 1 ? ' x' + qv : ''));
+            });
+            place('res-products', names.join(' + '), 'Sin productos');
+
+            /* Tarifa */
+            var zsel = document.getElementById('delivery_zone_id');
+            var zoneName = '';
+            if (zsel && zsel.selectedIndex >= 0) {
+                var zo = zsel.options[zsel.selectedIndex];
+                zoneName = zo.value ? (zo.textContent || '').split(' - ')[0].trim() : '';
+            }
+            var shipEl = document.getElementById('shipping_value');
+            var shipVal = shipEl ? Number(shipEl.value || 0) : 0;
+            place('res-zone', [zoneName || v('recipient_locality'), shipVal > 0 ? money(shipVal) : ''].filter(Boolean).join(' · ').toLocaleUpperCase('es-CO'), 'Sin zona');
+
+            /* Cobro */
+            var collEl = document.getElementById('collection_value');
+            var collectMoney = Number(collEl ? collEl.value || 0 : 0);
+            var payEl = document.getElementById('payment_method');
+            var payLabel = payEl ? (PAYMENT_LABELS[payEl.value] || payEl.value.toLocaleUpperCase('es-CO')) : '';
+            place('res-collection', [money(collectMoney), payLabel].filter(Boolean).join(' · ').toLocaleUpperCase('es-CO'), '$0');
         }
 
         function updateReadiness() {
@@ -219,19 +265,12 @@
             }
             var percent = Math.round((readyCount / totalChecks) * 100);
             for (var key in checks) {
-                updateReadyItem(key, checks[key]);
+                updateResumeItem(key, checks[key]);
             }
             var bar = document.getElementById('te-ready-bar');
             if (bar) bar.style.width = percent + '%';
             setText('te-ready-percent', percent + '%');
             setText('te-ready-label', percent === 100 ? 'Guia lista para crear' : (totalChecks - readyCount) + ' paso(s) pendiente(s)');
-            setText('te-summary-product', content.value.trim() || 'Sin producto agregado');
-            var recipient = [fieldValue('recipient_name'), fieldValue('recipient_lastname')].filter(Boolean).join(' ');
-            var destination = [recipient, fieldValue('recipient_locality')].filter(Boolean).join(' - ');
-            setText('te-summary-destination', destination || 'Sin destinatario');
-            setText('te-summary-zone', shippingValue > 0
-                ? (zoneName || 'Tarifa manual') + ' - ' + money(shippingValue)
-                : 'Sin tarifa asignada');
             var hint = document.getElementById('te-money-hint');
             if (hint) {
                 if (paymentMethod === 'cod' && collectionValue <= 0) {
@@ -245,6 +284,7 @@
                     hint.textContent = 'Pago sin recaudo contraentrega. Revisa solo el valor del envio.';
                 }
             }
+            refreshPreview();
         }
 
         function sync() {
@@ -263,7 +303,12 @@
                 qty += qv;
                 price += pv * qv;
                 var invId = row.dataset.inventoryId;
-                if (invId) invItems.push({ id: Number(invId), quantity: qv });
+                var quickId = row.dataset.quickProductId;
+                if (invId) {
+                    invItems.push({ id: Number(invId), type: 'inventory', quantity: qv });
+                } else if (quickId) {
+                    invItems.push({ id: Number(quickId), type: 'quick', quantity: qv });
+                }
             });
             content.value = Array.from(rows).map(function (row) {
                 var n = row.querySelector('.te-product-name');
@@ -283,13 +328,14 @@
             updateReadiness();
         }
 
-        function makeRow(name, price, qty, inventoryId) {
+        function makeRow(name, price, qty, inventoryId, quickProductId) {
             name = name || '';
             price = price || 0;
             qty = qty || 1;
             var r = document.createElement('div');
             r.className = 'te-product-row';
             if (inventoryId) r.dataset.inventoryId = inventoryId;
+            if (quickProductId) r.dataset.quickProductId = quickProductId;
             r.innerHTML = '<input type="text" value="' + esc(up(name)) + '" placeholder="Producto" class="te-product-name uppercase"><input type="number" min="0" step="100" value="' + price + '" placeholder="Precio" class="te-product-price"><input type="number" min="1" step="1" value="' + qty + '" placeholder="Cant" class="te-product-quantity"><button type="button" title="Eliminar">×</button>';
             r.querySelectorAll('.te-product-price, .te-product-quantity').forEach(function (i) { i.addEventListener('input', sync); });
             var pn = r.querySelector('.te-product-name');
@@ -299,7 +345,7 @@
             return r;
         }
 
-        function addProductLine(name, price, qty, inventoryId, type) {
+        function addProductLine(name, price, qty, inventoryId, type, quickProductId) {
             if (!name) return;
             price = price || 0;
             qty = qty || 1;
@@ -308,7 +354,10 @@
             var existing = Array.from(existingRows).find(function (row) {
                 var rowName = up(row.querySelector('.te-product-name').value || '').trim();
                 var rowInventoryId = row.dataset.inventoryId || null;
-                return rowName === normalizedName && String(rowInventoryId || '') === String(inventoryId || '');
+                var rowQuickProductId = row.dataset.quickProductId || null;
+                return rowName === normalizedName && 
+                       String(rowInventoryId || '') === String(inventoryId || '') &&
+                       String(rowQuickProductId || '') === String(quickProductId || '');
             });
             if (existing) {
                 var quantity = existing.querySelector('.te-product-quantity');
@@ -329,8 +378,9 @@
                 emptyRow.querySelector('.te-product-price').value = price;
                 emptyRow.querySelector('.te-product-quantity').value = qty;
                 if (inventoryId) emptyRow.dataset.inventoryId = inventoryId;
+                if (quickProductId) emptyRow.dataset.quickProductId = quickProductId;
             } else {
-                lines.appendChild(makeRow(name, price, qty, inventoryId));
+                lines.appendChild(makeRow(name, price, qty, inventoryId, quickProductId));
             }
             if (type && packageType) {
                 packageType.value = type;
@@ -346,20 +396,15 @@
                 var name = quickSelect.value || '';
                 var type = opt ? opt.dataset.packageType || null : null;
                 var price = opt ? opt.dataset.price || 0 : 0;
-                addProductLine(name, price, 1, null, type);
+                var quickId = opt ? opt.dataset.id || null : null;
+                addProductLine(name, price, 1, null, type, quickId);
                 if (quickSelect) quickSelect.value = '';
             });
         }
 
         if (D.quickProductPrefill && D.quickProductPrefill.name) {
-            addProductLine(D.quickProductPrefill.name, D.quickProductPrefill.price || 0, 1, null, D.quickProductPrefill.package_type || null);
+            addProductLine(D.quickProductPrefill.name, D.quickProductPrefill.price || 0, 1, null, D.quickProductPrefill.package_type || null, D.quickProductPrefill.id || null);
         }
-
-        quickCards.forEach(function (card) {
-            card.addEventListener('click', function () {
-                addProductLine(card.dataset.name || '', card.dataset.price || 0, 1, null, card.dataset.packageType || null);
-            });
-        });
 
         if (invBtn) {
             invBtn.addEventListener('click', function (e) {
@@ -371,7 +416,7 @@
                 var invId = opt ? opt.value || null : null;
                 var type = opt ? opt.dataset.packageType || 'merchandise' : 'merchandise';
                 if (!name) return;
-                addProductLine(name, price, 1, invId, type);
+                addProductLine(name, price, 1, invId, type, null);
                 if (sel) sel.value = '';
             });
         }
@@ -394,13 +439,17 @@
             form.addEventListener('submit', function () { sync(); }, true);
         }
         updateReadiness();
+        refreshPreview();
     });
+
+    window.shipmentCreateForm = shipmentCreateForm;
+    window.recipientAutocomplete = recipientAutocomplete;
 
     window.loadCities = async function (departmentId) {
         var citySelect = document.getElementById('recipient_locality');
         citySelect.innerHTML = '<option value="">Cargando...</option>';
         if (!departmentId) {
-            citySelect.innerHTML = '<option value="">Selecciona un departamento</option>';
+            citySelect.innerHTML = '<option value="">Seleccionar</option>';
             return;
         }
         try {
@@ -418,13 +467,87 @@
         }
     }
 
-    if (D.oldRecipientDepartment && D.oldRecipientLocality) {
+    window.loadLocalities = async function (cityName) {
+        var sel = document.getElementById('recipient_city');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Cargando...</option>';
+        if (!cityName) {
+            sel.innerHTML = '<option value="">Seleccionar</option>';
+            return;
+        }
+        try {
+            var res = await fetch('/api/localities?city=' + encodeURIComponent(cityName));
+            var localities = await res.json();
+            if (!localities.length) {
+                sel.innerHTML = '<option value="">Seleccionar</option>';
+                return;
+            }
+            sel.innerHTML = '<option value="">Seleccionar</option>';
+            localities.forEach(function (loc) {
+                var opt = document.createElement('option');
+                opt.value = loc.name;
+                opt.textContent = loc.name;
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            sel.innerHTML = '<option value="">Seleccionar</option>';
+        }
+    }
+
+    var citySelectEl = document.getElementById('recipient_locality');
+    if (citySelectEl) {
+        citySelectEl.addEventListener('change', function () {
+            loadLocalities(this.value);
+        });
+    }
+
+    var notesEl = document.getElementById('recipient_notes');
+    var notesCount = document.getElementById('recipient_notes_count');
+    if (notesEl && notesCount) {
+        var refreshNotesCount = function () {
+            notesCount.textContent = String(notesEl.value.length);
+        };
+        notesEl.addEventListener('input', refreshNotesCount);
+        notesEl.addEventListener('change', refreshNotesCount);
+        refreshNotesCount();
+    }
+
+    var deptToSelect = D.oldRecipientDepartment || D.prefillDepartmentId;
+    var localityToSelect = D.oldRecipientLocality || D.prefillLocality || '';
+    if (deptToSelect && (D.oldRecipientLocality || D.prefillLocality)) {
         document.addEventListener('DOMContentLoaded', async function () {
-            await loadCities(D.oldRecipientDepartment);
+            var deptSel = document.getElementById('recipient_department');
+            if (deptSel) deptSel.value = String(deptToSelect);
+            await loadCities(deptToSelect);
             var citySelect = document.getElementById('recipient_locality');
             var options = Array.from(citySelect.options);
-            var match = options.find(function (opt) { return opt.value === D.oldRecipientLocality; });
-            if (match) citySelect.value = match.value;
+            var norm = function (s) {
+                return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            };
+            var targetLoc = norm(localityToSelect);
+            var match = options.find(function (opt) { return norm(opt.value) === targetLoc; });
+            if (!match && targetLoc) {
+                match = options.find(function (opt) { return opt.value && norm(opt.value).indexOf(targetLoc) === 0; });
+            }
+            if (match) {
+                citySelect.value = match.value;
+                citySelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            var cityToSelect = D.oldRecipientCity || '';
+            if (!cityToSelect && D.prefillRecipientCity) cityToSelect = D.prefillRecipientCity;
+            if (cityToSelect) {
+                await loadLocalities(citySelect.value);
+                var locSelect = document.getElementById('recipient_city');
+                if (locSelect) {
+                    var locOptions = Array.from(locSelect.options);
+                    var targetCity = norm(cityToSelect);
+                    var locMatch = locOptions.find(function (opt) { return norm(opt.value) === targetCity; });
+                    if (!locMatch && targetCity) {
+                        locMatch = locOptions.find(function (opt) { return opt.value && norm(opt.value).indexOf(targetCity) === 0; });
+                    }
+                    if (locMatch) locSelect.value = locMatch.value;
+                }
+            }
         });
     }
 })();

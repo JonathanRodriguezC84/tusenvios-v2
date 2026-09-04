@@ -18,6 +18,7 @@ use App\Http\Controllers\InventoryReportController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuickProductController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\ShipmentPrintController;
 use App\Http\Controllers\ShipmentStatusController;
@@ -29,9 +30,18 @@ use App\Http\Controllers\TrackingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/deploy/{key}', DeployController::class);
+Route::get('/deploy/{key}/log', [DeployController::class, 'log']);
+Route::get('/deploy/{key}/view/recipients', [DeployController::class, 'checkView']);
+Route::get('/deploy/{key}/data/recipients', [DeployController::class, 'checkData']);
 
 Route::get('/', function () {
-    return view('welcome');
+    $plans = \App\Models\SubscriptionPlan::query()
+        ->where('code', 'emprende')
+        ->where('is_active', true)
+        ->orderBy('monthly_price')
+        ->get();
+
+    return view('welcome', compact('plans'));
 });
 
 Route::get('/track', [TrackingController::class, 'index'])->name('tracking.index');
@@ -55,6 +65,13 @@ Route::get('/dashboard', DashboardController::class)
 
 Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/daily-tasks', DailyTaskController::class)->name('daily-tasks.index');
+
+    Route::get('/notes', [NoteController::class, 'index'])->name('notes.index');
+    Route::post('/notes', [NoteController::class, 'store'])->name('notes.store');
+    Route::patch('/notes/{note}', [NoteController::class, 'update'])->name('notes.update');
+    Route::delete('/notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
+
+    Route::get('/help', [App\Http\Controllers\HelpController::class, 'index'])->name('help.index');
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -99,6 +116,8 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::patch('/my-brand', [BrandSettingController::class, 'update'])->name('brand-settings.update');
 
     Route::get('/quick-products', [QuickProductController::class, 'index'])->name('quick-products.index');
+    Route::get('/quick-products/template', [QuickProductController::class, 'template'])->name('quick-products.template');
+    Route::post('/quick-products/import', [QuickProductController::class, 'import'])->name('quick-products.import');
     Route::post('/quick-products', [QuickProductController::class, 'store'])->name('quick-products.store');
     Route::patch('/quick-products/{quickProduct}', [QuickProductController::class, 'update'])->name('quick-products.update');
     Route::delete('/quick-products/{quickProduct}', [QuickProductController::class, 'destroy'])->name('quick-products.destroy');
@@ -164,6 +183,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::any('/settings/{any?}', fn () => view('settings.edit'))->where('any', '.*')->name('settings.edit');
 
     Route::get('/recipients', [FrequentRecipientController::class, 'index'])->name('recipients.index');
+    Route::get('/recipients/export', [FrequentRecipientController::class, 'export'])->name('recipients.export');
     Route::get('/recipients/search', [FrequentRecipientController::class, 'search'])->name('recipients.search');
     Route::post('/recipients', [FrequentRecipientController::class, 'store'])->name('recipients.store');
     Route::delete('/recipients/{frequentRecipient}', [FrequentRecipientController::class, 'destroy'])->name('recipients.destroy');
@@ -178,6 +198,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
 
     Route::get('/api/departments', [LocationController::class, 'departments'])->name('api.departments');
     Route::get('/api/cities', [LocationController::class, 'cities'])->name('api.cities');
+    Route::get('/api/localities', [LocationController::class, 'localities'])->name('api.localities');
 });
 
 require __DIR__.'/auth.php';

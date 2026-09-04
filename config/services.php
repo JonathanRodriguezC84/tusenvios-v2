@@ -50,5 +50,6 @@ return [
         'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v18.0'),
         'token' => env('WHATSAPP_TOKEN', ''),
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID', ''),
+        'support_phone' => env('WHATSAPP_SUPPORT_PHONE', ''),
     ],
 ];

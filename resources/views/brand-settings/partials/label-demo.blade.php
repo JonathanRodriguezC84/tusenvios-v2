@@ -8,7 +8,11 @@
         'recipient_name' => 'SOFIA CARDENAS',
         'recipient_address' => 'CALLE 140 #12-44',
         'recipient_zone' => 'CEDRITOS / BOGOTA',
+        'recipient_barrio' => 'CEDRITOS',
+        'recipient_ciudad' => 'BOGOTA',
+        'recipient_localidad' => 'CHAPINERO',
         'recipient_phone' => '3203332211',
+        'recipient_whatsapp' => '3203332212',
         'sender_address' => data_get($brand, 'address') ?: 'DIRECCION NO CONFIGURADA',
         'sender_zone' => trim((data_get($brand, 'neighborhood') ?: 'SIN BARRIO').' / '.(data_get($brand, 'locality') ?: 'SIN CIUDAD'), ' /'),
         'notes' => 'ENTREGAR EN HORARIO DE OFICINA',
@@ -95,8 +99,14 @@ TOP);
         <div class="label-recipient">
             <div><span>NOMBRE</span><strong>{{ $demo['recipient_name'] }}</strong></div>
             <div><span>DIRECCION</span><strong class="big">{{ $demo['recipient_address'] }}</strong></div>
-            <div><span>BARRIO / LOCALIDAD</span><strong>{{ $demo['recipient_zone'] }}</strong></div>
-            <div><span>TELEFONO</span><strong>{{ $demo['recipient_phone'] }}</strong></div>
+            <div class="label-contact">
+                <div><span>BARRIO</span><strong>{{ $demo['recipient_barrio'] }}</strong></div>
+                <div><span>CIUDAD</span><strong>{{ $demo['recipient_ciudad'] }}</strong></div>
+            </div>
+            <div class="label-contact">
+                <div><span>TELEFONO</span><strong>{{ $demo['recipient_phone'] }}</strong></div>
+                <div><span>WHATSAPP</span><strong>{{ $demo['recipient_whatsapp'] }}</strong></div>
+            </div>
         </div>
         <div class="label-qr">{!! \App\Support\QrCode::svg($demo['barcode'], 3) !!}</div>
     </section>
@@ -108,7 +118,7 @@ TOP);
     @endif
 
     <section class="label-metas">
-        <div><span>ZONA</span><strong>{{ $demo['zone'] }}</strong></div>
+        <div><span>LOCALIDAD</span><strong>{{ $demo['recipient_localidad'] }}</strong></div>
         <div><span>PIEZAS</span><strong>{{ $demo['pieces'] }}</strong></div>
         <div><span>RECAUDO</span><strong>{{ $demo['collection'] }}</strong></div>
     </section>

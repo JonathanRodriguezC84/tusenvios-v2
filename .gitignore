@@ -38,3 +38,6 @@ well-known.zip
 test_view.php
 /cache
 /storage/framework/views/*.php
+deploy_v2.zip
+*.xlsx
+/.agents

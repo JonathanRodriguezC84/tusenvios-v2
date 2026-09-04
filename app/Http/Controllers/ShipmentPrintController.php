@@ -17,14 +17,14 @@ class ShipmentPrintController extends Controller
         $shipment->load(['affiliatedCompany', 'tenant', 'deliveryZone']);
 
         if ($shipment->status === 'created') {
-            $shipment->update(['status' => 'printed']);
+            $shipment->update(['status' => 'on_route']);
 
             ShipmentEvent::query()->create([
                 'shipment_id' => $shipment->id,
                 'user_id' => Auth::id(),
-                'status' => 'printed',
+                'status' => 'on_route',
                 'location' => 'Sistema',
-                'notes' => 'Guia impresa.',
+                'notes' => 'Guia impresa y en camino.',
             ]);
 
             Audit::log('shipment.printed', $shipment, "Guia {$shipment->guide_number} impresa.");
@@ -87,14 +87,14 @@ class ShipmentPrintController extends Controller
 
         foreach ($shipments as $shipment) {
             if ($shipment->status === 'created') {
-                $shipment->update(['status' => 'printed']);
+                $shipment->update(['status' => 'on_route']);
 
                 ShipmentEvent::query()->create([
                     'shipment_id' => $shipment->id,
                     'user_id' => Auth::id(),
-                    'status' => 'printed',
+                    'status' => 'on_route',
                     'location' => 'Sistema',
-                    'notes' => 'Guia impresa en lote.',
+                    'notes' => 'Guia impresa y en camino (lote).',
                 ]);
 
                 Audit::log('shipment.printed', $shipment, "Guia {$shipment->guide_number} impresa en lote.");

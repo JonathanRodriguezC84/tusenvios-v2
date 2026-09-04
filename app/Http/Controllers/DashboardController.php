@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\AffiliateSettlement;
 use App\Models\InventoryProduct;
-use App\Models\QuickProduct;
 use App\Models\Shipment;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,18 +17,14 @@ class DashboardController extends Controller
         [$from, $to] = $this->resolveDateRange($range);
 
         $metrics = $this->buildMetrics($user, $from, $to);
-        $onboarding = $this->onboardingFor($user);
+        $productFinancials = $this->productFinancials($user, $from, $to);
 
         $chartShipmentsByDay = $this->chartShipmentsByDay($user, $from, $to);
-        $statusCounts = $this->statusCounts($user);
-        $chartStatusDistribution = $this->chartStatusDistribution($user, $statusCounts);
-        $chartStatusBuckets = $this->chartStatusBuckets($statusCounts);
+        $chartFinancialsByDay = $this->chartFinancialsByDay($user, $from, $to);
         $chartTopProducts = $this->chartTopProducts($user, $from, $to);
-        $chartRevenueByDay = $this->chartRevenueByDay($user, $from, $to);
-        $chartMonthlyTrend = $this->chartMonthlyTrend($user);
+        $chartMonthToDate = $this->chartMonthToDate($user);
         $deliveryRate = $this->deliveryRate($user, $from, $to);
         $operationHealth = ['stale' => $this->staleShipmentsCount($user)];
-        $moneySummary = $this->moneySummary($user, $metrics, $from, $to);
         $inventoryAlerts = $this->inventoryAlerts($user);
 
         $alerts = array_filter([
@@ -51,18 +46,6 @@ class DashboardController extends Controller
             ] : null,
         ]);
 
-        $trialGuideCounter = null;
-        if (! $user->isSuperAdmin()) {
-            $trialTenant = $user->tenant ?: $user->affiliatedCompany?->tenant;
-            $trialSub = $trialTenant?->currentSubscription;
-            if ($trialSub && $trialSub->isTrial()) {
-                $trialGuideCounter = [
-                    'remaining' => $trialSub->trialGuidesRemaining(),
-                    'total' => (int) $trialSub->trial_guide_limit,
-                ];
-            }
-        }
-
         $dateRange = [
             'from' => $from->format('Y-m-d'),
             'to' => $to->format('Y-m-d'),
@@ -71,9 +54,8 @@ class DashboardController extends Controller
         ];
 
         return view('dashboard', compact(
-            'metrics', 'onboarding', 'alerts', 'trialGuideCounter', 'dateRange',
-            'chartShipmentsByDay', 'chartStatusDistribution', 'chartStatusBuckets', 'chartTopProducts', 'chartRevenueByDay',
-            'chartMonthlyTrend', 'deliveryRate', 'operationHealth', 'moneySummary', 'inventoryAlerts'
+            'metrics', 'productFinancials', 'alerts', 'dateRange',
+            'chartShipmentsByDay', 'chartFinancialsByDay', 'chartTopProducts', 'chartMonthToDate', 'deliveryRate', 'operationHealth', 'inventoryAlerts'
         ));
     }
 
@@ -126,6 +108,10 @@ class DashboardController extends Controller
             'issues' => Shipment::query()->visibleTo($user)->whereIn('status', ['failed_delivery', 'rescheduled'])->count(),
             'warehouse' => Shipment::query()->visibleTo($user)->whereIn('status', ['printed', 'in_warehouse', 'in_sorting'])->count(),
             'return_pending' => Shipment::query()->visibleTo($user)->where('status', 'return_pending')->count(),
+            'returned_total' => Shipment::query()->visibleTo($user)->whereIn('status', ['return_pending', 'returned'])->count(),
+            'on_route_only' => Shipment::query()->visibleTo($user)->whereIn('status', ['assigned', 'on_route'])->count(),
+            'cancelled' => Shipment::query()->visibleTo($user)->where('status', 'cancelled')->count(),
+            'total_shipments' => Shipment::query()->visibleTo($user)->count(),
             'collection_today' => $deliveredInRange->sum('collection_value'),
             'collection_open' => Shipment::query()
                 ->visibleTo($user)
@@ -181,87 +167,172 @@ class DashboardController extends Controller
         return ['days' => $data, 'max' => $max ?: 1];
     }
 
-    /**
-     * Buckets that roll the 12 raw shipment statuses up into the 8 stages the
-     * business actually thinks in. Slot numbers map to the fixed categorical
-     * color order in resources/css/app.css (--viz-cat-1..8) — never reassign
-     * a bucket to a different slot, that's what keeps a color meaning the
-     * same thing on every visit.
-     */
-    private function statusBuckets(): array
+    private function chartFinancialsByDay($user, $from = null, $to = null): array
     {
-        return [
-            'prep' => ['label' => 'En preparacion', 'slot' => 1, 'statuses' => ['created', 'printed']],
-            'warehouse' => ['label' => 'En bodega', 'slot' => 2, 'statuses' => ['in_warehouse', 'in_sorting']],
-            'route' => ['label' => 'En ruta', 'slot' => 3, 'statuses' => ['assigned', 'on_route']],
-            'delivered' => ['label' => 'Entregada', 'slot' => 4, 'statuses' => ['delivered']],
-            'issue' => ['label' => 'Con novedad', 'slot' => 5, 'statuses' => ['failed_delivery', 'rescheduled']],
-            'return_pending' => ['label' => 'Por devolver', 'slot' => 6, 'statuses' => ['return_pending']],
-            'returned' => ['label' => 'Devuelta', 'slot' => 7, 'statuses' => ['returned']],
-            'cancelled' => ['label' => 'Cancelada', 'slot' => 8, 'statuses' => ['cancelled']],
-        ];
-    }
+        $from = $from ?? today()->subDays(6);
+        $to = $to ?? now()->endOfDay();
 
-    private function statusLabels(): array
-    {
-        $labels = [];
-        foreach ($this->statusBuckets() as $bucket) {
-            foreach ($bucket['statuses'] as $status) {
-                $labels[$status] = ['label' => $bucket['label'], 'slot' => $bucket['slot']];
-            }
-        }
-
-        return $labels;
-    }
-
-    private function statusCounts($user)
-    {
-        return Shipment::query()
+        $shipments = Shipment::query()
             ->visibleTo($user)
-            ->selectRaw('status, COUNT(*) as aggregate')
-            ->groupBy('status')
-            ->pluck('aggregate', 'status');
-    }
+            ->whereBetween('created_at', [$from, $to])
+            ->get(['created_at', 'status', 'inventory_snapshot', 'collection_value', 'shipping_value']);
 
-    private function chartStatusDistribution($user, $counts): array
-    {
-        $order = ['delivered', 'on_route', 'assigned', 'in_warehouse', 'in_sorting', 'created', 'printed', 'failed_delivery', 'rescheduled', 'return_pending', 'returned', 'cancelled'];
-        $statusLabels = [
-            'created' => 'Por imprimir', 'printed' => 'Impresa', 'in_warehouse' => 'En bodega',
-            'in_sorting' => 'En clasificacion', 'assigned' => 'Asignada', 'on_route' => 'En camino',
-            'delivered' => 'Entregadas', 'failed_delivery' => 'Novedad', 'rescheduled' => 'Reprogramada',
-            'return_pending' => 'Por devolver', 'returned' => 'Devuelta', 'cancelled' => 'Canceladas',
-        ];
-        $slots = $this->statusLabels();
+        $days = (int) ceil($from->startOfDay()->diffInDays($to->endOfDay())) + 1;
+        $dailyData = [];
 
-        $rows = [];
-        $total = 0;
-        foreach ($order as $status) {
-            $count = (int) ($counts[$status] ?? 0);
-            $rows[] = ['status' => $status, 'label' => $statusLabels[$status], 'slot' => $slots[$status]['slot'], 'count' => $count];
-            $total += $count;
-        }
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = (clone $to)->subDays($i)->startOfDay();
+            $dateEnd = (clone $date)->endOfDay();
 
-        return ['rows' => $rows, 'total' => $total];
-    }
+            $dayShipments = $shipments->filter(function ($s) use ($date, $dateEnd) {
+                return $s->created_at >= $date && $s->created_at <= $dateEnd;
+            });
 
-    private function chartStatusBuckets($counts): array
-    {
-        $buckets = [];
-        $total = 0;
+            $dayCost = 0;
+            $daySales = 0;
+            $dayInTransit = 0;
+            $dayDelivered = 0;
+            $dayReturned = 0;
+            $dayCancelled = 0;
 
-        foreach ($this->statusBuckets() as $bucket) {
-            $count = 0;
-            foreach ($bucket['statuses'] as $status) {
-                $count += (int) ($counts[$status] ?? 0);
+            foreach ($dayShipments as $shipment) {
+                if ($shipment->status !== 'cancelled') {
+                    $snapshot = $shipment->inventory_snapshot ?? [];
+                    if (is_array($snapshot) && count($snapshot) > 0) {
+                        foreach ($snapshot as $item) {
+                            $quantity = (int) ($item['quantity'] ?? 1);
+                            $dayCost += $quantity * (float) ($item['cost'] ?? 0);
+                            $daySales += $quantity * (float) ($item['price'] ?? 0);
+                        }
+                    } else {
+                        $daySales += (float) ($shipment->collection_value ?? 0) + (float) ($shipment->shipping_value ?? 0);
+                    }
+                }
+
+                if (in_array($shipment->status, ['in_warehouse', 'in_sorting', 'assigned', 'on_route'], true)) {
+                    $dayInTransit++;
+                } elseif ($shipment->status === 'delivered') {
+                    $dayDelivered++;
+                } elseif (in_array($shipment->status, ['return_pending', 'returned'], true)) {
+                    $dayReturned++;
+                } elseif ($shipment->status === 'cancelled') {
+                    $dayCancelled++;
+                }
             }
-            $buckets[] = ['label' => $bucket['label'], 'slot' => $bucket['slot'], 'count' => $count];
-            $total += $count;
+
+            $dailyData[] = [
+                'label' => $date->locale('es')->isoFormat('ddd'),
+                'full' => $date->format('d/m'),
+                'shipments' => $dayShipments->count(),
+                'cost' => $dayCost,
+                'sales' => $daySales,
+                'profit' => $daySales - $dayCost,
+                'in_transit' => $dayInTransit,
+                'delivered' => $dayDelivered,
+                'returned' => $dayReturned,
+                'cancelled' => $dayCancelled,
+            ];
         }
 
-        return ['buckets' => $buckets, 'total' => $total];
+        $salesValues = array_column($dailyData, 'sales');
+        $costValues = array_column($dailyData, 'cost');
+        $profitValues = array_column($dailyData, 'profit');
+        $inTransitValues = array_column($dailyData, 'in_transit');
+        $deliveredValues = array_column($dailyData, 'delivered');
+        $returnedValues = array_column($dailyData, 'returned');
+        $cancelledValues = array_column($dailyData, 'cancelled');
+
+        [$salesLine, $salesArea, $salesLast] = $this->buildSvgSparkline($salesValues);
+        [$costLine, $costArea, $costLast] = $this->buildSvgSparkline($costValues);
+        [$profitLine, $profitArea, $profitLast] = $this->buildSvgSparkline($profitValues);
+        [$inTransitLine, $inTransitArea, $inTransitLast] = $this->buildSvgSparkline($inTransitValues);
+        [$deliveredLine, $deliveredArea, $deliveredLast] = $this->buildSvgSparkline($deliveredValues);
+        [$returnedLine, $returnedArea, $returnedLast] = $this->buildSvgSparkline($returnedValues);
+        [$cancelledLine, $cancelledArea, $cancelledLast] = $this->buildSvgSparkline($cancelledValues);
+
+        return [
+            'days' => $dailyData,
+            'sales_line' => $salesLine,
+            'sales_area' => $salesArea,
+            'sales_last' => $salesLast,
+            'cost_line' => $costLine,
+            'cost_area' => $costArea,
+            'cost_last' => $costLast,
+            'profit_line' => $profitLine,
+            'profit_area' => $profitArea,
+            'profit_last' => $profitLast,
+            'in_transit_line' => $inTransitLine,
+            'in_transit_area' => $inTransitArea,
+            'in_transit_last' => $inTransitLast,
+            'delivered_line' => $deliveredLine,
+            'delivered_area' => $deliveredArea,
+            'delivered_last' => $deliveredLast,
+            'returned_line' => $returnedLine,
+            'returned_area' => $returnedArea,
+            'returned_last' => $returnedLast,
+            'cancelled_line' => $cancelledLine,
+            'cancelled_area' => $cancelledArea,
+            'cancelled_last' => $cancelledLast,
+        ];
     }
 
+    private function buildSvgSparkline(array $values): array
+    {
+        $n = count($values);
+        if ($n === 0) {
+            return ['M 0 16 L 100 16', 'M 0 16 L 100 16 L 100 32 L 0 32 Z', ['x' => 100, 'y' => 16]];
+        }
+
+        $minVal = min($values);
+        $maxVal = max($values);
+
+        if ($maxVal == 0 && $minVal == 0) {
+            return ['M 0 28 L 100 28', 'M 0 28 L 100 28 L 100 32 L 0 32 Z', ['x' => 100, 'y' => 28]];
+        }
+
+        $range = ($maxVal - $minVal) ?: 1;
+
+        $points = [];
+        for ($i = 0; $i < $n; $i++) {
+            $x = $n > 1 ? round(($i / ($n - 1)) * 100, 1) : 50;
+            $y = round(28 - (($values[$i] - $minVal) / $range) * 24, 1);
+            $points[] = ['x' => $x, 'y' => $y];
+        }
+
+        if ($n === 1) {
+            $line = "M 0 {$points[0]['y']} L 100 {$points[0]['y']}";
+            $area = "{$line} L 100 32 L 0 32 Z";
+            return [$line, $area, ['x' => 100, 'y' => $points[0]['y']]];
+        }
+
+        // Catmull-Rom to Cubic Bézier para curvatura suave y natural
+        $line = "M {$points[0]['x']} {$points[0]['y']}";
+        for ($i = 0; $i < $n - 1; $i++) {
+            $p0 = $points[max($i - 1, 0)];
+            $p1 = $points[$i];
+            $p2 = $points[$i + 1];
+            $p3 = $points[min($i + 2, $n - 1)];
+
+            $cp1x = round($p1['x'] + ($p2['x'] - $p0['x']) / 6, 1);
+            $cp1y = round(max(3, min(29, $p1['y'] + ($p2['y'] - $p0['y']) / 6)), 1);
+
+            $cp2x = round($p2['x'] - ($p3['x'] - $p1['x']) / 6, 1);
+            $cp2y = round(max(3, min(29, $p2['y'] - ($p3['y'] - $p1['y']) / 6)), 1);
+
+            $line .= " C {$cp1x} {$cp1y}, {$cp2x} {$cp2y}, {$p2['x']} {$p2['y']}";
+        }
+
+        $area = "{$line} L 100 32 L 0 32 Z";
+        $last = end($points);
+
+        return [$line, $area, $last];
+    }
+
+    /**
+     * Buckets que agrupan los 12 estados internos en los 3 grupos que el plan
+     * Emprende muestra (En camino, Entregada, Devuelta). Los colores se asignan
+     * en el orden --viz-cat-1..3 de resources/css/app.css.
+     */
     private function chartTopProducts($user, $from = null, $to = null): array
     {
         $products = [];
@@ -301,62 +372,154 @@ class DashboardController extends Controller
         arsort($products);
         $top = array_slice($products, 0, 5);
         $max = !empty($top) ? max($top) : 1;
+        $totalUnits = array_sum($top);
 
+        $circumference = 226.2; // 2 * pi * 36
+        $offset = 0;
         $result = [];
         foreach ($top as $name => $count) {
-            $result[] = ['name' => $name, 'count' => $count, 'pct' => round(($count / $max) * 100)];
+            $share = $totalUnits > 0 ? ($count / $totalUnits) : 0;
+            $dashLength = round($share * $circumference, 2);
+            $dashRemainder = round($circumference - $dashLength, 2);
+            $sharePct = round($share * 100, 1);
+
+            $result[] = [
+                'name' => $name,
+                'count' => $count,
+                'pct' => round(($count / $max) * 100),
+                'share_pct' => $sharePct,
+                'dash_array' => "{$dashLength} {$dashRemainder}",
+                'dash_offset' => round(-$offset, 2),
+            ];
+            $offset += $dashLength;
         }
 
         return $result;
     }
 
-    private function chartRevenueByDay($user, $from = null, $to = null): array
+    private function chartMonthToDate($user): array
     {
-        $from = $from ?? today()->subDays(6);
-        $to = $to ?? now()->endOfDay();
-        $data = [];
-        $max = 0;
+        $start = now()->startOfMonth();
+        $end = now()->endOfDay();
+        $totalDays = (int) now()->daysInMonth;
+        $elapsedDays = (int) min(now()->day, $totalDays);
 
-        $days = (int) ceil($from->startOfDay()->diffInDays($to->endOfDay())) + 1;
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $date = (clone $to)->subDays($i)->startOfDay();
-            $dateEnd = (clone $date)->endOfDay();
-            $deliveries = Shipment::query()
-                ->visibleTo($user)
-                ->where('status', 'delivered')
-                ->whereBetween('updated_at', [$date, $dateEnd])
-                ->get();
-            $revenue = $deliveries->sum('collection_value') + $deliveries->sum('shipping_value');
-            $data[] = [
-                'label' => $date->locale('es')->isoFormat('ddd'),
-                'full' => $date->format('d/m'),
-                'revenue' => $revenue,
+        $shipments = Shipment::query()
+            ->visibleTo($user)
+            ->whereBetween('created_at', [$start, $end])
+            ->get(['created_at', 'collection_value', 'shipping_value', 'status']);
+
+        $created = 0;
+        $revenue = 0;
+        foreach ($shipments as $shipment) {
+            $created++;
+            if ($shipment->status === 'cancelled') continue;
+            $revenue += (float) ($shipment->collection_value ?? 0) + (float) ($shipment->shipping_value ?? 0);
+        }
+
+        $expectedRevenue = $totalDays > 0 ? round($revenue / max($elapsedDays, 1) * $totalDays) : 0;
+        $expectedShipments = $totalDays > 0 ? round($created / max($elapsedDays, 1) * $totalDays) : 0;
+
+        // Histograma completo de los 30/31 días del mes
+        $monthDays = [];
+        $maxDayCount = 1;
+        $avgDailyShipments = max(1, round($created / max(1, $elapsedDays)));
+
+        for ($d = 1; $d <= $totalDays; $d++) {
+            $dayDate = (clone $start)->day($d)->startOfDay();
+            $dayEnd = (clone $dayDate)->endOfDay();
+            $isPast = $d < $elapsedDays;
+            $isToday = $d === $elapsedDays;
+            $isFuture = $d > $elapsedDays;
+
+            if ($isPast || $isToday) {
+                $dayShipments = $shipments->filter(function ($s) use ($dayDate, $dayEnd) {
+                    return $s->created_at >= $dayDate && $s->created_at <= $dayEnd;
+                });
+                $cnt = $dayShipments->count();
+                $rev = 0;
+                foreach ($dayShipments as $s) {
+                    if ($s->status === 'cancelled') continue;
+                    $rev += (float) ($s->collection_value ?? 0) + (float) ($s->shipping_value ?? 0);
+                }
+            } else {
+                $cnt = $avgDailyShipments;
+                $rev = round($revenue / max(1, $elapsedDays));
+            }
+
+            if ($cnt > $maxDayCount) $maxDayCount = $cnt;
+
+            $monthDays[] = [
+                'day' => $d,
+                'date' => $dayDate->format('d/m'),
+                'is_past' => $isPast,
+                'is_today' => $isToday,
+                'is_future' => $isFuture,
+                'count' => $cnt,
+                'revenue' => $rev,
             ];
-            if ($revenue > $max) $max = $revenue;
         }
 
-        return ['days' => $data, 'max' => $max ?: 1];
-    }
+        // Parámetros del medidor radial (Semicircular Gauge) de ingresos:
+        // Arco de 180° con radio 56 (longitud = pi * 56 = 175.93)
+        $gaugeCircumference = 175.93;
+        $revenueRatio = $expectedRevenue > 0 ? min(1, $revenue / $expectedRevenue) : 0;
+        $gaugeDashLength = round($revenueRatio * $gaugeCircumference, 2);
+        $gaugePct = round($revenueRatio * 100);
 
-    private function chartMonthlyTrend($user): array
-    {
-        $data = [];
-        $months = [];
-        for ($i = 2; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $months[] = ['label' => $date->locale('es')->isoFormat('MMM'), 'year' => $date->format('Y'), 'start' => (clone $date)->startOfMonth(), 'end' => (clone $date)->endOfMonth()];
+        // Ritmo respecto al tiempo transcurrido del mes
+        $timeRatio = $totalDays > 0 ? ($elapsedDays / $totalDays) : 0;
+        $paceDelta = round(($revenueRatio - $timeRatio) * 100, 1);
+        $paceStatus = $paceDelta >= 0 ? 'ahead' : 'behind';
+
+        // Agrupación ejecutiva en 4 semanas para visualización limpia, espaciosa e inmune al zoom
+        $weeks = [
+            ['label' => 'Sem 1', 'start' => 1, 'end' => 7, 'count' => 0, 'is_current' => false, 'is_future' => false],
+            ['label' => 'Sem 2', 'start' => 8, 'end' => 14, 'count' => 0, 'is_current' => false, 'is_future' => false],
+            ['label' => 'Sem 3', 'start' => 15, 'end' => 21, 'count' => 0, 'is_current' => false, 'is_future' => false],
+            ['label' => 'Sem 4', 'start' => 22, 'end' => $totalDays, 'count' => 0, 'is_current' => false, 'is_future' => false],
+        ];
+
+        $maxWeekCount = 1;
+        $avgWeeklyShipments = max(1, round($expectedShipments / 4));
+
+        foreach ($weeks as &$w) {
+            if ($elapsedDays >= $w['start'] && $elapsedDays <= $w['end']) {
+                $w['is_current'] = true;
+            } elseif ($elapsedDays < $w['start']) {
+                $w['is_future'] = true;
+            }
+
+            if (!$w['is_future']) {
+                $wStart = (clone $start)->day($w['start'])->startOfDay();
+                $wEnd = (clone $start)->day(min($elapsedDays, $w['end']))->endOfDay();
+                $w['count'] = $shipments->filter(function ($s) use ($wStart, $wEnd) {
+                    return $s->created_at >= $wStart && $s->created_at <= $wEnd;
+                })->count();
+            } else {
+                $w['count'] = $avgWeeklyShipments;
+            }
+
+            if ($w['count'] > $maxWeekCount) $maxWeekCount = $w['count'];
         }
+        unset($w);
 
-        $max = 0;
-        foreach ($months as $m) {
-            $count = Shipment::query()->visibleTo($user)
-                ->whereBetween('created_at', [$m['start'], $m['end']])
-                ->count();
-            $data[] = ['label' => $m['label'] . ' ' . $m['year'], 'count' => $count];
-            if ($count > $max) $max = $count;
-        }
-
-        return ['months' => $data, 'max' => $max ?: 1];
+        return [
+            'created' => $created,
+            'revenue' => $revenue,
+            'month' => now()->locale('es')->isoFormat('MMMM YYYY'),
+            'elapsed_days' => $elapsedDays,
+            'total_days' => $totalDays,
+            'expected_revenue' => $expectedRevenue,
+            'expected_shipments' => $expectedShipments,
+            'weeks' => $weeks,
+            'max_week_count' => $maxWeekCount,
+            'timeline' => $monthDays,
+            'max_day_count' => $maxDayCount,
+            'gauge_pct' => min(100, $gaugePct),
+            'pace_delta' => $paceDelta,
+            'pace_status' => $paceStatus,
+        ];
     }
 
     private function deliveryRate($user, $from = null, $to = null): array
@@ -371,7 +534,23 @@ class DashboardController extends Controller
             ->count();
         $rate = $total > 0 ? round(($delivered / $total) * 100, 1) : 0;
 
-        return ['total' => $total, 'delivered' => $delivered, 'rate' => $rate];
+        $previousFrom = (clone $from)->subDays($from->diffInDays((clone $to)->startOfDay()));
+        $previousTo = (clone $from)->subSecond();
+        $totalPrev = Shipment::query()->visibleTo($user)
+            ->whereBetween('created_at', [$previousFrom, $previousTo])
+            ->count();
+        $deliveredPrev = Shipment::query()->visibleTo($user)->where('status', 'delivered')
+            ->whereBetween('created_at', [$previousFrom, $previousTo])
+            ->count();
+        $prevRate = $totalPrev > 0 ? round(($deliveredPrev / $totalPrev) * 100, 1) : 0;
+
+        return [
+            'total' => $total,
+            'delivered' => $delivered,
+            'rate' => $rate,
+            'previousRate' => $prevRate,
+            'rateDelta' => round($rate - $prevRate, 1),
+        ];
     }
 
     private function staleShipmentsCount($user): int
@@ -383,39 +562,44 @@ class DashboardController extends Controller
             ->count();
     }
 
-    private function moneySummary($user, array $metrics, $from, $to): array
+    private function productFinancials($user, $from = null, $to = null): array
     {
-        $createdValue = Shipment::query()
+        $from = $from ?? today()->subDays(6);
+        $to = $to ?? now()->endOfDay();
+
+        $cost = 0;
+        $sales = 0;
+        $units = 0;
+
+        Shipment::query()
             ->visibleTo($user)
-            ->whereBetween('created_at', [$from, $to])
             ->where('status', '!=', 'cancelled')
-            ->selectRaw('COALESCE(SUM(collection_value), 0) + COALESCE(SUM(shipping_value), 0) as total')
-            ->value('total') ?? 0;
+            ->whereBetween('created_at', [$from, $to])
+            ->latest()
+            ->take(500)
+            ->get(['inventory_snapshot', 'collection_value', 'shipping_value'])
+            ->each(function ($shipment) use (&$cost, &$sales, &$units) {
+                $snapshot = $shipment->inventory_snapshot ?? [];
+                if (is_array($snapshot) && count($snapshot) > 0) {
+                    foreach ($snapshot as $item) {
+                        $quantity = (int) ($item['quantity'] ?? 1);
+                        $units += $quantity;
+                        $cost += $quantity * (float) ($item['cost'] ?? 0);
+                        $sales += $quantity * (float) ($item['price'] ?? 0);
+                    }
+                    return;
+                }
 
-        $issueValue = Shipment::query()
-            ->visibleTo($user)
-            ->whereIn('status', ['failed_delivery', 'rescheduled', 'return_pending'])
-            ->selectRaw('COALESCE(SUM(collection_value), 0) + COALESCE(SUM(shipping_value), 0) as total')
-            ->value('total') ?? 0;
-
-        $moneyToWatch = (float) $metrics['collection_open']
-            + (float) $metrics['affiliate_pending_value']
-            + (float) $metrics['settlements_pending_payment_value']
-            + (float) $issueValue;
-
-        $tone = $moneyToWatch > 0 ? 'amber' : ((float) $metrics['revenue_today'] > 0 ? 'emerald' : 'blue');
-        $label = $moneyToWatch > 0
-            ? 'Dinero por vigilar'
-            : ((float) $metrics['revenue_today'] > 0 ? 'Flujo saludable' : 'Sin movimientos de dinero');
+                $units++;
+                $sales += (float) ($shipment->collection_value ?? 0) + (float) ($shipment->shipping_value ?? 0);
+            });
 
         return [
-            'tone' => $tone,
-            'label' => $label,
-            'createdValue' => (float) $createdValue,
-            'deliveredValue' => (float) $metrics['revenue_today'],
-            'collectionOpen' => (float) $metrics['collection_open'],
-            'issueValue' => (float) $issueValue,
-            'moneyToWatch' => $moneyToWatch,
+            'cost' => $cost,
+            'sales' => $sales,
+            'profit' => $sales - $cost,
+            'units' => $units,
+            'margin' => $sales > 0 ? round((($sales - $cost) / $sales) * 100, 1) : 0,
         ];
     }
 
@@ -436,49 +620,6 @@ class DashboardController extends Controller
             ->orderBy('name')->take(3)->get();
 
         return ['low' => $low, 'out' => $out];
-    }
-
-    private function onboardingFor($user): array
-    {
-        if ($user->isSuperAdmin()) return ['show' => false, 'steps' => [], 'completed' => 0, 'total' => 0];
-
-        $brandOwner = $user->role === 'affiliate' && $user->affiliatedCompany
-            ? $user->affiliatedCompany : $user->tenant;
-
-        if (! $brandOwner) return ['show' => false, 'steps' => [], 'completed' => 0, 'total' => 0];
-
-        $hasBrand = filled($brandOwner->logo_path) || filled($brandOwner->brand_whatsapp)
-            || filled($brandOwner->brand_instagram) || filled($brandOwner->brand_website);
-
-        $quickProductsCount = QuickProduct::query()
-            ->when(
-                $user->role === 'affiliate' && $user->affiliated_company_id,
-                fn ($q) => $q->where('affiliated_company_id', $user->affiliated_company_id),
-                fn ($q) => $q->where('tenant_id', $user->tenant_id)->whereNull('affiliated_company_id')
-            )->count();
-
-        $shipmentsCount = Shipment::query()->visibleTo($user)->count();
-
-        $steps = [
-            ['label' => 'Personaliza tu marca', 'description' => 'Logo, WhatsApp y redes para tus etiquetas.', 'route' => route('brand-settings.edit'), 'action' => 'Configurar', 'done' => $hasBrand],
-        ];
-
-        if (! $user->canUseInventory()) {
-            $steps[] = ['label' => 'Crea productos rapidos', 'description' => 'Los productos que mas envias, para crear guias mas rapido.', 'route' => route('quick-products.index'), 'action' => 'Agregar', 'done' => $quickProductsCount > 0];
-        } else {
-            $inventoryCount = InventoryProduct::query()
-                ->when($user->role === 'affiliate' && $user->affiliated_company_id,
-                    fn ($q) => $q->where('affiliated_company_id', $user->affiliated_company_id),
-                    fn ($q) => $q->where('tenant_id', $user->tenant_id)->whereNull('affiliated_company_id')
-                )->count();
-            $steps[] = ['label' => 'Agrega productos al inventario', 'description' => 'Controla tu stock y prepara envios mas rapido.', 'route' => route('inventory.index'), 'action' => 'Agregar', 'done' => $inventoryCount > 0];
-        }
-
-        $steps[] = ['label' => 'Crea tu primera guia', 'description' => 'Registra un envio y prueba la impresion.', 'route' => route('shipments.create'), 'action' => 'Crear guia', 'done' => $shipmentsCount > 0];
-
-        $completed = collect($steps)->where('done', true)->count();
-
-        return ['show' => $completed < count($steps), 'steps' => $steps, 'completed' => $completed, 'total' => count($steps)];
     }
 
 }

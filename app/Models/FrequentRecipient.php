@@ -32,6 +32,25 @@ class FrequentRecipient extends Model
         return $this->belongsTo(AffiliatedCompany::class);
     }
 
+    public function normalizedNameParts(): array
+    {
+        $name = trim((string) $this->name);
+        $lastname = trim((string) $this->lastname);
+
+        if ($lastname !== '' || $name === '') {
+            return [$name, $lastname];
+        }
+
+        $words = preg_split('/\s+/', $name);
+        if (count($words) < 2) {
+            return [$name, ''];
+        }
+
+        $lastname = array_pop($words);
+
+        return [implode(' ', $words), $lastname];
+    }
+
     public static function getForUser($user)
     {
         return static::query()

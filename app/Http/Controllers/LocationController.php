@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\City;
 use App\Models\Department;
+use App\Models\Locality;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,5 +26,21 @@ class LocationController extends Controller
             ->get(['id', 'name']);
 
         return response()->json($cities);
+    }
+
+    public function localities(Request $request): JsonResponse
+    {
+        $request->validate(['city' => ['required', 'string', 'max:255']]);
+
+        $cityId = City::where('name', $request->city)->value('id');
+        if (! $cityId) {
+            return response()->json([]);
+        }
+
+        $localities = Locality::where('city_id', $cityId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return response()->json($localities);
     }
 }

@@ -44,7 +44,18 @@ class FrequentRecipientTest extends TestCase
 
         $response = $this->actingAs($this->user)->get(route('recipients.search', ['q' => 'Juan']));
         $response->assertOk();
-        $this->assertContains('Juan Perez', array_column($response->json(), 'name'));
+
+        $rows = array_column($response->json(), 'name');
+
+        foreach ($response->json() as $row) {
+            $fullName = trim(($row['name'] ?? '').' '.($row['lastname'] ?? ''));
+            if ($fullName === 'Juan Perez') {
+                $this->assertTrue(true);
+                return;
+            }
+        }
+
+        $this->fail('No se encontro "Juan Perez" en la respuesta.');
     }
 
     public function test_recipient_search_requires_q_parameter(): void

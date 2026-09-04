@@ -9,6 +9,9 @@
             $brandUser = auth()->user();
             if ($brandUser) {
                 $brandOwner = $brandUser->affiliatedCompany ?: $brandUser->tenant;
+                if (! $brandOwner && $brandUser->isSuperAdmin()) {
+                    $brandOwner = \App\Models\Tenant::query()->orderBy('id')->first();
+                }
                 $brandData = $brandOwner?->brandData();
                 $brandCandidate = $brandData['color'] ?? null;
                 if (is_string($brandCandidate) && preg_match('/^#[0-9A-Fa-f]{6}$/', $brandCandidate)) {

@@ -6,10 +6,12 @@
 @section('page-description', 'Ultimas guias creadas en la plataforma.')
 
 @section('page-actions')
-    <a href="{{ route('admin.activity.export', request()->query()) }}" class="admin-outline-link">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        Exportar CSV
-    </a>
+    @if (auth()->user()->isSuperAdmin())
+        <a href="{{ route('admin.activity.export', request()->query()) }}" class="admin-outline-link">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Exportar CSV
+        </a>
+    @endif
 @endsection
 
 @section('content')
@@ -45,34 +47,40 @@
         <table class="w-full text-left text-sm">
             <thead>
                 <tr class="border-b border-gray-200 text-xs font-black uppercase text-gray-500">
-                    <th class="px-4 py-3">Guia</th>
+                    <th class="whitespace-nowrap px-4 py-3">Guia</th>
                     <th class="px-4 py-3">Cliente</th>
                     <th class="px-4 py-3">Destinatario</th>
-                    <th class="px-4 py-3">Estado</th>
-                    <th class="px-4 py-3 text-right">Fecha</th>
+                    <th class="whitespace-nowrap px-4 py-3">Telefono</th>
+                    <th class="whitespace-nowrap px-4 py-3">Estado</th>
+                    <th class="whitespace-nowrap px-4 py-3 text-right">Fecha</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse ($shipments as $shipment)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3">
+                        <td class="whitespace-nowrap px-4 py-3 pr-0">
                             <a href="{{ route('shipments.show', $shipment) }}" target="_blank" class="font-bold text-blue-800 hover:text-blue-900">{{ $shipment->guide_number }}</a>
                         </td>
-                        <td class="px-4 py-3 text-gray-700">{{ $shipment->tenant?->name ?? 'Sin cliente' }}</td>
-                        <td class="px-4 py-3">
-                            <p class="font-semibold text-gray-900">{{ $shipment->recipient_name }} {{ $shipment->recipient_lastname }}</p>
-                            @if ($shipment->recipient_phone)<p class="text-xs text-gray-500">{{ $shipment->recipient_phone }}</p>@endif
+                        <td class="px-4 py-3 break-words text-gray-700">{{ $shipment->tenant?->name ?? 'Sin cliente' }}</td>
+                        <td class="px-4 py-3 break-words font-semibold text-gray-900">{{ $shipment->recipient_name }} {{ $shipment->recipient_lastname }}</td>
+                        <td class="whitespace-nowrap px-4 py-3">
+                            @if ($shipment->recipient_phone)
+                                <span data-masked-phone="{{ $shipment->recipient_phone }}" data-mask="{{ \Illuminate\Support\Str::mask($shipment->recipient_phone, '*', 3, max(0, strlen($shipment->recipient_phone) - 5)) }}">{{ \Illuminate\Support\Str::mask($shipment->recipient_phone, '*', 3, max(0, strlen($shipment->recipient_phone) - 5)) }}</span>
+                                <button type="button" data-phone-toggle class="ml-1 text-blue-700 hover:underline" aria-label="Ver telefono">Ver</button>
+                            @else
+                                <span class="text-gray-400">Sin telefono</span>
+                            @endif
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="whitespace-nowrap px-4 py-3">
                             <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold {{ $shipment->status === 'delivered' ? 'bg-emerald-100 text-emerald-800' : ($shipment->status === 'cancelled' ? 'bg-gray-100 text-gray-600' : ($shipment->status === 'failed_delivery' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800')) }}">
                                 {{ $statusLabels[$shipment->status] ?? $shipment->status }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-right text-gray-500">{{ $shipment->created_at->format('d/m/Y H:i') }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 text-right text-gray-500">{{ $shipment->created_at->format('d/m/Y H:i') }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-10 text-center text-gray-500">No hay actividad para los filtros seleccionados.</td>
+                        <td colspan="6" class="px-4 py-10 text-center text-gray-500">No hay actividad para los filtros seleccionados.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -82,4 +90,22 @@
     <div class="mt-4">
         {{ $shipments->links() }}
     </div>
+@endsection
+
+@section('scripts')
+    @push('scripts')
+        <script>
+            document.addEventListener('click', function (e) {
+                const btn = e.target.closest('[data-phone-toggle]');
+                if (!btn) return;
+                const row = btn.parentElement;
+                const span = row.querySelector('[data-masked-phone]');
+                if (!span) return;
+                const revealed = span.dataset.revealed === '1';
+                span.textContent = revealed ? span.dataset.mask : span.dataset.maskedPhone;
+                span.dataset.revealed = revealed ? '0' : '1';
+                btn.textContent = revealed ? 'Ver' : 'Ocultar';
+            });
+        </script>
+    @endpush
 @endsection
