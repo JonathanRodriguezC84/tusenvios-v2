@@ -512,6 +512,17 @@
         refreshNotesCount();
     }
 
+    var addrEl = document.getElementById('recipient_address');
+    var addrCount = document.getElementById('recipient_address_count');
+    if (addrEl && addrCount) {
+        var refreshAddrCount = function () {
+            addrCount.textContent = String(addrEl.value.length);
+        };
+        addrEl.addEventListener('input', refreshAddrCount);
+        addrEl.addEventListener('change', refreshAddrCount);
+        refreshAddrCount();
+    }
+
     var deptToSelect = D.oldRecipientDepartment || D.prefillDepartmentId;
     var localityToSelect = D.oldRecipientLocality || D.prefillLocality || '';
     if (deptToSelect && (D.oldRecipientLocality || D.prefillLocality)) {

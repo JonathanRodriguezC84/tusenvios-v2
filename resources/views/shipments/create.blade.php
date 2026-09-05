@@ -170,8 +170,11 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-0.5">Direccion</label>
-                    <input id="recipient_address" name="recipient_address" x-model="preview.address" value="{{ old('recipient_address', $prefillRecipient?->address) }}" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Calle, carrera, complementos">
+                    <div class="flex items-center justify-between mb-0.5">
+                        <label class="block text-xs font-semibold text-gray-600">Direccion</label>
+                        <span class="text-[10px] font-bold text-gray-400"><span id="recipient_address_count">0</span>/100</span>
+                    </div>
+                    <input id="recipient_address" name="recipient_address" maxlength="100" x-model="preview.address" value="{{ old('recipient_address', $prefillRecipient?->address) }}" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" placeholder="Calle, carrera, torre, apto (máx. 100 caracteres)">
                 </div>
 
                 <div>

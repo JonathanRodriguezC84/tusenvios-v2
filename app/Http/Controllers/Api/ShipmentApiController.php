@@ -20,7 +20,7 @@ class ShipmentApiController extends Controller
             'recipient_name' => ['required', 'string', 'max:255'],
             'recipient_lastname' => ['nullable', 'string', 'max:255'],
             'recipient_phone' => ['required', 'string', 'max:50'],
-            'recipient_address' => ['required', 'string', 'max:255'],
+            'recipient_address' => ['required', 'string', 'max:100'],
             'recipient_neighborhood' => ['nullable', 'string', 'max:255'],
             'recipient_locality' => ['nullable', 'string', 'max:255'],
             'recipient_city' => ['nullable', 'string', 'max:255'],

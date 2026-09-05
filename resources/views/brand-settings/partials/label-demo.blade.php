@@ -97,7 +97,7 @@ TOP);
 
     <section class="label-recipient-row">
         <div class="label-recipient">
-            <div><span>NOMBRE</span><strong>{{ $demo['recipient_name'] }}</strong></div>
+            <div class="label-name"><span>NOMBRE</span><strong>{{ $demo['recipient_name'] }}</strong></div>
             <div><span>DIRECCION</span><strong class="big">{{ $demo['recipient_address'] }}</strong></div>
             <div class="label-contact">
                 <div><span>BARRIO</span><strong>{{ $demo['recipient_barrio'] }}</strong></div>

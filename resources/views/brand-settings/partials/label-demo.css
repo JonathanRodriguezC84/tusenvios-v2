@@ -53,10 +53,22 @@
 .label-code svg { display: block; height: 14mm; width: 100%; }
 .label-recipient-row { border-bottom: 1px solid #d4d4d8; display: grid; gap: 2.5mm; grid-template-columns: minmax(0, 1fr) 23mm; min-width: 0; overflow: hidden; padding: 1mm; }
 .label-modern .label-recipient-row, .label-advance .label-recipient-row { grid-template-columns: minmax(0, 1fr) 28mm; }
-.label-recipient { align-content: center; display: grid; gap: .85mm; min-width: 0; overflow: hidden; }
+.label-recipient { align-content: start; display: grid; gap: .6mm; min-width: 0; overflow: hidden; }
 .label-recipient span, .label-notes span, .label-metas span { color: #52525b; display: block; font-size: 7px; font-weight: 900; letter-spacing: .14px; }
 .label-recipient strong { display: block; font-size: 12px; font-weight: 900; line-height: 1.08; overflow-wrap: anywhere; }
-.label-recipient .big { font-size: 16px; }
+.label-recipient .label-name { flex-shrink: 0; }
+.label-recipient .label-name strong { font-size: 12.5px; font-weight: 900; line-height: 1.08; }
+.label-recipient .big {
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
 .label-recipient .label-contact { display: grid; gap: 1.5mm; grid-template-columns: 1fr 1fr; min-width: 0; }
 .label-recipient .label-contact > div { min-width: 0; overflow: hidden; }
 .label-qr { align-items: center; display: flex; justify-content: center; }

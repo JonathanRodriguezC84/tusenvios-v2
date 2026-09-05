@@ -24,7 +24,7 @@ class StoreShipmentRequest extends FormRequest
             'recipient_phone' => ['required', 'string', 'max:50'],
             'recipient_alt_phone' => ['nullable', 'string', 'max:50'],
             'recipient_email' => ['nullable', 'email', 'max:255'],
-            'recipient_address' => ['required', 'string', 'max:255'],
+            'recipient_address' => ['required', 'string', 'max:100'],
             'recipient_neighborhood' => ['required', 'string', 'max:255'],
             'recipient_department' => ['nullable', 'string', 'max:255'],
             'recipient_locality' => ['required', 'string', 'max:255'],

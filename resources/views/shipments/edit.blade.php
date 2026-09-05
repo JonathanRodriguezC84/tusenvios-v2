@@ -84,8 +84,8 @@
                             <input id="recipient_locality" name="recipient_locality" list="colombia_city_suggestions" value="{{ old('recipient_locality', $shipment->recipient_locality) }}" autocomplete="address-level2" placeholder="Ej. Bogota, Medellin, Cali" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
                         </label>
                         <label class="grid gap-1 text-sm font-semibold text-gray-700 sm:col-span-2">
-                            Direccion
-                            <input name="recipient_address" value="{{ old('recipient_address', $shipment->recipient_address) }}" required class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
+                            Direccion (máx. 100 caracteres)
+                            <input name="recipient_address" maxlength="100" value="{{ old('recipient_address', $shipment->recipient_address) }}" required class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
                         </label>
                         <label class="grid gap-1 text-sm font-semibold text-gray-700">
                             Barrio

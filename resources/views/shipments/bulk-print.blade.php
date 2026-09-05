@@ -169,7 +169,7 @@
 
                 <section class="label-recipient-row">
                     <div class="label-recipient">
-                        <div><span>NOMBRE</span><strong>{{ $shipment->recipient_name }} {{ $shipment->recipient_lastname }}</strong></div>
+                        <div class="label-name"><span>NOMBRE</span><strong>{{ $shipment->recipient_name }} {{ $shipment->recipient_lastname }}</strong></div>
                         <div><span>DIRECCION</span><strong class="big">{{ $shipment->recipient_address }}</strong></div>
                         <div class="label-contact">
                         <div><span>BARRIO</span><strong>{{ $shipment->recipient_neighborhood ?: 'SIN BARRIO' }}</strong></div>
