@@ -77,7 +77,7 @@
                         </span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
-                        <span data-count="{{ $curCount }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ $curCount }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format($curCount, 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Guias creadas · {{ $rangeLabel }}</p>
                 </div>
@@ -111,7 +111,7 @@
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
                         <span class="text-sm font-semibold text-gray-400 dark:text-gray-500">$</span>
-                        <span data-count="{{ round($productFinancials['cost']) }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ round($productFinancials['cost']) }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format(round($productFinancials['cost']), 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Costo de productos · {{ $rangeLabel }}</p>
                 </div>
@@ -151,12 +151,12 @@
                             <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.31M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                         </div>
                         <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                            {{ $metrics['delivered_today'] }} entregas
+                            {{ $productFinancials['orders'] }} pedidos
                         </span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
                         <span class="text-sm font-semibold text-gray-400 dark:text-gray-500">$</span>
-                        <span data-count="{{ round($productFinancials['sales']) }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ round($productFinancials['sales']) }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format(round($productFinancials['sales']), 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Ingreso por ventas · {{ $rangeLabel }}</p>
                 </div>
@@ -183,7 +183,7 @@
 
                 <div class="mt-2.5 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400">
                     <span>{{ $productFinancials['units'] }} unds vendidas</span>
-                    <span class="text-gray-700 dark:text-gray-200 font-bold">Ticket ${{ number_format($productFinancials['units'] > 0 ? round($productFinancials['sales'] / $productFinancials['units']) : 0, 0, ',', '.') }}</span>
+                    <span class="text-gray-700 dark:text-gray-200 font-bold">Ticket ${{ number_format($productFinancials['orders'] > 0 ? round($productFinancials['sales'] / $productFinancials['orders']) : 0, 0, ',', '.') }}</span>
                 </div>
             </div>
 
@@ -199,7 +199,7 @@
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
                         <span class="text-sm font-semibold text-gray-400 dark:text-gray-500">$</span>
-                        <span data-count="{{ abs(round($productFinancials['profit'])) }}" class="{{ $productFinancials['profit'] >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400' }} text-2xl sm:text-3xl font-extrabold tracking-tight">0</span>
+                        <span data-count="{{ abs(round($productFinancials['profit'])) }}" class="{{ $productFinancials['profit'] >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400' }} text-2xl sm:text-3xl font-extrabold tracking-tight">{{ number_format(abs(round($productFinancials['profit'])), 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Utilidad · {{ $rangeLabel }}</p>
                 </div>
@@ -255,7 +255,7 @@
                         </span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
-                        <span data-count="{{ $metrics['in_transit'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ $metrics['in_transit'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format($metrics['in_transit'], 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">En camino · guias en operacion</p>
                 </div>
@@ -297,7 +297,7 @@
                         <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">{{ $deliveryRate['rate'] }}% de entrega</span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
-                        <span data-count="{{ $deliveryRate['delivered'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ $deliveryRate['delivered'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format($deliveryRate['delivered'], 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Entregadas · {{ $rangeLabel }}</p>
                 </div>
@@ -326,7 +326,7 @@
                     <div class="flex items-center justify-between gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                         <span>De {{ $deliveryRate['total'] }} guias</span>
                         <span class="{{ $deliveryRate['rateDelta'] >= 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-red-600 dark:text-red-400' }}">
-                            {{ $deliveryRate['rateDelta'] >= 0 ? '+' : '' }}{{ $deliveryRate['rateDelta'] }} pp vs anterior
+                            {{ $deliveryRate['rateDelta'] >= 0 ? '+' : '' }}{{ $deliveryRate['rateDelta'] }} vs anterior
                         </span>
                     </div>
                     <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
@@ -346,7 +346,7 @@
                         <span class="inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">{{ $metrics['returned_total'] }} en total</span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
-                        <span data-count="{{ $metrics['return_pending'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ $metrics['return_pending'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format($metrics['return_pending'], 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Devoluciones · pendientes</p>
                 </div>
@@ -393,7 +393,7 @@
                         <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ $metrics['total_shipments'] > 0 ? round(($metrics['cancelled'] / $metrics['total_shipments']) * 100, 1) : 0 }}% del total</span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
-                        <span data-count="{{ $metrics['cancelled'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ $metrics['cancelled'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format($metrics['cancelled'], 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">Canceladas</p>
                 </div>
@@ -500,7 +500,7 @@
                         <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">{{ ucfirst($chartMonthToDate['month']) }}</span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
-                        <span data-count="{{ $chartMonthToDate['created'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ $chartMonthToDate['created'] }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format($chartMonthToDate['created'], 0, ',', '.') }}</span>
                         <span class="text-xs font-medium text-gray-400">guías</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -513,14 +513,14 @@
                     <div class="flex items-end justify-between gap-2.5 h-full w-full">
                         @foreach ($chartMonthToDate['weeks'] as $w)
                             @php
-                                $heightPct = max(16, round(($w['count'] / max(1, $chartMonthToDate['max_week_count'])) * 100));
+                                $heightPct = $w['count'] > 0 ? max(16, round(($w['count'] / max(1, $chartMonthToDate['max_week_count'])) * 100)) : 8;
                             @endphp
-                            <div class="flex-1 flex flex-col items-center justify-end h-full group" title="{{ $w['label'] }}: {{ $w['count'] }} guías{{ $w['is_current'] ? ' (en curso)' : ($w['is_future'] ? ' (proyectada)' : '') }}">
+                            <div class="flex-1 flex flex-col items-center justify-end h-full group" title="{{ $w['label'] }}: {{ $w['count'] }} guías{{ $w['is_current'] ? ' (en curso)' : ($w['is_future'] ? ' (por comenzar)' : '') }}">
                                 <div class="w-full flex items-end justify-center h-6">
                                     @if ($w['is_current'])
                                         <div class="w-full max-w-[28px] rounded-t bg-blue-600 dark:bg-blue-500 shadow-sm transition-all group-hover:bg-blue-700" style="height: {{ $heightPct }}%;"></div>
                                     @elseif ($w['is_future'])
-                                        <div class="w-full max-w-[28px] rounded-t bg-blue-100 dark:bg-blue-950/50 border border-dashed border-blue-300 dark:border-blue-700" style="height: {{ $heightPct }}%;"></div>
+                                        <div class="w-full max-w-[28px] rounded-t bg-gray-100 dark:bg-gray-800 border-t border-dashed border-gray-300 dark:border-gray-600" style="height: 4px;"></div>
                                     @else
                                         <div class="w-full max-w-[28px] rounded-t bg-blue-400/80 hover:bg-blue-500 dark:bg-blue-600/70 dark:hover:bg-blue-500 transition-all" style="height: {{ $heightPct }}%;"></div>
                                     @endif
@@ -551,13 +551,19 @@
                         <div class="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                             <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
-                        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                            {{ $chartMonthToDate['gauge_pct'] }}% meta
-                        </span>
+                        @if ($chartMonthToDate['prev_month_revenue'] > 0)
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold {{ $chartMonthToDate['growth_vs_prev_month'] >= 0 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' }}">
+                                {{ $chartMonthToDate['growth_vs_prev_month'] >= 0 ? '+' : '' }}{{ $chartMonthToDate['growth_vs_prev_month'] }}% vs mes anterior
+                            </span>
+                        @else
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                {{ round(($chartMonthToDate['elapsed_days'] / max(1, $chartMonthToDate['total_days'])) * 100) }}% del mes
+                            </span>
+                        @endif
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
                         <span class="text-sm font-semibold text-gray-400">$</span>
-                        <span data-count="{{ round($chartMonthToDate['revenue']) }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">0</span>
+                        <span data-count="{{ round($chartMonthToDate['revenue']) }}" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format(round($chartMonthToDate['revenue']), 0, ',', '.') }}</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
                         Facturación acumulada del mes
@@ -568,8 +574,20 @@
                 <div class="relative mt-3 h-9 shrink-0 flex flex-col justify-center">
                     <div class="flex items-center justify-between text-[11px] font-semibold mb-1">
                         <span class="text-gray-400">$0</span>
-                        <span class="text-emerald-600 dark:text-emerald-400 font-bold">{{ $chartMonthToDate['gauge_pct'] }}% alcanzado</span>
-                        <span class="text-gray-400">${{ number_format($chartMonthToDate['expected_revenue'], 0, ',', '.') }}</span>
+                        <span class="text-emerald-600 dark:text-emerald-400 font-bold">
+                            @if ($chartMonthToDate['prev_month_revenue'] > 0)
+                                {{ $chartMonthToDate['gauge_pct'] }}% de mes anterior
+                            @else
+                                Proyección: ${{ number_format($chartMonthToDate['expected_revenue'], 0, ',', '.') }}
+                            @endif
+                        </span>
+                        <span class="text-gray-400">
+                            @if ($chartMonthToDate['prev_month_revenue'] > 0)
+                                ${{ number_format($chartMonthToDate['prev_month_revenue'], 0, ',', '.') }}
+                            @else
+                                ${{ number_format($chartMonthToDate['expected_revenue'], 0, ',', '.') }}
+                            @endif
+                        </span>
                     </div>
                     <div class="relative h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
                         <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
@@ -607,11 +625,11 @@
                         </span>
                     </div>
                     <div class="mt-2.5 flex items-baseline gap-1">
-                        <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ $totalUnitsTop }}</span>
+                        <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">{{ number_format($totalUnitsTop, 0, ',', '.') }}</span>
                         <span class="text-xs font-medium text-gray-400">unidades</span>
                     </div>
                     <p class="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Los más vendidos del mes
+                        Los más vendidos en {{ ucfirst($chartMonthToDate['month']) }}
                     </p>
                 </div>
 

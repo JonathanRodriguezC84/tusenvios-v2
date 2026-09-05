@@ -21,7 +21,7 @@ class DashboardController extends Controller
 
         $chartShipmentsByDay = $this->chartShipmentsByDay($user, $from, $to);
         $chartFinancialsByDay = $this->chartFinancialsByDay($user, $from, $to);
-        $chartTopProducts = $this->chartTopProducts($user, $from, $to);
+        $chartTopProducts = $this->chartTopProducts($user, now()->startOfMonth(), now()->endOfDay());
         $chartMonthToDate = $this->chartMonthToDate($user);
         $deliveryRate = $this->deliveryRate($user, $from, $to);
         $operationHealth = ['stale' => $this->staleShipmentsCount($user)];
@@ -175,7 +175,7 @@ class DashboardController extends Controller
         $shipments = Shipment::query()
             ->visibleTo($user)
             ->whereBetween('created_at', [$from, $to])
-            ->get(['created_at', 'status', 'inventory_snapshot', 'collection_value', 'shipping_value']);
+            ->get(['created_at', 'status', 'inventory_snapshot', 'collection_value', 'shipping_value', 'declared_value']);
 
         $days = (int) ceil($from->startOfDay()->diffInDays($to->endOfDay())) + 1;
         $dailyData = [];
@@ -198,15 +198,21 @@ class DashboardController extends Controller
             foreach ($dayShipments as $shipment) {
                 if ($shipment->status !== 'cancelled') {
                     $snapshot = $shipment->inventory_snapshot ?? [];
+                    $shipmentCost = 0;
+                    $snapshotSales = 0;
+
                     if (is_array($snapshot) && count($snapshot) > 0) {
                         foreach ($snapshot as $item) {
-                            $quantity = (int) ($item['quantity'] ?? 1);
-                            $dayCost += $quantity * (float) ($item['cost'] ?? 0);
-                            $daySales += $quantity * (float) ($item['price'] ?? 0);
+                            $quantity = max(1, (int) ($item['quantity'] ?? 1));
+                            $shipmentCost += $quantity * (float) ($item['cost'] ?? 0);
+                            $snapshotSales += $quantity * (float) ($item['price'] ?? 0);
                         }
-                    } else {
-                        $daySales += (float) ($shipment->collection_value ?? 0) + (float) ($shipment->shipping_value ?? 0);
                     }
+
+                    $shipmentSales = $snapshotSales > 0 ? $snapshotSales : (float) ($shipment->collection_value ?: ($shipment->declared_value ?: 0));
+
+                    $dayCost += $shipmentCost;
+                    $daySales += $shipmentSales;
                 }
 
                 if (in_array($shipment->status, ['in_warehouse', 'in_sorting', 'assigned', 'on_route'], true)) {
@@ -342,8 +348,8 @@ class DashboardController extends Controller
             ->where('status', '!=', 'cancelled')
             ->when($from && $to, fn ($q) => $q->whereBetween('created_at', [$from, $to]))
             ->latest()
-            ->take(200)
-            ->get()
+            ->take(1000)
+            ->get(['inventory_snapshot', 'content_description'])
             ->each(function ($shipment) use (&$products) {
                 $snapshot = $shipment->inventory_snapshot;
                 if (is_array($snapshot) && count($snapshot) > 0) {
@@ -404,26 +410,60 @@ class DashboardController extends Controller
         $totalDays = (int) now()->daysInMonth;
         $elapsedDays = (int) min(now()->day, $totalDays);
 
+        $prevMonthStart = (clone $start)->subMonth()->startOfMonth();
+        $prevMonthSameDayEnd = (clone $prevMonthStart)->day(min($elapsedDays, (int) (clone $prevMonthStart)->daysInMonth))->endOfDay();
+        $prevMonthEnd = (clone $prevMonthStart)->endOfMonth();
+
         $shipments = Shipment::query()
             ->visibleTo($user)
             ->whereBetween('created_at', [$start, $end])
-            ->get(['created_at', 'collection_value', 'shipping_value', 'status']);
+            ->get(['created_at', 'collection_value', 'shipping_value', 'declared_value', 'inventory_snapshot', 'status']);
+
+        $prevMonthShipments = Shipment::query()
+            ->visibleTo($user)
+            ->whereBetween('created_at', [$prevMonthStart, $prevMonthEnd])
+            ->get(['created_at', 'collection_value', 'shipping_value', 'declared_value', 'inventory_snapshot', 'status']);
 
         $created = 0;
         $revenue = 0;
         foreach ($shipments as $shipment) {
             $created++;
             if ($shipment->status === 'cancelled') continue;
-            $revenue += (float) ($shipment->collection_value ?? 0) + (float) ($shipment->shipping_value ?? 0);
+
+            $snapSales = 0;
+            $snap = $shipment->inventory_snapshot ?? [];
+            if (is_array($snap) && count($snap) > 0) {
+                foreach ($snap as $item) {
+                    $snapSales += max(1, (int) ($item['quantity'] ?? 1)) * (float) ($item['price'] ?? 0);
+                }
+            }
+            $revenue += $snapSales > 0 ? $snapSales : (float) ($shipment->collection_value ?: ($shipment->declared_value ?: 0));
+        }
+
+        $prevMonthTotalRevenue = 0;
+        $prevMonthSamePeriodRevenue = 0;
+        foreach ($prevMonthShipments as $s) {
+            if ($s->status === 'cancelled') continue;
+            $snapSales = 0;
+            $snap = $s->inventory_snapshot ?? [];
+            if (is_array($snap) && count($snap) > 0) {
+                foreach ($snap as $item) {
+                    $snapSales += max(1, (int) ($item['quantity'] ?? 1)) * (float) ($item['price'] ?? 0);
+                }
+            }
+            $val = $snapSales > 0 ? $snapSales : (float) ($s->collection_value ?: ($s->declared_value ?: 0));
+            $prevMonthTotalRevenue += $val;
+            if ($s->created_at <= $prevMonthSameDayEnd) {
+                $prevMonthSamePeriodRevenue += $val;
+            }
         }
 
         $expectedRevenue = $totalDays > 0 ? round($revenue / max($elapsedDays, 1) * $totalDays) : 0;
         $expectedShipments = $totalDays > 0 ? round($created / max($elapsedDays, 1) * $totalDays) : 0;
 
-        // Histograma completo de los 30/31 días del mes
+        // Histograma de días del mes
         $monthDays = [];
         $maxDayCount = 1;
-        $avgDailyShipments = max(1, round($created / max(1, $elapsedDays)));
 
         for ($d = 1; $d <= $totalDays; $d++) {
             $dayDate = (clone $start)->day($d)->startOfDay();
@@ -440,11 +480,18 @@ class DashboardController extends Controller
                 $rev = 0;
                 foreach ($dayShipments as $s) {
                     if ($s->status === 'cancelled') continue;
-                    $rev += (float) ($s->collection_value ?? 0) + (float) ($s->shipping_value ?? 0);
+                    $snapSales = 0;
+                    $snap = $s->inventory_snapshot ?? [];
+                    if (is_array($snap) && count($snap) > 0) {
+                        foreach ($snap as $item) {
+                            $snapSales += max(1, (int) ($item['quantity'] ?? 1)) * (float) ($item['price'] ?? 0);
+                        }
+                    }
+                    $rev += $snapSales > 0 ? $snapSales : (float) ($s->collection_value ?: ($s->declared_value ?: 0));
                 }
             } else {
-                $cnt = $avgDailyShipments;
-                $rev = round($revenue / max(1, $elapsedDays));
+                $cnt = 0;
+                $rev = 0;
             }
 
             if ($cnt > $maxDayCount) $maxDayCount = $cnt;
@@ -460,19 +507,7 @@ class DashboardController extends Controller
             ];
         }
 
-        // Parámetros del medidor radial (Semicircular Gauge) de ingresos:
-        // Arco de 180° con radio 56 (longitud = pi * 56 = 175.93)
-        $gaugeCircumference = 175.93;
-        $revenueRatio = $expectedRevenue > 0 ? min(1, $revenue / $expectedRevenue) : 0;
-        $gaugeDashLength = round($revenueRatio * $gaugeCircumference, 2);
-        $gaugePct = round($revenueRatio * 100);
-
-        // Ritmo respecto al tiempo transcurrido del mes
-        $timeRatio = $totalDays > 0 ? ($elapsedDays / $totalDays) : 0;
-        $paceDelta = round(($revenueRatio - $timeRatio) * 100, 1);
-        $paceStatus = $paceDelta >= 0 ? 'ahead' : 'behind';
-
-        // Agrupación ejecutiva en 4 semanas para visualización limpia, espaciosa e inmune al zoom
+        // Agrupación ejecutiva en 4 semanas para visualización limpia
         $weeks = [
             ['label' => 'Sem 1', 'start' => 1, 'end' => 7, 'count' => 0, 'is_current' => false, 'is_future' => false],
             ['label' => 'Sem 2', 'start' => 8, 'end' => 14, 'count' => 0, 'is_current' => false, 'is_future' => false],
@@ -481,7 +516,6 @@ class DashboardController extends Controller
         ];
 
         $maxWeekCount = 1;
-        $avgWeeklyShipments = max(1, round($expectedShipments / 4));
 
         foreach ($weeks as &$w) {
             if ($elapsedDays >= $w['start'] && $elapsedDays <= $w['end']) {
@@ -496,13 +530,18 @@ class DashboardController extends Controller
                 $w['count'] = $shipments->filter(function ($s) use ($wStart, $wEnd) {
                     return $s->created_at >= $wStart && $s->created_at <= $wEnd;
                 })->count();
+                if ($w['count'] > $maxWeekCount) $maxWeekCount = $w['count'];
             } else {
-                $w['count'] = $avgWeeklyShipments;
+                $w['count'] = 0;
             }
-
-            if ($w['count'] > $maxWeekCount) $maxWeekCount = $w['count'];
         }
         unset($w);
+
+        $benchmarkTarget = $prevMonthTotalRevenue > 0 ? $prevMonthTotalRevenue : $expectedRevenue;
+        $revenuePct = $benchmarkTarget > 0 ? round(($revenue / $benchmarkTarget) * 100) : 0;
+        $growthVsPrevMonth = $prevMonthSamePeriodRevenue > 0
+            ? round((($revenue - $prevMonthSamePeriodRevenue) / $prevMonthSamePeriodRevenue) * 100, 1)
+            : null;
 
         return [
             'created' => $created,
@@ -512,44 +551,54 @@ class DashboardController extends Controller
             'total_days' => $totalDays,
             'expected_revenue' => $expectedRevenue,
             'expected_shipments' => $expectedShipments,
+            'prev_month_revenue' => $prevMonthTotalRevenue,
+            'growth_vs_prev_month' => $growthVsPrevMonth,
+            'target_revenue' => $benchmarkTarget,
+            'gauge_pct' => min(100, $revenuePct),
+            'real_pct' => $revenuePct,
             'weeks' => $weeks,
             'max_week_count' => $maxWeekCount,
             'timeline' => $monthDays,
             'max_day_count' => $maxDayCount,
-            'gauge_pct' => min(100, $gaugePct),
-            'pace_delta' => $paceDelta,
-            'pace_status' => $paceStatus,
         ];
     }
 
     private function deliveryRate($user, $from = null, $to = null): array
     {
-        $from = $from ?? today()->subDays(6);
+        $from = $from ?? today()->subDays(6)->startOfDay();
         $to = $to ?? now()->endOfDay();
-        $total = Shipment::query()->visibleTo($user)
-            ->whereBetween('created_at', [$from, $to])
-            ->count();
-        $delivered = Shipment::query()->visibleTo($user)->where('status', 'delivered')
-            ->whereBetween('created_at', [$from, $to])
-            ->count();
-        $rate = $total > 0 ? round(($delivered / $total) * 100, 1) : 0;
 
-        $previousFrom = (clone $from)->subDays($from->diffInDays((clone $to)->startOfDay()));
+        $deliveredCount = Shipment::query()->visibleTo($user)
+            ->where('status', 'delivered')
+            ->whereBetween('updated_at', [$from, $to])
+            ->count();
+
+        $totalCreated = Shipment::query()->visibleTo($user)
+            ->whereBetween('created_at', [$from, $to])
+            ->count();
+
+        $cohortDelivered = Shipment::query()->visibleTo($user)
+            ->where('status', 'delivered')
+            ->whereBetween('created_at', [$from, $to])
+            ->count();
+
+        $rate = $totalCreated > 0 ? round(($cohortDelivered / $totalCreated) * 100, 1) : 0;
+
+        $previousFrom = (clone $from)->subDays($from->diffInDays($to));
         $previousTo = (clone $from)->subSecond();
-        $totalPrev = Shipment::query()->visibleTo($user)
-            ->whereBetween('created_at', [$previousFrom, $previousTo])
+
+        $deliveredCountPrev = Shipment::query()->visibleTo($user)
+            ->where('status', 'delivered')
+            ->whereBetween('updated_at', [$previousFrom, $previousTo])
             ->count();
-        $deliveredPrev = Shipment::query()->visibleTo($user)->where('status', 'delivered')
-            ->whereBetween('created_at', [$previousFrom, $previousTo])
-            ->count();
-        $prevRate = $totalPrev > 0 ? round(($deliveredPrev / $totalPrev) * 100, 1) : 0;
 
         return [
-            'total' => $total,
-            'delivered' => $delivered,
+            'total' => $totalCreated,
+            'delivered' => $deliveredCount,
+            'cohort_delivered' => $cohortDelivered,
             'rate' => $rate,
-            'previousRate' => $prevRate,
-            'rateDelta' => round($rate - $prevRate, 1),
+            'previousDelivered' => $deliveredCountPrev,
+            'rateDelta' => round($deliveredCount - $deliveredCountPrev, 1),
         ];
     }
 
@@ -564,34 +613,44 @@ class DashboardController extends Controller
 
     private function productFinancials($user, $from = null, $to = null): array
     {
-        $from = $from ?? today()->subDays(6);
+        $from = $from ?? today()->subDays(6)->startOfDay();
         $to = $to ?? now()->endOfDay();
 
         $cost = 0;
         $sales = 0;
         $units = 0;
+        $ordersCount = 0;
 
         Shipment::query()
             ->visibleTo($user)
             ->where('status', '!=', 'cancelled')
             ->whereBetween('created_at', [$from, $to])
             ->latest()
-            ->take(500)
-            ->get(['inventory_snapshot', 'collection_value', 'shipping_value'])
-            ->each(function ($shipment) use (&$cost, &$sales, &$units) {
+            ->take(1000)
+            ->get(['inventory_snapshot', 'collection_value', 'shipping_value', 'declared_value'])
+            ->each(function ($shipment) use (&$cost, &$sales, &$units, &$ordersCount) {
+                $ordersCount++;
                 $snapshot = $shipment->inventory_snapshot ?? [];
+                $shipmentCost = 0;
+                $snapshotSales = 0;
+                $shipmentUnits = 0;
+
                 if (is_array($snapshot) && count($snapshot) > 0) {
                     foreach ($snapshot as $item) {
-                        $quantity = (int) ($item['quantity'] ?? 1);
-                        $units += $quantity;
-                        $cost += $quantity * (float) ($item['cost'] ?? 0);
-                        $sales += $quantity * (float) ($item['price'] ?? 0);
+                        $quantity = max(1, (int) ($item['quantity'] ?? 1));
+                        $shipmentUnits += $quantity;
+                        $shipmentCost += $quantity * (float) ($item['cost'] ?? 0);
+                        $snapshotSales += $quantity * (float) ($item['price'] ?? 0);
                     }
-                    return;
+                } else {
+                    $shipmentUnits = 1;
                 }
 
-                $units++;
-                $sales += (float) ($shipment->collection_value ?? 0) + (float) ($shipment->shipping_value ?? 0);
+                $shipmentSales = $snapshotSales > 0 ? $snapshotSales : (float) ($shipment->collection_value ?: ($shipment->declared_value ?: 0));
+
+                $cost += $shipmentCost;
+                $sales += $shipmentSales;
+                $units += $shipmentUnits;
             });
 
         return [
@@ -599,6 +658,7 @@ class DashboardController extends Controller
             'sales' => $sales,
             'profit' => $sales - $cost,
             'units' => $units,
+            'orders' => $ordersCount,
             'margin' => $sales > 0 ? round((($sales - $cost) / $sales) * 100, 1) : 0,
         ];
     }
