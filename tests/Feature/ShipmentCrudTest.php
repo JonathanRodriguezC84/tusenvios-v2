@@ -44,6 +44,53 @@ class ShipmentCrudTest extends TestCase
         ]);
     }
 
+    public function test_can_create_shipment_without_lastname_and_without_sender_phone(): void
+    {
+        $tenant = Tenant::factory()->create(['phone' => null]);
+        $user = User::factory()->create([
+            'role' => 'superadmin',
+            'status' => 'active',
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('shipments.store'), [
+            'recipient_name' => 'Solo Nombre',
+            'recipient_phone' => '3007654321',
+            'recipient_address' => 'Carrera 7 # 12-34',
+            'recipient_locality' => 'Bogota',
+            'package_type' => 'package',
+            'pieces' => 1,
+            'payment_method' => 'cod',
+        ]);
+
+        $response->assertRedirect(route('shipments.index'));
+        $this->assertDatabaseHas('shipments', [
+            'recipient_name' => 'Solo Nombre',
+            'tenant_id' => $tenant->id,
+        ]);
+    }
+
+    public function test_validation_errors_return_spanish_messages(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'superadmin',
+            'status' => 'active',
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('shipments.store'), [
+            'recipient_name' => '',
+        ]);
+
+        $response->assertSessionHasErrors([
+            'recipient_name' => 'El nombre del cliente es obligatorio.',
+            'recipient_phone' => 'El teléfono del cliente es obligatorio.',
+            'recipient_address' => 'La dirección de entrega es obligatoria.',
+            'recipient_locality' => 'Debes seleccionar la ciudad de entrega.',
+        ]);
+    }
+
     public function test_guest_cannot_create_shipment(): void
     {
         $response = $this->post(route('shipments.store'), [

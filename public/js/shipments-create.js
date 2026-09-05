@@ -94,7 +94,7 @@
             },
             stepReady: function (step) {
                 var requiredByStep = {
-                    client: ['recipient_name', 'recipient_lastname', 'recipient_phone', 'recipient_department', 'recipient_locality', 'recipient_address', 'recipient_neighborhood'],
+                    client: ['recipient_name', 'recipient_phone', 'recipient_department', 'recipient_locality', 'recipient_address'],
                     product: ['content_description', 'shipping_value', 'collection_value'],
                 };
                 var missing = (requiredByStep[step] || []).find(function (name) {
@@ -253,7 +253,7 @@
                 : Boolean(paymentMethod && shippingValue >= 0);
             var checks = {
                 client: Boolean(fieldValue('recipient_name') && fieldValue('recipient_phone')),
-                address: Boolean(fieldValue('recipient_address') && fieldValue('recipient_neighborhood') && fieldValue('recipient_locality')),
+                address: Boolean(fieldValue('recipient_address') && fieldValue('recipient_locality')),
                 tariff: shippingValue > 0,
                 product: Boolean(content.value.trim()),
                 money: moneyReady,

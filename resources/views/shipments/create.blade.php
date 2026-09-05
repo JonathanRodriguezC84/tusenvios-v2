@@ -73,7 +73,7 @@
 
             <input type="hidden" name="service_type" value="{{ old('service_type', 'standard') }}">
             <input id="sender_name" type="hidden" name="sender_name" value="{{ old('sender_name', $senderPresets['default']['name'] ?? $senderPresets['rci']['name'] ?? 'Tus Envios') }}">
-            <input id="sender_phone" type="hidden" name="sender_phone" value="{{ old('sender_phone', $senderPresets['default']['phone'] ?? $senderPresets['rci']['phone'] ?? '') }}">
+            <input id="sender_phone" type="hidden" name="sender_phone" value="{{ old('sender_phone', $senderPresets['default']['phone'] ?? $senderPresets['rci']['phone'] ?? '3000000000') }}">
             <input id="sender_address" type="hidden" name="sender_address" value="{{ old('sender_address', $senderPresets['default']['address'] ?? $senderPresets['rci']['address'] ?? 'Direccion principal') }}">
             <input id="sender_neighborhood" type="hidden" name="sender_neighborhood" value="{{ old('sender_neighborhood', $senderPresets['default']['neighborhood'] ?? $senderPresets['rci']['neighborhood'] ?? '') }}">
             <input id="sender_locality" type="hidden" name="sender_locality" value="{{ old('sender_locality', $senderPresets['default']['locality'] ?? $senderPresets['rci']['locality'] ?? 'Bogota') }}">
@@ -93,7 +93,21 @@
             {{-- COLUMN 1: Customer Info --}}
             <div data-step-panel="client" class="te-create-col te-col-client rounded-xl border border-gray-200 shadow-sm bg-white p-4">
                 @if ($errors->any())
-                    <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{{ $errors->first('inventory_items') ?: $errors->first() ?: 'Revisa los campos antes de guardar.' }}</div>
+                    <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800 shadow-sm">
+                        <div class="flex items-start gap-2">
+                            <svg class="h-4 w-4 text-red-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div class="flex-1">
+                                <p class="font-bold text-red-900">Revisa los siguientes campos antes de guardar:</p>
+                                <ul class="mt-1 list-disc list-inside space-y-0.5 text-red-700 font-semibold">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 @endif
 
                 <div>
@@ -117,8 +131,8 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Apellidos</label>
-                        <input id="recipient_lastname" name="recipient_lastname" value="{{ old('recipient_lastname', $prefillLastname) }}" required class="uppercase w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Apellidos <span class="font-normal text-gray-400">(Opcional)</span></label>
+                        <input id="recipient_lastname" name="recipient_lastname" value="{{ old('recipient_lastname', $prefillLastname) }}" class="uppercase w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                     </div>
                 </div>
 
@@ -158,8 +172,8 @@
 
                 <div class="grid sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Barrio</label>
-                        <input id="recipient_neighborhood" name="recipient_neighborhood" value="{{ old('recipient_neighborhood', $prefillRecipient?->neighborhood) }}" required class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
+                        <label class="block text-xs font-semibold text-gray-600 mb-0.5">Barrio <span class="font-normal text-gray-400">(Opcional)</span></label>
+                        <input id="recipient_neighborhood" name="recipient_neighborhood" value="{{ old('recipient_neighborhood', $prefillRecipient?->neighborhood) }}" class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-0.5">Localidad</label>

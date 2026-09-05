@@ -486,6 +486,12 @@ $useInventory = Auth::user()->canUseInventory();
             $validated['zone'] = strtoupper($recipientLocalityForZone);
         }
         $validated = $this->normalizeShipmentText($validated);
+        $validated['sender_name'] = !empty($validated['sender_name']) ? $validated['sender_name'] : ($tenant->name ?: 'Tus Envios');
+        $validated['sender_phone'] = !empty($validated['sender_phone']) ? $validated['sender_phone'] : ($tenant->phone ?: '3000000000');
+        $validated['sender_address'] = !empty($validated['sender_address']) ? $validated['sender_address'] : 'Bodega principal Bogota';
+        $validated['sender_locality'] = !empty($validated['sender_locality']) ? $validated['sender_locality'] : 'Bogota';
+        $validated['recipient_lastname'] = $validated['recipient_lastname'] ?? '';
+        $validated['recipient_neighborhood'] = $validated['recipient_neighborhood'] ?? 'Centro';
 
         $shipment = DB::transaction(function () use ($validated, $tenant, $inventoryItems) {
             $prefix = $this->guidePrefix($validated['affiliated_company_id'] ?? null, $tenant);
@@ -892,12 +898,15 @@ return $this->inventoryQueryForUser()
 
     private function senderPresetData(?Tenant $tenant, $companies): array
     {
+        $defaultPhone = $tenant?->phone ?: '3000000000';
+        $defaultName = $tenant?->name ?: 'Tus Envios';
+
         $presets = [
             'default' => [
                 'label' => 'Tus Envios',
                 'affiliated_company_id' => '',
-                'name' => $tenant?->name ?? 'RCI',
-                'phone' => $tenant?->phone ?? '',
+                'name' => $defaultName,
+                'phone' => $defaultPhone,
                 'address' => 'Bodega principal Bogota',
                 'neighborhood' => '',
                 'locality' => 'Bogota',
@@ -926,7 +935,7 @@ return $this->inventoryQueryForUser()
                     : $sender->label,
                 'affiliated_company_id' => $companyId,
                 'name' => $sender->name,
-                'phone' => $sender->phone ?? '',
+                'phone' => $sender->phone ?: $defaultPhone,
                 'address' => $sender->address,
                 'neighborhood' => $sender->neighborhood ?? '',
                 'locality' => $sender->locality ?? '',
@@ -943,7 +952,7 @@ return $this->inventoryQueryForUser()
                 'label' => $company->name,
                 'affiliated_company_id' => (string) $company->id,
                 'name' => $company->name,
-                'phone' => $company->phone ?? '',
+                'phone' => $company->phone ?: $defaultPhone,
                 'address' => 'Bodega principal Bogota',
                 'neighborhood' => '',
                 'locality' => 'Bogota',
