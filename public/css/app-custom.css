@@ -373,3 +373,20 @@ body {
 h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
 }
+
+/* 5) El logotipo del panel nunca debe tener fondo en movil ni escritorio */
+.te-panel-logo-area,
+.te-panel-logo-box,
+.te-panel-logo-mobile-box,
+aside .te-panel-logo-area,
+aside .te-panel-logo-box,
+aside a.te-panel-logo-box,
+aside a[href].te-panel-logo-box,
+nav .te-panel-logo-mobile-box,
+nav a.te-panel-logo-mobile-box,
+nav a[href].te-panel-logo-mobile-box,
+.fixed.inset-x-0.top-0 .te-panel-logo-mobile-box {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}

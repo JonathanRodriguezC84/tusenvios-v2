@@ -267,8 +267,20 @@
         .te-mobile-drawer-logout-v24 { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
         .te-mobile-drawer-logout-v24 form, .te-mobile-drawer-logout-v24 button { display: none !important; }
         aside form[action*="logout"] > button[aria-label="Salir"]:not(.te-logout-button) { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
-        .te-panel-logo-area, .te-panel-logo-box, .te-panel-logo-mobile-box, .te-panel-logo-area a, .te-panel-logo-mobile-box img, .te-panel-logo-img { background: transparent !important; box-shadow: none !important; filter: none !important; }
-        .te-panel-logo-area img, .te-panel-logo-mobile-box img { background: transparent !important; box-shadow: none !important; filter: none !important; }
+        .te-panel-logo-area, .te-panel-logo-box, .te-panel-logo-mobile-box, .te-panel-logo-area a, .te-panel-logo-mobile-box img, .te-panel-logo-img,
+        aside .te-panel-logo-area, aside .te-panel-logo-box, aside a.te-panel-logo-box, aside a[href].te-panel-logo-box,
+        nav .te-panel-logo-mobile-box, nav a.te-panel-logo-mobile-box, nav a[href].te-panel-logo-mobile-box {
+            background: transparent !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+        .te-panel-logo-area img, .te-panel-logo-mobile-box img, .te-panel-logo-box img {
+            background: transparent !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
         @media (max-width: 1023px) {
             .te-mobile-side-v21 { padding-bottom: 64px !important; }
             .te-mobile-side-v21 > .flex-1 { flex: 0 1 auto !important; max-height: calc(100dvh - 80px - 136px) !important; }
@@ -301,7 +313,7 @@
 
     <div class="fixed inset-x-0 top-0 z-40 border-b border-gray-200 bg-white px-4 py-2 lg:hidden" style="min-height:60px;">
         <div class="flex items-center justify-between">
-            <a href="{{ route('dashboard') }}" class="te-panel-logo-mobile-box">
+            <a href="{{ route('dashboard') }}" class="te-panel-logo-mobile-box" style="background:transparent!important;background-color:transparent!important;">
                 <img src="{{ $panelLogoUrl }}" alt="{{ $panelLogoOwner?->name ?: 'Tus Envios' }}" style="display:block;width:auto;height:auto;max-width:170px;max-height:42px;object-fit:contain;">
             </a>
             <button @click="open = !open" class="rounded-md border border-gray-300 p-2 text-gray-700" aria-label="Abrir menu">
@@ -318,8 +330,8 @@
         class="te-mobile-side-v21 fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-gray-200 bg-white transition lg:w-52 lg:translate-x-0"
         :class="{ 'translate-x-0': open }"
     >
-        <div class="te-panel-logo-area">
-            <a href="{{ route('dashboard') }}" class="te-panel-logo-box">
+        <div class="te-panel-logo-area" style="background:transparent!important;background-color:transparent!important;">
+            <a href="{{ route('dashboard') }}" class="te-panel-logo-box" style="background:transparent!important;background-color:transparent!important;">
                 <img src="{{ $panelLogoUrl }}" alt="{{ $panelLogoOwner?->name ?: 'Tus Envios' }}" class="block h-auto max-h-[42px] w-auto max-w-[170px] object-contain">
             </a>
         </div>

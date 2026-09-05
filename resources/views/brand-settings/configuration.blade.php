@@ -1,4 +1,4 @@
-﻿@php
+@php
     $brand = $brandOwner->brandData();
     $logoUrl = $brand['logo_path'] ? Storage::url($brand['logo_path']) : null;
     $brandPalettes = [
@@ -342,7 +342,7 @@
                                 @endif
                             </div>
 
-                            <div class="store-logo-preview flex-1 grid place-items-center rounded-lg border border-gray-200 bg-gray-50 p-4" style="min-height: 260px;">
+                            <div class="store-logo-preview flex-1 grid place-items-center rounded-lg border border-gray-200 bg-white dark:bg-gray-800 p-4" style="min-height: 260px;">
                                 @if ($logoUrl)
                                     <img src="{{ $logoUrl }}" alt="{{ $brandOwner->name }}">
                                 @else

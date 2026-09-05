@@ -127,6 +127,12 @@
                 const applyMobileMenuColor = () => {
                     document.querySelectorAll('div.fixed.inset-x-0.bottom-0, aside.fixed.inset-y-0.left-0').forEach((area) => {
                         area.querySelectorAll('a[href]').forEach((link) => {
+                            if (link.classList.contains('te-panel-logo-box') || link.classList.contains('te-panel-logo-mobile-box') || link.closest('.te-panel-logo-area, .te-panel-logo-box, .te-panel-logo-mobile-box') || link.querySelector('img')) {
+                                link.classList.remove('te-mobile-brand-active', 'te-mobile-brand-featured', 'te-current-mobile-v20');
+                                link.style.setProperty('background', 'transparent', 'important');
+                                link.style.setProperty('background-color', 'transparent', 'important');
+                                return;
+                            }
                             const label = (link.textContent || '').trim().toLowerCase();
                             const href = link.getAttribute('href') || '';
                             link.classList.remove('te-mobile-brand-active', 'te-mobile-brand-featured');
@@ -156,10 +162,28 @@
                 nav div[class*="bottom-0"] a[href*="/shipments/create"] svg { color: #ffffff !important; stroke: currentColor !important; }
                 nav div.fixed.inset-x-0.bottom-0 a[href]:not([href*="/shipments/create"]).te-current-mobile-v20,
                 nav div[class*="bottom-0"] a[href]:not([href*="/shipments/create"]).te-current-mobile-v20,
-                nav aside a[href].te-current-mobile-v20 { background-color: {{ $brandTint }} !important; color: {{ $brandColor }} !important; }
+                nav aside a[href]:not(.te-panel-logo-box):not([class*="logo"]).te-current-mobile-v20 { background-color: {{ $brandTint }} !important; color: {{ $brandColor }} !important; }
                 nav div.fixed.inset-x-0.bottom-0 a[href]:not([href*="/shipments/create"]).te-current-mobile-v20 svg,
                 nav div[class*="bottom-0"] a[href]:not([href*="/shipments/create"]).te-current-mobile-v20 svg,
-                nav aside a[href].te-current-mobile-v20 svg { color: {{ $brandColor }} !important; stroke: currentColor !important; }
+                nav aside a[href]:not(.te-panel-logo-box):not([class*="logo"]).te-current-mobile-v20 svg { color: {{ $brandColor }} !important; stroke: currentColor !important; }
+            }
+            html body nav .te-panel-logo-area,
+            html body nav .te-panel-logo-box,
+            html body nav .te-panel-logo-mobile-box,
+            html body nav aside a.te-panel-logo-box,
+            html body nav aside a[href].te-panel-logo-box,
+            html body nav a.te-panel-logo-mobile-box,
+            html body nav a[href].te-panel-logo-mobile-box,
+            html body nav .te-panel-logo-area a,
+            html body .fixed.inset-x-0.top-0 a,
+            html body .fixed.inset-x-0.top-0 img,
+            html body nav .te-panel-logo-area img,
+            html body nav .te-panel-logo-box img,
+            html body nav .te-panel-logo-mobile-box img {
+                background: transparent !important;
+                background-color: transparent !important;
+                box-shadow: none !important;
+                filter: none !important;
             }
         </style>
         <script id="te-force-mobile-menu-v20">
@@ -182,6 +206,12 @@
                     document.documentElement.style.setProperty('--tenant-brand-color', color);
                     document.documentElement.style.setProperty('--tenant-brand-tint', tint);
                     document.querySelectorAll('nav a[href]').forEach((link) => {
+                        if (link.classList.contains('te-panel-logo-box') || link.classList.contains('te-panel-logo-mobile-box') || link.closest('.te-panel-logo-area, .te-panel-logo-box, .te-panel-logo-mobile-box') || link.querySelector('img')) {
+                            link.classList.remove('te-current-mobile-v20', 'te-mobile-brand-active');
+                            link.style.setProperty('background', 'transparent', 'important');
+                            link.style.setProperty('background-color', 'transparent', 'important');
+                            return;
+                        }
                         const inMobileMenu = Boolean(link.closest('div.fixed.inset-x-0.bottom-0, div[class*="bottom-0"], aside'));
                         if (!inMobileMenu) return;
                         link.classList.toggle('te-current-mobile-v20', isCurrent(link.getAttribute('href') || ''));
