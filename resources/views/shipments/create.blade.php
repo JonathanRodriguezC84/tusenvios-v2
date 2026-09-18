@@ -38,24 +38,6 @@
         ['type' => 'tiktok', 'value' => $previewBrand['tiktok'] ?? null],
     ])->filter(fn ($s) => filled($s['value']))->values();
 
-    if (!function_exists('tusDisplayName')) {
-        function tusDisplayName($name) {
-            $n = strtoupper(trim($name ?? ''));
-            $m = null;
-            if (preg_match('/IP(?:HONE)?\s*(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI)?)/', $n, $mm)) $m = $mm[1];
-            elseif (preg_match('/(?:PARA\s+)?(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI))\b/', $n, $mm)) $m = $mm[1];
-            elseif (preg_match('/\b(\d{2,})\b/', $n, $mm)) $m = $mm[1];
-            if (!$m) return $n;
-            $m = trim(preg_replace('/\s+/', ' ', $m));
-            preg_match('/(AZUL|ROJO|NEGRO|BLANCO|VERDE|ROSADO|MORADO|AMARILLO|TRANSPARENTE|NARANJA|GRIS|DORADO|CELESTE)/', $n, $cm);
-            preg_match('/(DIAMANTE|ELECTRO|SILICONA|CARCAZA|TPU|ACRILICO|DEGRADE)/', $n, $dm);
-            $out = 'IP ' . $m;
-            if (!empty($cm[1])) $out .= ' ' . $cm[1];
-            if (!empty($dm[1]) && strpos($out, $dm[1]) === false) $out .= ' ' . $dm[1];
-            if ($out === 'IP ' . $m) return $n;
-            return $out;
-        }
-    }
 @endphp
 
 <x-app-layout>
@@ -226,9 +208,114 @@
                 @else
                     {{-- Emprende: Quick products --}}
                     @php
+                        $formatQuickProductDisplay = function ($name) {
+                            if (empty($name)) return '';
+                            $raw = trim($name);
+
+                            $variant = '';
+                            $working = $raw;
+                            if (preg_match('/\(([^)]+)\)/', $raw, $parenMatch)) {
+                                $variant = trim($parenMatch[1]);
+                                $working = str_replace($parenMatch[0], ' ', $working);
+                            }
+
+                            $modelNum = '';
+                            $suffix = '';
+                            $modelMatchedText = '';
+
+                            if (preg_match('/\b(?:iphone|ip)\s*(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i', $working, $m)) {
+                                $modelMatchedText = $m[0];
+                                $modelNum = strtoupper($m[1]);
+                                $suffix = $m[2] ?? '';
+                            } elseif (preg_match('/\bpara\s+(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i', $working, $m)) {
+                                $modelMatchedText = $m[0];
+                                $modelNum = strtoupper($m[1]);
+                                $suffix = $m[2] ?? '';
+                            } elseif (preg_match('/\b(?:para\s+)?(\d{1,2})(pm|promax|p|pro|plus|\+|mini|max)\b/i', $working, $m)) {
+                                $modelMatchedText = $m[0];
+                                $modelNum = strtoupper($m[1]);
+                                $suffix = $m[2] ?? '';
+                            } elseif (preg_match('/\b(?:para\s+)?(xr|xs\s*max|xsmax|xsm|xs|x|se)\b/i', $working, $m)) {
+                                $modelMatchedText = $m[0];
+                                $rawModel = strtoupper(str_replace(' ', '', $m[1]));
+                                if ($rawModel === 'XSMAX' || $rawModel === 'XSM') {
+                                    $modelNum = 'XS';
+                                    $suffix = 'ProMax';
+                                } else {
+                                    $modelNum = $rawModel;
+                                }
+                            }
+
+                            if (!$modelNum) return $raw;
+
+                            $cleanSuffix = strtoupper(str_replace(' ', '', $suffix));
+                            $modelSuffix = match ($cleanSuffix) {
+                                'PM', 'PROMAX', 'PRO MAX' => 'ProMax',
+                                'P', 'PRO' => 'Pro',
+                                'PLUS', '+' => 'Plus',
+                                'MINI' => 'Mini',
+                                'MAX' => 'Max',
+                                default => ''
+                            };
+
+                            $formattedModel = 'IP ' . $modelNum . ($modelSuffix ? ' ' . $modelSuffix : '');
+
+                            $colorList = [
+                                'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
+                                'SIERRA BLUE', 'SPACE GRAY', 'ROSE GOLD', 'ROSA GOLD',
+                                'PLATA', 'SILVER', 'NEGRO', 'BLACK', 'BLANCO', 'WHITE',
+                                'AZUL REY', 'AZUL MARINO', 'AZUL CIELO', 'AZUL', 'BLUE',
+                                'ROJO', 'RED', 'VERDE MILITAR', 'VERDE MENTA', 'VERDE', 'GREEN',
+                                'ROSADO', 'ROSA', 'PINK', 'MORADO', 'PURPURA', 'PURPLE', 'VIOLETA', 'LAVANDA',
+                                'AMARILLO', 'YELLOW', 'NARANJA', 'ORANGE', 'GRIS', 'GRAY', 'GREY',
+                                'DORADO', 'ORO', 'GOLD', 'CELESTE', 'TORNASOL', 'ARCOIRIS', 'MULTICOLOR',
+                                'CAFE', 'MARRON', 'BEIGE', 'GRAFITO'
+                            ];
+
+                            $color = '';
+                            if ($variant) {
+                                $variant = mb_convert_case(mb_strtolower($variant, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                            } else {
+                                $upperWorking = mb_strtoupper($working, 'UTF-8');
+                                foreach ($colorList as $c) {
+                                    if (preg_match('/\b' . preg_quote($c, '/') . '\b/i', $upperWorking)) {
+                                        $color = mb_convert_case(mb_strtolower($c, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                                        $working = preg_replace('/\b' . preg_quote($c, '/') . '\b/i', ' ', $working, 1);
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if ($modelMatchedText) {
+                                $working = str_ireplace($modelMatchedText, ' ', $working);
+                            }
+
+                            $working = preg_replace('/\b(funda|estuche|case|cover|protector|para|de|del|con|el|la|los|las)\b/iu', ' ', $working);
+                            $working = trim(preg_replace('/[(),.\-_\/]/', ' ', $working));
+                            $working = trim(preg_replace('/\s+/', ' ', $working));
+
+                            $remainder = '';
+                            if ($working) {
+                                $words = explode(' ', $working);
+                                $formattedWords = array_map(function($w) {
+                                    if (preg_match('/^(3d|tpu|pc|led)$/i', $w)) return strtoupper($w);
+                                    return mb_convert_case(mb_strtolower($w, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                                }, $words);
+                                $remainder = implode(' ', $formattedWords);
+                            }
+
+                            $parts = [$formattedModel];
+                            $middle = $variant ?: $color;
+                            if ($middle) $parts[] = $middle;
+                            if ($remainder) $parts[] = $remainder;
+
+                            return implode(' ', $parts);
+                        };
+
                         $serializedProducts = $quickProducts->map(fn($p) => [
                             'id' => $p->id,
                             'name' => $p->name,
+                            'display_name' => $formatQuickProductDisplay($p->name),
                             'sku' => $p->sku,
                             'package_type' => $p->package_type,
                             'price' => (int) $p->price,
@@ -263,30 +350,143 @@
                                 const needle = nc(this.search);
                                 if (!needle) return this.products;
                                 const scored = this.products.map(p => {
-                                    const hay = nc(p.name + ' ' + (p.sku||''));
+                                    const formatted = p.display_name || this.displayName(p.name);
+                                    const hay = nc(formatted + ' ' + p.name + ' ' + (p.sku||''));
                                     let score = 999;
                                     if (hay.includes(needle)) score = 0;
                                     else if (needle.includes(hay)) score = 1;
                                     else { let i=0, ok=true; for(const ch of needle){ const idx=hay.indexOf(ch,i); if(idx===-1){ ok=false; break; } i=idx+1; } if(ok) score=2; }
-                                    return {p, score};
-                                }).filter(x=>x.score<999).sort((a,b)=>a.score-b.score || a.p.name.localeCompare(b.p.name)).map(x=>x.p);
+                                    return {p, score, formatted};
+                                }).filter(x=>x.score<999).sort((a,b)=>a.score-b.score || (a.formatted || a.p.name).localeCompare(b.formatted || b.p.name)).map(x=>x.p);
                                 return scored;
                             },
-                            displayName(name){
-                                const n=(name||'').toUpperCase().trim();
-                                let m=n.match(/IP(?:HONE)?\s*(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI)?)/);
-                                if(!m){ const m2=n.match(/(?:PARA\s+)?(\d+\s*(?:PRO\s*MAX|PRO|PLUS|MINI))\b/); if(m2) m=[m2[0],m2[1]]; }
-                                if(!m) return n;
-                                const colors=n.match(/(AZUL|ROJO|NEGRO|BLANCO|VERDE|ROSADO|MORADO|AMARILLO|TRANSPARENTE|NARANJA|GRIS|DORADO|CELESTE)/);
-                                const mats=n.match(/(DIAMANTE|ELECTRO|SILICONA|CARCAZA|TPU|ACRILICO|DEGRADE)/);
-                                let out=`IP ${m[1].replace(/\s+/g,' ').trim()}`;
-                                if(colors) out+=` ${colors[1]}`;
-                                if(mats && !out.includes(mats[1])) out+=` ${mats[1]}`;
-                                if(out===`IP ${m[1].replace(/\s+/g,' ').trim()}`) return n;
-                                return out;
+                            displayName(name) {
+                                if (!name) return '';
+                                const raw = String(name).trim();
+
+                                let variant = '';
+                                const parenMatch = raw.match(/\(([^)]+)\)/);
+                                let working = raw;
+                                if (parenMatch) {
+                                    variant = parenMatch[1].trim();
+                                    working = working.replace(parenMatch[0], ' ');
+                                }
+
+                                let modelNum = '';
+                                let suffix = '';
+                                let modelMatchedText = '';
+
+                                const explicitIpRegex = /\b(?:iphone|ip)\s*(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i;
+                                let m = working.match(explicitIpRegex);
+
+                                if (m) {
+                                    modelMatchedText = m[0];
+                                    modelNum = m[1].toUpperCase();
+                                    suffix = m[2] || '';
+                                } else {
+                                    const paraRegex = /\bpara\s+(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i;
+                                    m = working.match(paraRegex);
+                                    if (m) {
+                                        modelMatchedText = m[0];
+                                        modelNum = m[1].toUpperCase();
+                                        suffix = m[2] || '';
+                                    } else {
+                                        const compactRegex = /\b(?:para\s+)?(\d{1,2})(pm|promax|p|pro|plus|\+|mini|max)\b/i;
+                                        m = working.match(compactRegex);
+                                        if (m) {
+                                            modelMatchedText = m[0];
+                                            modelNum = m[1].toUpperCase();
+                                            suffix = m[2] || '';
+                                        }
+                                    }
+                                }
+
+                                if (!modelNum) {
+                                    const xRegex = /\b(?:para\s+)?(xr|xs\s*max|xsmax|xsm|xs|x|se)\b/i;
+                                    m = working.match(xRegex);
+                                    if (m) {
+                                        modelMatchedText = m[0];
+                                        const rawModel = m[1].toUpperCase().replace(/\s+/g, '');
+                                        if (rawModel === 'XSMAX' || rawModel === 'XSM') {
+                                            modelNum = 'XS';
+                                            suffix = 'ProMax';
+                                        } else {
+                                            modelNum = rawModel;
+                                        }
+                                    }
+                                }
+
+                                if (!modelNum) {
+                                    return raw;
+                                }
+
+                                const cleanSuffix = suffix.toUpperCase().replace(/\s+/g, '');
+                                let modelSuffix = '';
+                                if (cleanSuffix === 'PM' || cleanSuffix === 'PROMAX' || cleanSuffix === 'PRO MAX') {
+                                    modelSuffix = 'ProMax';
+                                } else if (cleanSuffix === 'P' || cleanSuffix === 'PRO') {
+                                    modelSuffix = 'Pro';
+                                } else if (cleanSuffix === 'PLUS' || cleanSuffix === '+') {
+                                    modelSuffix = 'Plus';
+                                } else if (cleanSuffix === 'MINI') {
+                                    modelSuffix = 'Mini';
+                                } else if (cleanSuffix === 'MAX') {
+                                    modelSuffix = 'Max';
+                                }
+
+                                const formattedModel = `IP ${modelNum}${modelSuffix ? ' ' + modelSuffix : ''}`;
+
+                                const colorList = [
+                                    'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
+                                    'SIERRA BLUE', 'SPACE GRAY', 'ROSE GOLD', 'ROSA GOLD',
+                                    'PLATA', 'SILVER', 'NEGRO', 'BLACK', 'BLANCO', 'WHITE',
+                                    'AZUL REY', 'AZUL MARINO', 'AZUL CIELO', 'AZUL', 'BLUE',
+                                    'ROJO', 'RED', 'VERDE MILITAR', 'VERDE MENTA', 'VERDE', 'GREEN',
+                                    'ROSADO', 'ROSA', 'PINK', 'MORADO', 'PURPURA', 'PURPLE', 'VIOLETA', 'LAVANDA',
+                                    'AMARILLO', 'YELLOW', 'NARANJA', 'ORANGE', 'GRIS', 'GRAY', 'GREY',
+                                    'DORADO', 'ORO', 'GOLD', 'CELESTE', 'TORNASOL', 'ARCOIRIS', 'MULTICOLOR',
+                                    'CAFE', 'MARRON', 'BEIGE', 'GRAFITO'
+                                ];
+
+                                let color = '';
+                                if (variant) {
+                                    variant = variant.toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                } else {
+                                    const upperWorking = working.toUpperCase();
+                                    for (const c of colorList) {
+                                        const cRegex = new RegExp(`\\b${c}\\b`, 'i');
+                                        if (cRegex.test(upperWorking)) {
+                                            color = c.toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                            working = working.replace(cRegex, ' ');
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (modelMatchedText) {
+                                    working = working.replace(modelMatchedText, ' ');
+                                }
+
+                                working = working.replace(/\b(funda|estuche|case|cover|protector|para|de|del|con|el|la|los|las)\b/gi, ' ');
+                                working = working.replace(/[(),.\-_/]/g, ' ').replace(/\s+/g, ' ').trim();
+
+                                let remainder = '';
+                                if (working) {
+                                    remainder = working.split(/\s+/).map(w => {
+                                        if (/^(3d|tpu|pc|led)$/i.test(w)) return w.toUpperCase();
+                                        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+                                    }).join(' ');
+                                }
+
+                                const parts = [formattedModel];
+                                const middle = variant || color;
+                                if (middle) parts.push(middle);
+                                if (remainder) parts.push(remainder);
+
+                                return parts.join(' ');
                             },
                             selectProduct(product) {
-                                this.search = product.name;
+                                this.search = product.display_name || this.displayName(product.name);
                                 this.open = false;
                                 
                                 const select = document.getElementById('quick_product_select');
@@ -344,7 +544,7 @@
                                         class="w-full text-left px-2 py-0.5 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none flex justify-between items-center"
                                     >
                                         <div class="min-w-0 flex-1">
-                                            <span class="font-semibold text-gray-800" style="font-size:9px" x-text="p.name"></span>
+                                            <span class="font-semibold text-gray-800" style="font-size:9px" x-text="p.display_name || displayName(p.name)"></span>
                                         </div>
                                         <div class="shrink-0 flex items-center gap-1.5" style="font-size:9px">
                                             <span class="bg-blue-50 text-blue-700 px-1 py-0.5 rounded font-bold" style="font-size:9px" x-text="p.stock + ' UND'"></span>
