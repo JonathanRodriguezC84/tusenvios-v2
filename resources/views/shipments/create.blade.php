@@ -590,21 +590,12 @@
                 </div>
 
                 {{-- CHECK OUT DE PRESTAMO --}}
-                <div class="mt-4 pt-3 border-t border-gray-100">
-                    <div class="rounded-xl border-2 border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50/70 to-blue-50/40 p-3 space-y-2.5">
-                        <div class="flex items-start gap-2.5">
-                            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shrink-0 shadow-sm">📦</span>
-                            <div class="min-w-0 flex-1">
-                                <h4 class="text-xs font-black uppercase tracking-wider text-indigo-950">Check out de Préstamo</h4>
-                                <p class="text-[11px] font-semibold text-indigo-700 leading-tight">Registra al cliente y descuenta el stock de bodega sin generar guía física de envío.</p>
-                            </div>
-                        </div>
-
-                        <button type="button" id="btn_checkout_loan" class="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-sm hover:bg-indigo-700 active:scale-[0.98] transition-all cursor-pointer">
-                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                            <span>📦 Registrar como Préstamo</span>
-                        </button>
-                    </div>
+                <div class="pt-1">
+                    <input type="hidden" name="is_loan" id="is_loan_input" value="0">
+                    <button type="button" id="btn_checkout_loan" class="te-loan-check-btn" aria-pressed="false">
+                        <span class="te-loan-box">✓</span>
+                        <span class="te-loan-text">Préstamo</span>
+                    </button>
                 </div>
             </div>
 
@@ -779,6 +770,61 @@
         .dark .te-resume-value { color: #f3f4f6; }
         .dark .te-resume-ok { border-color: #065f46; background: #064e3b; }
         .dark .te-resume-ok .te-resume-check { background: #34d399; }
+
+        /* Botón con check list de Préstamo */
+        .te-loan-check-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1.5px solid #d1d5db;
+            background: #ffffff;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+            user-select: none;
+        }
+        .te-loan-check-btn:hover {
+            border-color: #9ca3af;
+            background: #f9fafb;
+        }
+        .te-loan-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            border: 2px solid #9ca3af;
+            background: #ffffff;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+        }
+        .te-loan-text {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .te-loan-check-btn.is-checked {
+            border-color: #059669;
+            background: #ecfdf5;
+        }
+        .te-loan-check-btn.is-checked .te-loan-box {
+            border-color: #059669;
+            background: #059669;
+            color: #ffffff;
+        }
+        .te-loan-check-btn.is-checked .te-loan-text {
+            color: #065f46;
+            font-weight: 800;
+        }
     </style>
 
     <script>
@@ -809,62 +855,34 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var btnLoan = document.getElementById('btn_checkout_loan');
-            if (btnLoan) {
-                btnLoan.addEventListener('click', function (e) {
-                    e.preventDefault();
+            var loanInput = document.getElementById('is_loan_input');
+            var form = document.querySelector('form.te-create-form');
+            if (!btnLoan || !form) return;
 
-                    var form = document.querySelector('form.te-create-form');
-                    if (!form) return;
+            var submitButtons = form.querySelectorAll('button:not([type="button"])');
+            var deptSelect = document.getElementById('recipient_department');
+            var locSelect = document.getElementById('recipient_locality');
+            var addrInput = document.getElementById('recipient_address');
 
-                    var nameInput = document.getElementById('recipient_name');
-                    var phoneInput = document.getElementById('recipient_phone');
-                    var invField = document.getElementById('inventory_items');
+            btnLoan.addEventListener('click', function () {
+                var isChecked = btnLoan.classList.toggle('is-checked');
+                btnLoan.setAttribute('aria-pressed', isChecked ? 'true' : 'false');
+                if (loanInput) loanInput.value = isChecked ? '1' : '0';
 
-                    if (!nameInput || !nameInput.value.trim()) {
-                        alert('Por favor ingresa el nombre del cliente en los datos del destinatario.');
-                        nameInput && nameInput.focus();
-                        return;
-                    }
-
-                    if (!phoneInput || !phoneInput.value.trim()) {
-                        alert('Por favor ingresa el teléfono del cliente.');
-                        phoneInput && phoneInput.focus();
-                        return;
-                    }
-
-                    var rawItems = [];
-                    try {
-                        rawItems = JSON.parse(invField ? invField.value : '[]');
-                    } catch (err) {
-                        rawItems = [];
-                    }
-
-                    if (!rawItems || rawItems.length === 0) {
-                        alert('Por favor agrega al menos un producto rápido o de inventario para registrar el préstamo.');
-                        return;
-                    }
-
-                    var totalUnits = rawItems.reduce(function (sum, item) {
-                        return sum + (Number(item.quantity) || 1);
-                    }, 0);
-
-                    var confirmMsg = '¿Deseas registrar este pedido como PRÉSTAMO de mercancía?\n\n' +
-                        '• Cliente: ' + nameInput.value.trim() + '\n' +
-                        '• Unidades a prestar: ' + totalUnits + '\n\n' +
-                        '✓ Se guardará al cliente en Clientes Frecuentes\n' +
-                        '✓ Se descontará el stock de bodega\n' +
-                        '✓ No genera cobro de saldo ni guía de transportadora\n' +
-                        '✓ Pasará a la pestaña Préstamos para su seguimiento';
-
-                    if (!confirm(confirmMsg)) {
-                        return;
-                    }
-
-                    // Enviar formulario a la ruta de préstamo
+                if (isChecked) {
                     form.action = '{{ route("shipments.loan") }}';
-                    form.submit();
-                });
-            }
+                    if (deptSelect) deptSelect.removeAttribute('required');
+                    if (locSelect) locSelect.removeAttribute('required');
+                    if (addrInput) addrInput.removeAttribute('required');
+                    submitButtons.forEach(function (b) { b.textContent = 'Registrar préstamo'; });
+                } else {
+                    form.action = '{{ route("shipments.store") }}';
+                    if (deptSelect) deptSelect.setAttribute('required', 'required');
+                    if (locSelect) locSelect.setAttribute('required', 'required');
+                    if (addrInput) addrInput.setAttribute('required', 'required');
+                    submitButtons.forEach(function (b) { b.textContent = 'Crear guia'; });
+                }
+            });
         });
     </script>
 </x-app-layout>
