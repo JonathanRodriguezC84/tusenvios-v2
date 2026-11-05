@@ -7,6 +7,7 @@ use App\Models\InventoryProduct;
 use App\Models\MerchandiseLoan;
 use App\Models\MerchandiseLoanItem;
 use App\Models\QuickProduct;
+use App\Models\FrequentRecipient;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -299,6 +300,235 @@ class MerchandiseLoanController extends InventoryProductController
         return redirect()
             ->route('inventory.loans.show', $loan)
             ->with('status', "Préstamo {$loan->loan_number} creado con éxito.");
+    }
+
+    public function storeFromShipment(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorizeLoanAccess();
+
+        $validated = $request->validate([
+            'recipient_name' => ['required', 'string', 'max:150'],
+            'recipient_lastname' => ['nullable', 'string', 'max:150'],
+            'recipient_phone' => ['required', 'string', 'max:50'],
+            'recipient_alt_phone' => ['nullable', 'string', 'max:50'],
+            'recipient_email' => ['nullable', 'string', 'max:150'],
+            'recipient_address' => ['nullable', 'string', 'max:255'],
+            'recipient_department' => ['nullable'],
+            'recipient_locality' => ['nullable', 'string', 'max:120'],
+            'recipient_city' => ['nullable', 'string', 'max:120'],
+            'recipient_neighborhood' => ['nullable', 'string', 'max:120'],
+            'recipient_notes' => ['nullable', 'string', 'max:1000'],
+            'inventory_items' => ['nullable'],
+        ], [
+            'recipient_name.required' => 'El nombre del cliente es obligatorio para registrar el préstamo.',
+            'recipient_phone.required' => 'El teléfono del cliente es obligatorio para registrar el préstamo.',
+        ]);
+
+        $owner = $this->ownerKeys();
+
+        // 1. Decodificar items de productos
+        $rawItems = $request->input('inventory_items');
+        if (is_string($rawItems)) {
+            $rawItems = json_decode($rawItems, true) ?: [];
+        }
+        if (!is_array($rawItems)) {
+            $rawItems = [];
+        }
+
+        if (empty($rawItems)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['inventory_items' => 'Debes agregar al menos un producto frecuente o de inventario para registrar el préstamo.']);
+        }
+
+        // 2. Registrar o actualizar al cliente en FrequentRecipient
+        $fullName = trim($validated['recipient_name'] . ' ' . ($validated['recipient_lastname'] ?? ''));
+        $phone = trim($validated['recipient_phone']);
+
+        $recipientData = [
+            'name' => trim($validated['recipient_name']),
+            'lastname' => trim($validated['recipient_lastname'] ?? ''),
+            'phone' => $phone,
+            'alt_phone' => trim($validated['recipient_alt_phone'] ?? ''),
+            'address' => trim($validated['recipient_address'] ?? ''),
+            'neighborhood' => trim($validated['recipient_neighborhood'] ?? ''),
+            'locality' => trim($validated['recipient_locality'] ?? ''),
+            'city' => trim($validated['recipient_city'] ?? ''),
+            'notes' => trim($validated['recipient_notes'] ?? ''),
+        ];
+
+        try {
+            $existingRecipient = FrequentRecipient::query()
+                ->when(
+                    $owner['affiliated_company_id'],
+                    fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                    fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+                )
+                ->where('name', $recipientData['name'])
+                ->when($phone, fn ($q) => $q->where('phone', $phone))
+                ->first();
+
+            if ($existingRecipient) {
+                $existingRecipient->increment('use_count');
+                $existingRecipient->update(array_filter($recipientData));
+            } else {
+                FrequentRecipient::create(array_merge(
+                    $owner['affiliated_company_id']
+                        ? ['affiliated_company_id' => $owner['affiliated_company_id'], 'tenant_id' => null]
+                        : ['tenant_id' => $owner['tenant_id'], 'affiliated_company_id' => null],
+                    $recipientData,
+                    ['use_count' => 1]
+                ));
+            }
+        } catch (\Throwable $e) {
+            // Continuar sin bloquear el préstamo si falla recipient
+        }
+
+        // 3. Crear el préstamo y descontar stock
+        $loan = DB::transaction(function () use ($validated, $fullName, $phone, $rawItems, $owner) {
+            $loanNumber = $this->generateLoanNumber();
+
+            $totalItems = 0;
+            $totalValue = 0;
+            $itemsData = [];
+
+            foreach ($rawItems as $item) {
+                $productId = (int) ($item['id'] ?? 0);
+                $productType = $item['type'] ?? 'quick';
+                $quantity = max(1, (int) ($item['quantity'] ?? 1));
+
+                if ($productType === 'quick' && $productId > 0) {
+                    $product = QuickProduct::query()
+                        ->when(
+                            $owner['affiliated_company_id'],
+                            fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                            fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+                        )
+                        ->whereKey($productId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$product) {
+                        throw ValidationException::withMessages([
+                            'inventory_items' => "Uno de los productos rápidos seleccionados ya no está disponible.",
+                        ]);
+                    }
+
+                    if ($product->stock < $quantity) {
+                        throw ValidationException::withMessages([
+                            'inventory_items' => "Stock insuficiente para {$product->name}. Disponible en bodega: {$product->stock}.",
+                        ]);
+                    }
+
+                    $product->decrement('stock', $quantity);
+
+                    $totalItems += $quantity;
+                    $lineTotal = $quantity * (float) $product->price;
+                    $totalValue += $lineTotal;
+
+                    $itemsData[] = [
+                        'inventory_product_id' => null,
+                        'quick_product_id' => $product->id,
+                        'product_type' => 'quick',
+                        'product_name' => $product->name,
+                        'product_sku' => $product->sku,
+                        'quantity_lent' => $quantity,
+                        'quantity_returned' => 0,
+                        'quantity_sold' => 0,
+                        'unit_price' => $product->price,
+                        'unit_cost' => $product->cost,
+                        'notes' => null,
+                    ];
+                } elseif ($productType === 'inventory' && $productId > 0) {
+                    $product = $this->queryForOwner()
+                        ->whereKey($productId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$product) {
+                        throw ValidationException::withMessages([
+                            'inventory_items' => "Uno de los productos de inventario ya no está disponible.",
+                        ]);
+                    }
+
+                    if ($product->stock < $quantity) {
+                        throw ValidationException::withMessages([
+                            'inventory_items' => "Stock insuficiente para {$product->name}. Disponible en bodega: {$product->stock}.",
+                        ]);
+                    }
+
+                    $product->decrement('stock', $quantity);
+                    $product->refresh();
+
+                    $product->movements()->create(array_merge($owner, [
+                        'type' => 'loan_out',
+                        'quantity_delta' => -1 * $quantity,
+                        'stock_after' => $product->stock,
+                        'notes' => "Préstamo {$loanNumber} a {$fullName}",
+                    ]));
+
+                    $totalItems += $quantity;
+                    $lineTotal = $quantity * (float) $product->price;
+                    $totalValue += $lineTotal;
+
+                    $itemsData[] = [
+                        'inventory_product_id' => $product->id,
+                        'quick_product_id' => null,
+                        'product_type' => 'inventory',
+                        'product_name' => $product->name,
+                        'product_sku' => $product->sku,
+                        'quantity_lent' => $quantity,
+                        'quantity_returned' => 0,
+                        'quantity_sold' => 0,
+                        'unit_price' => $product->price,
+                        'unit_cost' => $product->cost,
+                        'notes' => null,
+                    ];
+                }
+            }
+
+            if (empty($itemsData)) {
+                throw ValidationException::withMessages([
+                    'inventory_items' => "Debes seleccionar al menos un producto válido para registrar el préstamo.",
+                ]);
+            }
+
+            $fullAddress = trim(implode(', ', array_filter([
+                $validated['recipient_address'] ?? null,
+                $validated['recipient_neighborhood'] ?? null,
+                $validated['recipient_locality'] ?? null,
+                $validated['recipient_city'] ?? null,
+            ])));
+
+            $loan = MerchandiseLoan::create([
+                'tenant_id' => $owner['tenant_id'],
+                'affiliated_company_id' => $owner['affiliated_company_id'],
+                'loan_number' => $loanNumber,
+                'borrower_name' => $fullName,
+                'borrower_phone' => $phone,
+                'borrower_document' => null,
+                'borrower_address' => $fullAddress ?: null,
+                'loan_date' => now()->toDateString(),
+                'due_date' => now()->addDays(7)->toDateString(),
+                'status' => 'active',
+                'total_items' => $totalItems,
+                'total_value' => $totalValue,
+                'notes' => !empty($validated['recipient_notes']) ? trim($validated['recipient_notes']) : "Registrado desde checkout Crear Guía",
+                'created_by' => Auth::id(),
+            ]);
+
+            foreach ($itemsData as $data) {
+                $loan->items()->create($data);
+            }
+
+            return $loan;
+        });
+
+        Audit::log('merchandise_loan.created', $loan, "Préstamo {$loan->loan_number} registrado para {$loan->borrower_name} desde Crear Guía.");
+
+        return redirect()
+            ->route('inventory.loans.index')
+            ->with('status', "¡Préstamo {$loan->loan_number} registrado con éxito! Cliente guardado y stock descontado.");
     }
 
     public function show(MerchandiseLoan $loan): \Illuminate\View\View

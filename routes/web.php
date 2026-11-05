@@ -162,6 +162,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/shipments/export/pdf', [ShipmentController::class, 'exportPdf'])->name('shipments.export.pdf');
     Route::get('/shipments/create', [ShipmentController::class, 'create'])->name('shipments.create');
     Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
+    Route::post('/shipments/loan', [MerchandiseLoanController::class, 'storeFromShipment'])->name('shipments.loan');
     Route::get('/shipments/bulk-print', fn () => redirect()
         ->route('shipments.index', ['status' => 'created'])
         ->with('status', 'Selecciona las guias que quieres imprimir.'))->name('shipments.bulk-print.fallback');

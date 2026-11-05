@@ -2,10 +2,10 @@
     @vite(['resources/css/inventory.css', 'resources/js/inventory.js'])
 
     <x-slot name="header">
-        <x-page-header eyebrow="Productos / Préstamos" title="Préstamos de Mercancía" description="Control y trazabilidad de mercancía entregada en préstamo, muestras o consignación.">
+        <x-page-header eyebrow="Productos / Préstamos" title="Resumen de Préstamos de Mercancía" description="Resumen, control y seguimiento de mercancía entregada a clientes o prestatarios.">
             <x-slot name="actions">
-                <a href="{{ route('inventory.loans.create') }}" class="rounded-xl bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 shadow-sm inline-flex items-center gap-1.5">
-                    <span>+</span> Nuevo Préstamo
+                <a href="{{ route('shipments.create') }}" class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm inline-flex items-center gap-1.5">
+                    <span>📦</span> Ir a Crear Guía / Préstamo
                 </a>
             </x-slot>
         </x-page-header>
@@ -164,11 +164,11 @@
                                     <svg class="mx-auto h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    <p class="font-bold text-gray-700">No hay préstamos de mercancía registrados.</p>
-                                    <p class="text-xs text-gray-400 mt-1">Crea tu primer préstamo para entregar mercancía a terceros con trazabilidad de retorno.</p>
+                                    <p class="font-bold text-gray-700">No hay préstamos de mercancía registrados en el resumen.</p>
+                                    <p class="text-xs text-gray-400 mt-1">Para registrar un préstamo, ve a Crear Guía, añade los productos y pulsa en "Check out de Préstamo".</p>
                                     <div class="mt-4">
-                                        <a href="{{ route('inventory.loans.create') }}" class="rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800">
-                                            + Crear Préstamo
+                                        <a href="{{ route('shipments.create') }}" class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm inline-flex items-center gap-1.5">
+                                            <span>📦</span> Ir a Crear Guía / Préstamo
                                         </a>
                                     </div>
                                 </td>
