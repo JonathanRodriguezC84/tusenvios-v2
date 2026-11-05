@@ -20,6 +20,19 @@ class MerchandiseLoanController extends InventoryProductController
     {
         $this->authorizeLoanAccess();
 
+        // Corrección puntual para PREST-0001 reportado por el usuario (15.000 c/u en vez de 25.000)
+        $prest1 = $this->loanBaseQuery()->where('loan_number', 'PREST-0001')->with('items')->first();
+        if ($prest1 && $prest1->items->contains(fn ($i) => (float) $i->unit_price == 25000)) {
+            $newTotal = 0;
+            foreach ($prest1->items as $it) {
+                if ((float) $it->unit_price == 25000) {
+                    $it->update(['unit_price' => 15000]);
+                }
+                $newTotal += $it->quantity_lent * (float) $it->unit_price;
+            }
+            $prest1->update(['total_value' => $newTotal]);
+        }
+
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:active,partial,returned,sold,cancelled,overdue'],
@@ -422,8 +435,12 @@ class MerchandiseLoanController extends InventoryProductController
 
                     $product->decrement('stock', $quantity);
 
+                    $unitPrice = isset($item['price']) && is_numeric($item['price']) && (float) $item['price'] >= 0
+                        ? (float) $item['price']
+                        : (float) $product->price;
+
                     $totalItems += $quantity;
-                    $lineTotal = $quantity * (float) $product->price;
+                    $lineTotal = $quantity * $unitPrice;
                     $totalValue += $lineTotal;
 
                     $itemsData[] = [
@@ -435,7 +452,7 @@ class MerchandiseLoanController extends InventoryProductController
                         'quantity_lent' => $quantity,
                         'quantity_returned' => 0,
                         'quantity_sold' => 0,
-                        'unit_price' => $product->price,
+                        'unit_price' => $unitPrice,
                         'unit_cost' => $product->cost,
                         'notes' => null,
                     ];
@@ -467,8 +484,12 @@ class MerchandiseLoanController extends InventoryProductController
                         'notes' => "Préstamo {$loanNumber} a {$fullName}",
                     ]));
 
+                    $unitPrice = isset($item['price']) && is_numeric($item['price']) && (float) $item['price'] >= 0
+                        ? (float) $item['price']
+                        : (float) $product->price;
+
                     $totalItems += $quantity;
-                    $lineTotal = $quantity * (float) $product->price;
+                    $lineTotal = $quantity * $unitPrice;
                     $totalValue += $lineTotal;
 
                     $itemsData[] = [
@@ -480,7 +501,7 @@ class MerchandiseLoanController extends InventoryProductController
                         'quantity_lent' => $quantity,
                         'quantity_returned' => 0,
                         'quantity_sold' => 0,
-                        'unit_price' => $product->price,
+                        'unit_price' => $unitPrice,
                         'unit_cost' => $product->cost,
                         'notes' => null,
                     ];

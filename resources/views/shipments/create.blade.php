@@ -883,6 +883,31 @@
                     submitButtons.forEach(function (b) { b.textContent = 'Crear guia'; });
                 }
             });
+
+            form.addEventListener('submit', function () {
+                var rows = document.querySelectorAll('#product_lines .te-product-row');
+                var invField = document.getElementById('inventory_items');
+                if (rows && invField) {
+                    var items = [];
+                    rows.forEach(function (row) {
+                        var n = row.querySelector('.te-product-name');
+                        var p = row.querySelector('.te-product-price');
+                        var q = row.querySelector('.te-product-quantity');
+                        var name = (n ? n.value : '').trim();
+                        if (!name) return;
+                        var pv = Number(p ? p.value || 0 : 0);
+                        var qv = Math.max(Number(q ? q.value || 1 : 1), 1);
+                        var invId = row.dataset.inventoryId;
+                        var quickId = row.dataset.quickProductId;
+                        if (invId) {
+                            items.push({ id: Number(invId), type: 'inventory', quantity: qv, price: pv, name: name });
+                        } else if (quickId) {
+                            items.push({ id: Number(quickId), type: 'quick', quantity: qv, price: pv, name: name });
+                        }
+                    });
+                    invField.value = JSON.stringify(items);
+                }
+            });
         });
     </script>
 </x-app-layout>

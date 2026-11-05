@@ -305,9 +305,9 @@
                 var invId = row.dataset.inventoryId;
                 var quickId = row.dataset.quickProductId;
                 if (invId) {
-                    invItems.push({ id: Number(invId), type: 'inventory', quantity: qv });
+                    invItems.push({ id: Number(invId), type: 'inventory', quantity: qv, price: pv });
                 } else if (quickId) {
-                    invItems.push({ id: Number(quickId), type: 'quick', quantity: qv });
+                    invItems.push({ id: Number(quickId), type: 'quick', quantity: qv, price: pv });
                 }
             });
             content.value = Array.from(rows).map(function (row) {
