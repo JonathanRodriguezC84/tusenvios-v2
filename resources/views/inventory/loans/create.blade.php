@@ -2,7 +2,7 @@
     @vite(['resources/css/inventory.css', 'resources/js/inventory.js'])
 
     <x-slot name="header">
-        <x-page-header eyebrow="Inventario / Préstamos" title="Nuevo Préstamo de Mercancía" description="Registra la entrega de productos en préstamo o consignación descontando temporalmente el stock.">
+        <x-page-header eyebrow="Productos / Préstamos" title="Nuevo Préstamo de Mercancía" description="Registra la entrega de productos en préstamo o consignación descontando temporalmente el stock de bodega.">
             <x-slot name="actions">
                 <a href="{{ route('inventory.loans.index') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">← Cancelar</a>
             </x-slot>
@@ -10,13 +10,7 @@
     </x-slot>
 
     @php
-        $productsJson = $products->map(fn($p) => [
-            'id' => $p->id,
-            'name' => $p->name,
-            'sku' => $p->sku,
-            'price' => (float) $p->price,
-            'stock' => (int) $p->stock,
-        ])->values()->toJson();
+        $productsJson = $products->toJson();
     @endphp
 
     <div class="p-3 lg:p-5 max-w-5xl mx-auto" x-data="merchandiseLoanForm({{ $productsJson }})">
@@ -103,12 +97,15 @@
                         <div class="space-y-3">
                             <template x-for="(item, index) in items" :key="index">
                                 <div class="p-3 rounded-lg border border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                    <input type="hidden" :name="`items[${index}][product_id]`" :value="item.productId">
+                                    <input type="hidden" :name="`items[${index}][product_type]`" :value="item.productType">
+
                                     <div class="flex-1 w-full sm:w-auto">
                                         <label class="block text-[11px] font-bold text-gray-500 mb-0.5">Producto *</label>
-                                        <select :name="`items[${index}][product_id]`" x-model="item.productId" @change="onProductSelect(item)" required class="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs bg-white">
+                                        <select x-model="item.selectedKey" @change="onProductSelect(item)" required class="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs bg-white">
                                             <option value="">Selecciona un producto...</option>
-                                            <template x-for="p in availableProducts" :key="p.id">
-                                                <option :value="p.id" x-text="`${p.name} (Stock: ${p.stock})`" :selected="item.productId == p.id"></option>
+                                            <template x-for="p in availableProducts" :key="p.key">
+                                                <option :value="p.key" x-text="`${p.name} (Stock: ${p.stock})`" :selected="item.selectedKey == p.key"></option>
                                             </template>
                                         </select>
                                     </div>
@@ -162,10 +159,10 @@
             return {
                 availableProducts: products,
                 items: [
-                    { productId: '', quantity: 1, price: 0, maxStock: 9999 }
+                    { selectedKey: '', productId: '', productType: '', quantity: 1, price: 0, maxStock: 9999 }
                 ],
                 addItem() {
-                    this.items.push({ productId: '', quantity: 1, price: 0, maxStock: 9999 });
+                    this.items.push({ selectedKey: '', productId: '', productType: '', quantity: 1, price: 0, maxStock: 9999 });
                 },
                 removeItem(index) {
                     if (this.items.length > 1) {
@@ -173,14 +170,18 @@
                     }
                 },
                 onProductSelect(item) {
-                    const found = this.availableProducts.find(p => p.id == item.productId);
+                    const found = this.availableProducts.find(p => p.key == item.selectedKey);
                     if (found) {
+                        item.productId = found.id;
+                        item.productType = found.type;
                         item.price = found.price;
                         item.maxStock = found.stock;
                         if (item.quantity > found.stock) {
                             item.quantity = found.stock;
                         }
                     } else {
+                        item.productId = '';
+                        item.productType = '';
                         item.price = 0;
                         item.maxStock = 9999;
                     }
@@ -196,7 +197,7 @@
                 },
                 handleSubmit(e) {
                     for (const item of this.items) {
-                        if (!item.productId) {
+                        if (!item.productId || !item.productType) {
                             alert('Por favor selecciona un producto para cada fila.');
                             e.preventDefault();
                             return;

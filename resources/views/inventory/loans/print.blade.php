@@ -3,58 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remisión Préstamo {{ $loan->loan_number }}</title>
+    <title>Remisión {{ $loan->loan_number }} - Préstamo de Mercancía</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background: #f3f4f6; color: #111827; padding: 20px; font-size: 13px; }
-        .page { max-width: 800px; margin: 0 auto; background: #fff; padding: 32px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; margin-bottom: 20px; }
-        .brand-title { font-size: 20px; font-weight: 900; color: #1e3a8a; }
-        .brand-info { font-size: 11px; color: #4b5563; margin-top: 4px; line-height: 1.4; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #111827;
+            background-color: #fff;
+            padding: 24px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+        .brand-title { font-size: 20px; font-weight: 800; color: #1e3a8a; }
+        .brand-info { font-size: 11px; color: #4b5563; margin-top: 4px; }
         .doc-details { text-align: right; }
-        .doc-title { font-size: 13px; font-weight: 900; text-transform: uppercase; color: #4b5563; letter-spacing: 0.5px; }
-        .doc-number { font-size: 22px; font-weight: 900; color: #111827; margin: 4px 0; }
-        .doc-badge { display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 11px; font-weight: bold; background: #e0e7ff; color: #3730a3; }
-        
-        .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; padding: 14px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb; }
-        .info-col h4 { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; margin-bottom: 6px; }
-        .info-col p { font-size: 12px; margin-bottom: 3px; color: #1f2937; }
-        .info-col strong { color: #111827; }
-
-        table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
-        th { background: #f3f4f6; color: #374151; font-weight: 800; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border-bottom: 1px solid #d1d5db; }
-        td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-        .text-right { text-align: right; }
+        .doc-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: #1e3a8a; }
+        .doc-number { font-size: 18px; font-weight: 900; color: #111827; margin: 2px 0; }
+        .doc-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            border: 1px solid #d1d5db;
+        }
+        .grid-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+            background: #f9fafb;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .info-col h4 {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 3px;
+        }
+        .info-col p { margin-bottom: 3px; font-size: 11px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+        }
+        th {
+            background-color: #f3f4f6;
+            color: #374151;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 8px 10px;
+            border-bottom: 1px solid #d1d5db;
+            text-align: left;
+        }
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 11px;
+        }
         .text-center { text-align: center; }
-        .font-bold { font-weight: bold; }
-
-        .terms { font-size: 10px; color: #6b7280; line-height: 1.45; border-top: 1px dashed #d1d5db; padding-top: 14px; margin-bottom: 40px; }
-        .terms strong { color: #374151; }
-
-        .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 50px; }
-        .sig-box { border-top: 1px solid #9ca3af; padding-top: 8px; text-align: center; font-size: 11px; }
-        .sig-title { font-weight: bold; color: #111827; margin-bottom: 2px; }
-        .sig-sub { color: #6b7280; font-size: 10px; }
-
-        .print-btn-bar { max-width: 800px; margin: 0 auto 16px auto; display: flex; justify-content: flex-end; gap: 8px; }
-        .btn { padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-primary { background: #2563eb; color: #fff; }
-        .btn-secondary { background: #e5e7eb; color: #374151; }
-
+        .text-right { text-align: right; }
+        .font-bold { font-weight: 700; }
+        .terms {
+            font-size: 10px;
+            color: #4b5563;
+            background: #f9fafb;
+            border-left: 3px solid #1e3a8a;
+            padding: 10px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 50px;
+        }
+        .sig-box {
+            border-top: 1px solid #111827;
+            padding-top: 6px;
+            text-align: center;
+        }
+        .sig-title { font-weight: 800; font-size: 11px; }
+        .sig-sub { font-size: 10px; color: #4b5563; }
         @media print {
-            body { background: #fff; padding: 0; }
-            .page { box-shadow: none; padding: 0; }
-            .print-btn-bar { display: none; }
+            body { padding: 0; }
+            .no-print { display: none; }
         }
     </style>
 </head>
 <body>
-    <div class="print-btn-bar">
-        <a href="{{ route('inventory.loans.show', $loan) }}" class="btn btn-secondary">← Volver al Sistema</a>
-        <button onclick="window.print()" class="btn btn-primary">🖨️ Imprimir / Guardar PDF</button>
-    </div>
+    <div class="container">
+        {{-- Print Action Bar (hidden on print) --}}
+        <div class="no-print" style="margin-bottom: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+            <button onclick="window.print()" style="background: #1e3a8a; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+                🖨️ Imprimir
+            </button>
+            <button onclick="window.close()" style="background: #e5e7eb; color: #374151; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+                Cerrar
+            </button>
+        </div>
 
-    <div class="page">
         {{-- Header --}}
         <div class="header">
             <div>
@@ -116,9 +181,9 @@
                     <tr>
                         <td class="text-center text-gray-500">{{ $index + 1 }}</td>
                         <td>
-                            <span class="font-bold">{{ $item->product?->name }}</span>
-                            @if ($item->product?->sku)
-                                <div style="font-size: 10px; color: #6b7280;">SKU: {{ $item->product->sku }}</div>
+                            <span class="font-bold">{{ $item->displayName() }}</span>
+                            @if ($item->displaySku())
+                                <div style="font-size: 10px; color: #6b7280;">SKU: {{ $item->displaySku() }}</div>
                             @endif
                             @if ($item->notes)
                                 <div style="font-size: 10px; color: #4b5563; font-style: italic;">{{ $item->notes }}</div>

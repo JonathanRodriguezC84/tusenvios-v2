@@ -94,10 +94,11 @@
         [
             'label' => 'Productos',
             'icon' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7.5 12 3l8 4.5-8 4.5-8-4.5Z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12l8 4.5 8-4.5M4 16.5l8 4.5 8-4.5" />',
-            'active' => ['quick-products.*', 'notes.*'],
+            'active' => ['quick-products.*', 'notes.*', 'inventory.loans.*'],
             'show' => $userIsTenant && !$canInventory,
             'children' => [
                 ['label' => 'Productos rapidos', 'route' => 'quick-products.index', 'active' => 'quick-products.*', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M6 7l1 13h10l1-13M9 7V5a3 3 0 0 1 6 0v2" />', 'show' => $userIsTenant],
+                ['label' => 'Préstamos', 'route' => 'inventory.loans.index', 'active' => 'inventory.loans.*', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />', 'show' => $userIsTenant],
                 ['label' => 'Cuaderno', 'route' => 'notes.index', 'active' => 'notes.*', 'icon' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 3.75H7.5a1.5 1.5 0 0 0-1.5 1.5v13.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V5.25a1.5 1.5 0 0 0-1.5-1.5ZM8 7.5h8M8 11.25h8M8 15h4" />', 'show' => ! $isAdminOnly && $userIsTenant],
             ],
         ],

@@ -10,6 +10,10 @@ class MerchandiseLoanItem extends Model
     protected $fillable = [
         'merchandise_loan_id',
         'inventory_product_id',
+        'quick_product_id',
+        'product_type',
+        'product_name',
+        'product_sku',
         'quantity_lent',
         'quantity_returned',
         'quantity_sold',
@@ -34,6 +38,27 @@ class MerchandiseLoanItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(InventoryProduct::class, 'inventory_product_id');
+    }
+
+    public function quickProduct(): BelongsTo
+    {
+        return $this->belongsTo(QuickProduct::class, 'quick_product_id');
+    }
+
+    public function displayName(): string
+    {
+        return $this->product_name
+            ?: $this->product?->name
+            ?: $this->quickProduct?->name
+            ?: 'Producto sin nombre';
+    }
+
+    public function displaySku(): ?string
+    {
+        return $this->product_sku
+            ?: $this->product?->sku
+            ?: $this->quickProduct?->sku
+            ?: null;
     }
 
     public function pendingUnits(): int

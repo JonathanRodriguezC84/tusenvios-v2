@@ -1,78 +1,71 @@
 <x-app-layout>
     @vite(['resources/css/inventory.css', 'resources/js/inventory.js'])
 
-    <style>
-        .loans-page-v01 {
-            --inventory-theme-color: {{ $theme['color'] }};
-            --inventory-theme-text: {{ $theme['text'] }};
-            --inventory-theme-tint: {{ $theme['tint'] }};
-            --inventory-theme-border: {{ $theme['border'] }};
-            --inventory-theme-soft: {{ $theme['soft'] }};
-        }
-    </style>
-
-    @php
-        $toastMessages = [];
-        if (session('status')) { $toastMessages[] = ['text' => session('status'), 'type' => 'success']; }
-        if ($errors->any()) { $toastMessages[] = ['text' => $errors->first() ?: 'Revisa los campos.', 'type' => 'error']; }
-    @endphp
-
-    <script id="inventory-toast-data" type="application/json">{{ json_encode($toastMessages) }}</script>
-
     <x-slot name="header">
-        <x-page-header eyebrow="Inventario" title="Préstamos de Mercancía" description="Controla productos entregados a terceros, consignaciones y fechas de retorno.">
+        <x-page-header eyebrow="Productos / Préstamos" title="Préstamos de Mercancía" description="Control y trazabilidad de mercancía entregada en préstamo, muestras o consignación.">
             <x-slot name="actions">
-                <a href="{{ route('inventory.index') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">← Volver a Inventario</a>
-                <a href="{{ route('inventory.loans.create') }}" class="rounded-lg text-sm font-bold text-white px-4 py-1.5 shadow-sm" style="background:{{ $theme['color'] }}">+ Nuevo Préstamo</a>
+                <a href="{{ route('inventory.loans.create') }}" class="rounded-xl bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 shadow-sm inline-flex items-center gap-1.5">
+                    <span>+</span> Nuevo Préstamo
+                </a>
             </x-slot>
         </x-page-header>
     </x-slot>
 
-    <div class="loans-page-v01 p-3 lg:p-5 h-full flex flex-col space-y-4">
-        {{-- Metrics Summary Cards --}}
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Activos</span>
-                <span class="text-2xl font-black text-indigo-700 mt-1 block">{{ number_format($metrics['active']) }}</span>
-                <span class="text-[11px] text-gray-400">Préstamos en curso</span>
+    <div class="p-3 lg:p-5 max-w-7xl mx-auto flex flex-col gap-4">
+        @if (session('status'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 shadow-sm flex items-center justify-between">
+                <span>{{ session('status') }}</span>
+                <button type="button" @click="$el.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900">✕</button>
             </div>
+        @endif
+
+        {{-- Metrics Cards --}}
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Vencidos</span>
-                <span class="text-2xl font-black {{ $metrics['overdue'] > 0 ? 'text-rose-600' : 'text-gray-700' }} mt-1 block">{{ number_format($metrics['overdue']) }}</span>
-                <span class="text-[11px] text-gray-400">Fecha límite superada</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">Total Préstamos</span>
+                <span class="text-xl font-black text-gray-900">{{ $metrics['total'] }}</span>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Unidades Fuera</span>
-                <span class="text-2xl font-black text-amber-600 mt-1 block">{{ number_format($metrics['pending_units']) }}</span>
-                <span class="text-[11px] text-gray-400">Pendientes por retornar</span>
+
+            <div class="bg-white rounded-xl border border-indigo-200 bg-indigo-50/30 p-3 shadow-sm">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-700 block">Activos / Parciales</span>
+                <span class="text-xl font-black text-indigo-900">{{ $metrics['active'] }}</span>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Valor Prestado</span>
-                <span class="text-xl font-black text-gray-900 mt-1 block">${{ number_format($metrics['pending_value'], 0, ',', '.') }}</span>
-                <span class="text-[11px] text-gray-400">Mercancía en la calle</span>
+
+            <div class="bg-white rounded-xl border border-amber-200 bg-amber-50/40 p-3 shadow-sm">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">Unds por Devolver</span>
+                <span class="text-xl font-black text-amber-900">{{ $metrics['pending_units'] }}</span>
             </div>
-            <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm col-span-2 md:col-span-1">
-                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Histórico</span>
-                <div class="flex items-center gap-2 mt-1">
-                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{{ $metrics['returned'] }} devueltos</span>
-                    <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">{{ $metrics['sold'] }} liquidados</span>
-                </div>
-                <span class="text-[11px] text-gray-400 mt-1 block">{{ number_format($metrics['total']) }} totales</span>
+
+            <div class="bg-white rounded-xl border border-blue-200 bg-blue-50/30 p-3 shadow-sm">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700 block">Valor Prestado</span>
+                <span class="text-base font-black text-blue-900 leading-tight block mt-1">
+                    ${{ number_format($metrics['pending_value'], 0, ',', '.') }}
+                </span>
+            </div>
+
+            <div class="bg-white rounded-xl border border-rose-200 bg-rose-50/30 p-3 shadow-sm">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-rose-700 block">Vencidos</span>
+                <span class="text-xl font-black text-rose-900">{{ $metrics['overdue'] }}</span>
+            </div>
+
+            <div class="bg-white rounded-xl border border-emerald-200 bg-emerald-50/30 p-3 shadow-sm">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700 block">Cerrados</span>
+                <span class="text-xl font-black text-emerald-900">{{ $metrics['returned'] + $metrics['sold'] }}</span>
             </div>
         </div>
 
-        {{-- Filters & Search --}}
+        {{-- Filter & Search Bar --}}
         <div class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
             <form method="GET" action="{{ route('inventory.loans.index') }}" class="flex flex-wrap items-center gap-2.5">
-                <div class="flex-1 min-w-[220px]">
-                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Buscar por N° préstamo, prestatario, teléfono o producto..." class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-600 focus:ring-1 focus:ring-blue-600" autocomplete="off">
+                <div class="flex-1 min-w-[200px]">
+                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Buscar por cliente, documento, N° préstamo o producto..." class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs placeholder-gray-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600">
                 </div>
-                <div>
-                    <select name="status" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm bg-white">
+                <div class="w-40">
+                    <select name="status" class="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs bg-white">
                         <option value="">Todos los estados</option>
-                        <option value="active" @selected(($filters['status'] ?? '') === 'active')>Activos</option>
+                        <option value="active" @selected(($filters['status'] ?? '') === 'active')>En préstamo</option>
+                        <option value="partial" @selected(($filters['status'] ?? '') === 'partial')>Parcial</option>
                         <option value="overdue" @selected(($filters['status'] ?? '') === 'overdue')>Vencidos</option>
-                        <option value="partial" @selected(($filters['status'] ?? '') === 'partial')>Parciales</option>
                         <option value="returned" @selected(($filters['status'] ?? '') === 'returned')>Devueltos</option>
                         <option value="sold" @selected(($filters['status'] ?? '') === 'sold')>Liquidados (Venta)</option>
                         <option value="cancelled" @selected(($filters['status'] ?? '') === 'cancelled')>Anulados</option>
@@ -145,7 +138,7 @@
                                         @endif
                                     </div>
                                     <div class="mt-1 text-[11px] text-gray-500 truncate max-w-xs">
-                                        {{ $loan->items->pluck('product.name')->filter()->join(', ') }}
+                                        {{ $loan->items->map(fn($i) => $i->displayName())->filter()->join(', ') }}
                                     </div>
                                 </td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap font-bold text-gray-900">

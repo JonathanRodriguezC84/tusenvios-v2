@@ -2,61 +2,59 @@
     @vite(['resources/css/inventory.css', 'resources/js/inventory.js'])
 
     <x-slot name="header">
-        <x-page-header eyebrow="Inventario / Préstamos" :title="$loan->loan_number" :description="'Préstamo a: ' . $loan->borrower_name">
+        <x-page-header eyebrow="Productos / Préstamos" title="Préstamo {{ $loan->loan_number }}" description="Gestión, seguimiento de devoluciones y liquidación de mercancía entregada.">
             <x-slot name="actions">
-                <a href="{{ route('inventory.loans.index') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">← Listado de Préstamos</a>
-                <a href="{{ route('inventory.loans.print', $loan) }}" target="_blank" class="rounded-lg bg-gray-900 text-sm font-bold text-white px-3.5 py-1.5 shadow-sm hover:bg-black">
-                    🖨️ Imprimir Remisión
-                </a>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('inventory.loans.index') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                        ← Volver al listado
+                    </a>
+                    <a href="{{ route('inventory.loans.print', $loan) }}" target="_blank" class="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-black inline-flex items-center gap-1.5 shadow-sm">
+                        <span>🖨️</span> Imprimir Remisión
+                    </a>
+                    @if ($loan->isActive())
+                        <button type="button" @click="showReturnModal = true" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 inline-flex items-center gap-1 shadow-sm">
+                            <span>↩</span> Registrar Devolución
+                        </button>
+                        <button type="button" @click="showSettleModal = true" class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 inline-flex items-center gap-1 shadow-sm">
+                            <span>💰</span> Liquidar / Vender
+                        </button>
+                        @if ($loan->returnedUnits() == 0 && $loan->soldUnits() == 0)
+                            <button type="button" @click="showCancelModal = true" class="rounded-lg border border-rose-300 text-rose-700 px-2.5 py-1.5 text-xs font-bold hover:bg-rose-50">
+                                Anular
+                            </button>
+                        @endif
+                    @endif
+                </div>
             </x-slot>
         </x-page-header>
     </x-slot>
 
-    @php
-        $toastMessages = [];
-        if (session('status')) { $toastMessages[] = ['text' => session('status'), 'type' => 'success']; }
-        if ($errors->any()) { $toastMessages[] = ['text' => $errors->first() ?: 'Revisa los campos.', 'type' => 'error']; }
-    @endphp
-
-    <script id="inventory-toast-data" type="application/json">{{ json_encode($toastMessages) }}</script>
-
-    <div class="p-3 lg:p-5 max-w-6xl mx-auto space-y-5" x-data="{ showReturnModal: false, showSettleModal: false, showCancelModal: false }">
-        {{-- Status Bar & Overview --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-black border {{ $loan->statusBadgeClass() }}">
-                    {{ $loan->statusLabel() }}
-                </span>
-                <div>
-                    <h2 class="text-base font-black text-gray-900">{{ $loan->loan_number }}</h2>
-                    <span class="text-xs text-gray-500">Registrado el {{ $loan->created_at->format('d/m/Y h:i A') }} por {{ $loan->creator?->name ?? 'Usuario' }}</span>
-                </div>
+    <div class="p-3 lg:p-5 max-w-5xl mx-auto space-y-5" x-data="{ showReturnModal: false, showSettleModal: false, showCancelModal: false }">
+        @if (session('status'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800 shadow-sm flex items-center justify-between">
+                <span>{{ session('status') }}</span>
+                <button type="button" @click="$el.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900">✕</button>
             </div>
+        @endif
 
-            @if ($loan->isActive())
-                <div class="flex items-center gap-2">
-                    <button type="button" @click="showReturnModal = true" class="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                        Registrar Devolución
-                    </button>
-                    <button type="button" @click="showSettleModal = true" class="rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-blue-700 shadow-sm flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Liquidar (Venta)
-                    </button>
-                    @if ($loan->returnedUnits() === 0 && $loan->soldUnits() === 0)
-                        <button type="button" @click="showCancelModal = true" class="rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 px-3 py-2 text-xs font-bold">
-                            Anular
-                        </button>
-                    @endif
-                </div>
-            @endif
-        </div>
+        @if ($errors->any())
+            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800 shadow-sm">
+                @foreach ($errors->all() as $error)
+                    <div>{{ $error }}</div>
+                @endforeach
+            </div>
+        @endif
 
-        {{-- Grid: Details & Borrower info --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {{-- Borrower Details --}}
+        {{-- Overview Cards --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {{-- Borrower Card --}}
             <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
-                <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Datos del Prestatario</h3>
+                <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-blue-700">Prestatario / Receptor</h3>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border {{ $loan->statusBadgeClass() }}">
+                        {{ $loan->statusLabel() }}
+                    </span>
+                </div>
                 <div class="space-y-1.5 text-sm">
                     <div>
                         <span class="text-xs text-gray-400 block">Nombre:</span>
@@ -99,24 +97,30 @@
                             <span class="font-bold {{ $loan->isOverdue() ? 'text-rose-600' : 'text-gray-900' }}">
                                 {{ $loan->due_date->format('d/m/Y') }}
                                 @if ($loan->isOverdue())
-                                    <span class="text-xs text-rose-600 font-bold ml-1">(Vencido hace {{ $loan->due_date->diffInDays(now()) }} días)</span>
+                                    <span class="text-xs text-rose-600 block">(¡Vencido!)</span>
                                 @endif
                             </span>
                         @else
-                            <span class="text-gray-500">Sin fecha límite específica</span>
+                            <span class="text-gray-500">Sin fecha límite</span>
                         @endif
                     </div>
                     <div>
-                        <span class="text-xs text-gray-400 block">Notas / Observaciones:</span>
-                        <p class="text-xs text-gray-700 whitespace-pre-line mt-0.5">{{ $loan->notes ?: 'Sin notas registradas.' }}</p>
+                        <span class="text-xs text-gray-400 block">Registrado por:</span>
+                        <span class="font-semibold text-gray-700">{{ $loan->creator?->name ?? 'Sistema' }}</span>
                     </div>
+                    @if ($loan->notes)
+                        <div class="pt-1 border-t border-gray-100">
+                            <span class="text-xs text-gray-400 block">Notas:</span>
+                            <p class="text-xs text-gray-600 whitespace-pre-line">{{ $loan->notes }}</p>
+                        </div>
+                    @endif
                 </div>
             </div>
 
-            {{-- Units & Financial balance --}}
-            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
-                <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Balance de Mercancía</h3>
-                <div class="space-y-2">
+            {{-- Balance summary --}}
+            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-2">
+                <h3 class="text-xs font-black uppercase tracking-wider text-gray-500">Balance del Préstamo</h3>
+                <div class="space-y-2 pt-1">
                     <div class="flex justify-between items-center text-sm">
                         <span class="text-gray-500">Total Prestado:</span>
                         <span class="font-black text-gray-900">{{ $loan->total_items }} unds</span>
@@ -165,38 +169,31 @@
                         @foreach ($loan->items as $item)
                             <tr>
                                 <td class="px-4 py-3">
-                                    <span class="font-bold text-gray-900 block">{{ $item->product?->name ?? 'Producto eliminado' }}</span>
-                                    @if ($item->product?->sku)
-                                        <span class="text-xs text-gray-400">SKU: {{ $item->product->sku }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-gray-900 block">{{ $item->displayName() }}</span>
+                                        @if ($item->product_type === 'quick')
+                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">Rápido</span>
+                                        @endif
+                                    </div>
+                                    @if ($item->displaySku())
+                                        <span class="text-xs text-gray-400">SKU: {{ $item->displaySku() }}</span>
                                     @endif
                                     @if ($item->notes)
-                                        <span class="text-xs text-gray-500 block italic mt-0.5">{{ $item->notes }}</span>
+                                        <p class="text-xs text-gray-500 italic mt-0.5">{{ $item->notes }}</p>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-center font-bold text-gray-800">
-                                    {{ $item->quantity_lent }}
-                                </td>
-                                <td class="px-4 py-3 text-center font-bold text-emerald-700">
-                                    {{ $item->quantity_returned }}
-                                </td>
-                                <td class="px-4 py-3 text-center font-bold text-blue-700">
-                                    {{ $item->quantity_sold }}
-                                </td>
-                                <td class="px-4 py-3 text-center font-black text-amber-800 bg-amber-50">
-                                    {{ $item->pendingUnits() }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-xs text-gray-600">
-                                    ${{ number_format($item->unit_price, 0, ',', '.') }}
-                                </td>
-                                <td class="px-4 py-3 text-right font-bold text-gray-900">
-                                    ${{ number_format($item->quantity_lent * $item->unit_price, 0, ',', '.') }}
-                                </td>
+                                <td class="px-4 py-3 text-center font-bold">{{ $item->quantity_lent }}</td>
+                                <td class="px-4 py-3 text-center font-bold text-emerald-700">{{ $item->quantity_returned }}</td>
+                                <td class="px-4 py-3 text-center font-bold text-blue-700">{{ $item->quantity_sold }}</td>
+                                <td class="px-4 py-3 text-center font-black text-amber-800 bg-amber-50">{{ $item->pendingUnits() }}</td>
+                                <td class="px-4 py-3 text-right text-xs">${{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                                <td class="px-4 py-3 text-right font-bold text-gray-900">${{ number_format($item->quantity_lent * $item->unit_price, 0, ',', '.') }}</td>
                             </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-50 border-t border-gray-200 text-xs font-bold text-gray-900">
                         <tr>
-                            <td class="px-4 py-3">TOTALES</td>
+                            <td class="px-4 py-3 uppercase">Totales</td>
                             <td class="px-4 py-3 text-center">{{ $loan->total_items }}</td>
                             <td class="px-4 py-3 text-center text-emerald-700">{{ $loan->returnedUnits() }}</td>
                             <td class="px-4 py-3 text-center text-blue-700">{{ $loan->soldUnits() }}</td>
@@ -225,7 +222,7 @@
                             @if ($item->pendingUnits() > 0)
                                 <div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs">
                                     <div class="flex-1 mr-2">
-                                        <span class="font-bold text-gray-900 block">{{ $item->product?->name }}</span>
+                                        <span class="font-bold text-gray-900 block">{{ $item->displayName() }}</span>
                                         <span class="text-[11px] text-gray-500">Pendientes: {{ $item->pendingUnits() }}</span>
                                         <input type="hidden" name="returns[{{ $idx }}][item_id]" value="{{ $item->id }}">
                                     </div>
@@ -267,7 +264,7 @@
                             @if ($item->pendingUnits() > 0)
                                 <div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs">
                                     <div class="flex-1 mr-2">
-                                        <span class="font-bold text-gray-900 block">{{ $item->product?->name }}</span>
+                                        <span class="font-bold text-gray-900 block">{{ $item->displayName() }}</span>
                                         <span class="text-[11px] text-gray-500">Pendientes: {{ $item->pendingUnits() }} (${{ number_format($item->unit_price, 0, ',', '.') }}/u)</span>
                                         <input type="hidden" name="settle[{{ $idx }}][item_id]" value="{{ $item->id }}">
                                     </div>

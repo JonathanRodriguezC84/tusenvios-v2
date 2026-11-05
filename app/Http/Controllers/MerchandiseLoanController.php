@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InventoryProduct;
 use App\Models\InventoryMovement;
+use App\Models\InventoryProduct;
 use App\Models\MerchandiseLoan;
 use App\Models\MerchandiseLoanItem;
+use App\Models\QuickProduct;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,7 @@ class MerchandiseLoanController extends InventoryProductController
 {
     public function index(Request $request): \Illuminate\View\View
     {
-        $this->authorizeInventoryAccess();
+        $this->authorizeLoanAccess();
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
@@ -28,7 +29,7 @@ class MerchandiseLoanController extends InventoryProductController
         $query = $this->loanQuery($filters);
 
         $loans = (clone $query)
-            ->with(['items.product', 'creator'])
+            ->with(['items.product', 'items.quickProduct', 'creator'])
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
@@ -67,13 +68,57 @@ class MerchandiseLoanController extends InventoryProductController
 
     public function create(): \Illuminate\View\View
     {
-        $this->authorizeInventoryAccess();
+        $this->authorizeLoanAccess();
 
-        $products = $this->queryForOwner()
+        $owner = $this->ownerKeys();
+
+        // 1. QuickProducts del tenant
+        $quickProducts = QuickProduct::query()
+            ->when(
+                $owner['affiliated_company_id'],
+                fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+            )
             ->where('status', 'active')
             ->where('stock', '>', 0)
             ->orderBy('name')
-            ->get(['id', 'name', 'sku', 'price', 'cost', 'stock']);
+            ->get(['id', 'name', 'sku', 'price', 'cost', 'stock'])
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'key' => 'quick_' . $p->id,
+                'type' => 'quick',
+                'name' => $p->name,
+                'sku' => $p->sku,
+                'price' => (float) $p->price,
+                'cost' => (float) $p->cost,
+                'stock' => (int) $p->stock,
+                'badge' => 'Rápido',
+            ]);
+
+        // 2. InventoryProducts del tenant (si existen)
+        $invProducts = InventoryProduct::query()
+            ->when(
+                $owner['affiliated_company_id'],
+                fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+            )
+            ->where('status', 'active')
+            ->where('stock', '>', 0)
+            ->orderBy('name')
+            ->get(['id', 'name', 'sku', 'price', 'cost', 'stock'])
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'key' => 'inv_' . $p->id,
+                'type' => 'inventory',
+                'name' => $p->name,
+                'sku' => $p->sku,
+                'price' => (float) $p->price,
+                'cost' => (float) $p->cost,
+                'stock' => (int) $p->stock,
+                'badge' => 'Inventario',
+            ]);
+
+        $products = $quickProducts->concat($invProducts)->values();
 
         return view('inventory.loans.create', [
             'products' => $products,
@@ -85,7 +130,7 @@ class MerchandiseLoanController extends InventoryProductController
 
     public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $this->authorizeInventoryAccess();
+        $this->authorizeLoanAccess();
 
         $validated = $request->validate([
             'borrower_name' => ['required', 'string', 'max:150'],
@@ -97,6 +142,7 @@ class MerchandiseLoanController extends InventoryProductController
             'notes' => ['nullable', 'string', 'max:1000'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer'],
+            'items.*.product_type' => ['required', 'in:quick,inventory'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.notes' => ['nullable', 'string', 'max:255'],
         ], [
@@ -117,56 +163,111 @@ class MerchandiseLoanController extends InventoryProductController
 
             foreach ($validated['items'] as $itemInput) {
                 $productId = (int) $itemInput['product_id'];
+                $productType = $itemInput['product_type'];
                 $quantity = (int) $itemInput['quantity'];
 
-                $product = $this->queryForOwner()
-                    ->whereKey($productId)
-                    ->lockForUpdate()
-                    ->first();
+                if ($productType === 'quick') {
+                    $product = QuickProduct::query()
+                        ->when(
+                            $owner['affiliated_company_id'],
+                            fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                            fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+                        )
+                        ->whereKey($productId)
+                        ->lockForUpdate()
+                        ->first();
 
-                if (!$product) {
-                    throw ValidationException::withMessages([
-                        'items' => 'Uno de los productos seleccionados no existe o no pertenece a tu cuenta.',
-                    ]);
+                    if (!$product) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Uno de los productos rápidos seleccionados no existe o no pertenece a tu cuenta.',
+                        ]);
+                    }
+
+                    if ($product->status !== 'active') {
+                        throw ValidationException::withMessages([
+                            'items' => "El producto {$product->name} se encuentra inactivo.",
+                        ]);
+                    }
+
+                    if ($product->stock < $quantity) {
+                        throw ValidationException::withMessages([
+                            'items' => "Stock insuficiente para {$product->name}. Disponible en bodega: {$product->stock}.",
+                        ]);
+                    }
+
+                    // Descontar stock de producto rápido
+                    $product->decrement('stock', $quantity);
+
+                    $totalItems += $quantity;
+                    $lineTotal = $quantity * (float) $product->price;
+                    $totalValue += $lineTotal;
+
+                    $itemsData[] = [
+                        'inventory_product_id' => null,
+                        'quick_product_id' => $product->id,
+                        'product_type' => 'quick',
+                        'product_name' => $product->name,
+                        'product_sku' => $product->sku,
+                        'quantity_lent' => $quantity,
+                        'quantity_returned' => 0,
+                        'quantity_sold' => 0,
+                        'unit_price' => $product->price,
+                        'unit_cost' => $product->cost,
+                        'notes' => $itemInput['notes'] ?? null,
+                    ];
+                } else {
+                    $product = $this->queryForOwner()
+                        ->whereKey($productId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$product) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Uno de los productos de inventario no pertenece a tu cuenta.',
+                        ]);
+                    }
+
+                    if ($product->status !== 'active') {
+                        throw ValidationException::withMessages([
+                            'items' => "El producto {$product->name} se encuentra pausado.",
+                        ]);
+                    }
+
+                    if ($product->stock < $quantity) {
+                        throw ValidationException::withMessages([
+                            'items' => "Stock insuficiente para {$product->name}. Disponible en bodega: {$product->stock}.",
+                        ]);
+                    }
+
+                    // Descontar stock y registrar movimiento
+                    $product->decrement('stock', $quantity);
+                    $product->refresh();
+
+                    $product->movements()->create(array_merge($owner, [
+                        'type' => 'loan_out',
+                        'quantity_delta' => -1 * $quantity,
+                        'stock_after' => $product->stock,
+                        'notes' => "Préstamo {$loanNumber} a {$validated['borrower_name']}",
+                    ]));
+
+                    $totalItems += $quantity;
+                    $lineTotal = $quantity * (float) $product->price;
+                    $totalValue += $lineTotal;
+
+                    $itemsData[] = [
+                        'inventory_product_id' => $product->id,
+                        'quick_product_id' => null,
+                        'product_type' => 'inventory',
+                        'product_name' => $product->name,
+                        'product_sku' => $product->sku,
+                        'quantity_lent' => $quantity,
+                        'quantity_returned' => 0,
+                        'quantity_sold' => 0,
+                        'unit_price' => $product->price,
+                        'unit_cost' => $product->cost,
+                        'notes' => $itemInput['notes'] ?? null,
+                    ];
                 }
-
-                if ($product->status !== 'active') {
-                    throw ValidationException::withMessages([
-                        'items' => "El producto {$product->name} se encuentra pausado.",
-                    ]);
-                }
-
-                if ($product->stock < $quantity) {
-                    throw ValidationException::withMessages([
-                        'items' => "Stock insuficiente para {$product->name}. Disponible en bodega: {$product->stock}.",
-                    ]);
-                }
-
-                // Decrement stock
-                $product->decrement('stock', $quantity);
-                $product->refresh();
-
-                // Register inventory movement
-                $product->movements()->create(array_merge($owner, [
-                    'type' => 'loan_out',
-                    'quantity_delta' => -1 * $quantity,
-                    'stock_after' => $product->stock,
-                    'notes' => "Préstamo {$loanNumber} a {$validated['borrower_name']}",
-                ]));
-
-                $totalItems += $quantity;
-                $lineTotal = $quantity * (float) $product->price;
-                $totalValue += $lineTotal;
-
-                $itemsData[] = [
-                    'inventory_product_id' => $product->id,
-                    'quantity_lent' => $quantity,
-                    'quantity_returned' => 0,
-                    'quantity_sold' => 0,
-                    'unit_price' => $product->price,
-                    'unit_cost' => $product->cost,
-                    'notes' => $itemInput['notes'] ?? null,
-                ];
             }
 
             $loan = MerchandiseLoan::create([
@@ -204,7 +305,7 @@ class MerchandiseLoanController extends InventoryProductController
     {
         $this->authorizeLoan($loan);
 
-        $loan->load(['items.product', 'creator', 'tenant', 'affiliatedCompany']);
+        $loan->load(['items.product', 'items.quickProduct', 'creator', 'tenant', 'affiliatedCompany']);
 
         return view('inventory.loans.show', [
             'loan' => $loan,
@@ -216,7 +317,7 @@ class MerchandiseLoanController extends InventoryProductController
     {
         $this->authorizeLoan($loan);
 
-        $loan->load(['items.product', 'creator', 'tenant', 'affiliatedCompany']);
+        $loan->load(['items.product', 'items.quickProduct', 'creator', 'tenant', 'affiliatedCompany']);
 
         $user = Auth::user();
         $owner = $user->affiliatedCompany ?: $user->tenant;
@@ -260,31 +361,48 @@ class MerchandiseLoanController extends InventoryProductController
 
                 if ($qty > $pending) {
                     throw ValidationException::withMessages([
-                        'returns' => "No puedes devolver {$qty} unidades de {$item->product->name}. Pendientes: {$pending}.",
+                        'returns' => "No puedes devolver {$qty} unidades de {$item->displayName()}. Pendientes: {$pending}.",
                     ]);
                 }
 
-                $product = $this->queryForOwner()
-                    ->whereKey($item->inventory_product_id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                // Devolver stock según tipo de producto
+                if ($item->product_type === 'quick' || $item->quick_product_id) {
+                    $quickProduct = QuickProduct::query()
+                        ->when(
+                            $owner['affiliated_company_id'],
+                            fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                            fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+                        )
+                        ->whereKey($item->quick_product_id)
+                        ->lockForUpdate()
+                        ->first();
 
-                // Increment stock
-                $product->increment('stock', $qty);
-                $product->refresh();
+                    if ($quickProduct) {
+                        $quickProduct->increment('stock', $qty);
+                    }
+                } else {
+                    $product = $this->queryForOwner()
+                        ->whereKey($item->inventory_product_id)
+                        ->lockForUpdate()
+                        ->first();
 
-                // Record return movement
-                $note = "Devolución préstamo {$loan->loan_number} de {$loan->borrower_name}";
-                if (!empty($validated['return_notes'])) {
-                    $note .= " (" . trim($validated['return_notes']) . ")";
+                    if ($product) {
+                        $product->increment('stock', $qty);
+                        $product->refresh();
+
+                        $note = "Devolución préstamo {$loan->loan_number} de {$loan->borrower_name}";
+                        if (!empty($validated['return_notes'])) {
+                            $note .= " (" . trim($validated['return_notes']) . ")";
+                        }
+
+                        $product->movements()->create(array_merge($owner, [
+                            'type' => 'loan_return',
+                            'quantity_delta' => $qty,
+                            'stock_after' => $product->stock,
+                            'notes' => $note,
+                        ]));
+                    }
                 }
-
-                $product->movements()->create(array_merge($owner, [
-                    'type' => 'loan_return',
-                    'quantity_delta' => $qty,
-                    'stock_after' => $product->stock,
-                    'notes' => $note,
-                ]));
 
                 $item->increment('quantity_returned', $qty);
                 $anyProcessed = true;
@@ -296,7 +414,6 @@ class MerchandiseLoanController extends InventoryProductController
                 ]);
             }
 
-            // Recalculate loan status
             $this->recalculateLoanStatus($loan);
         });
 
@@ -336,11 +453,10 @@ class MerchandiseLoanController extends InventoryProductController
 
                 if ($qty > $pending) {
                     throw ValidationException::withMessages([
-                        'settle' => "No puedes liquidar {$qty} unidades de {$item->product->name}. Pendientes: {$pending}.",
+                        'settle' => "No puedes liquidar {$qty} unidades de {$item->displayName()}. Pendientes: {$pending}.",
                     ]);
                 }
 
-                // Since stock was already deducted at loan time, we just mark as sold
                 $item->increment('quantity_sold', $qty);
                 $anyProcessed = true;
             }
@@ -387,20 +503,38 @@ class MerchandiseLoanController extends InventoryProductController
 
         DB::transaction(function () use ($loan, $owner) {
             foreach ($loan->items as $item) {
-                $product = $this->queryForOwner()
-                    ->whereKey($item->inventory_product_id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                if ($item->product_type === 'quick' || $item->quick_product_id) {
+                    $quickProduct = QuickProduct::query()
+                        ->when(
+                            $owner['affiliated_company_id'],
+                            fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                            fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+                        )
+                        ->whereKey($item->quick_product_id)
+                        ->lockForUpdate()
+                        ->first();
 
-                $product->increment('stock', $item->quantity_lent);
-                $product->refresh();
+                    if ($quickProduct) {
+                        $quickProduct->increment('stock', $item->quantity_lent);
+                    }
+                } else {
+                    $product = $this->queryForOwner()
+                        ->whereKey($item->inventory_product_id)
+                        ->lockForUpdate()
+                        ->first();
 
-                $product->movements()->create(array_merge($owner, [
-                    'type' => 'loan_return',
-                    'quantity_delta' => $item->quantity_lent,
-                    'stock_after' => $product->stock,
-                    'notes' => "Anulación de préstamo {$loan->loan_number}",
-                ]));
+                    if ($product) {
+                        $product->increment('stock', $item->quantity_lent);
+                        $product->refresh();
+
+                        $product->movements()->create(array_merge($owner, [
+                            'type' => 'loan_return',
+                            'quantity_delta' => $item->quantity_lent,
+                            'stock_after' => $product->stock,
+                            'notes' => "Anulación de préstamo {$loan->loan_number}",
+                        ]));
+                    }
+                }
             }
 
             $loan->update(['status' => 'cancelled']);
@@ -465,7 +599,7 @@ class MerchandiseLoanController extends InventoryProductController
                         ->where('borrower_name', 'like', "%{$search}%")
                         ->orWhere('borrower_phone', 'like', "%{$search}%")
                         ->orWhere('borrower_document', 'like', "%{$search}%")
-                        ->orWhereHas('items.product', fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%"));
+                        ->orWhereHas('items', fn ($q) => $q->where('product_name', 'like', "%{$search}%")->orWhere('product_sku', 'like', "%{$search}%"));
                 });
             })
             ->when($filters['status'] ?? null, function ($query, $status) {
@@ -511,8 +645,22 @@ class MerchandiseLoanController extends InventoryProductController
         return $number;
     }
 
+    protected function authorizeLoanAccess(): void
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->accountIsActive()) {
+            abort(403, 'Acceso no autorizado.');
+        }
+
+        if (! $user->isSuperAdmin() && ! $user->tenant_id && ! $user->affiliated_company_id) {
+            abort(403, 'Debes pertenecer a una tienda para gestionar préstamos.');
+        }
+    }
+
     protected function authorizeLoan(MerchandiseLoan $loan): void
     {
+        $this->authorizeLoanAccess();
+
         $keys = $this->ownerKeys();
 
         abort_if(
