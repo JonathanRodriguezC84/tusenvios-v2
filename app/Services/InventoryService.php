@@ -78,6 +78,8 @@ class InventoryService
             'restock' => 'Reposicion',
             'manual_in' => 'Entrada',
             'manual_out' => 'Salida',
+            'loan_out' => 'Préstamo',
+            'loan_return' => 'Devolución préstamo',
             'status_change' => 'Estado',
         ];
     }

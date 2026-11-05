@@ -22,6 +22,7 @@
     <x-slot name="header">
         <x-page-header eyebrow="Inventario" title="Listado" description="Gestiona tus productos, stock y precios.">
             <x-slot name="actions">
+                <a href="{{ route('inventory.loans.index') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Préstamos</a>
                 <a href="{{ route('inventory.movements') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Movimientos</a>
                 <a href="{{ route('inventory.reports.sales') }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Reportes</a>
                 <a href="{{ route('inventory.create') }}" class="rounded-lg text-sm font-bold text-white px-4 py-1.5 shadow-sm" style="background:{{ $theme['color'] }}">+ Agregar</a>

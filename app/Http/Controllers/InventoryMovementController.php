@@ -15,7 +15,7 @@ class InventoryMovementController extends InventoryProductController
         $this->authorizeInventoryAccess();
 
         $filters = $request->validate([
-            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,status_change'],
+            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,loan_out,loan_return,status_change'],
             'search' => ['nullable', 'string', 'max:120'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],
@@ -94,7 +94,7 @@ class InventoryMovementController extends InventoryProductController
         $this->authorizeInventoryAccess();
 
         $filters = $request->validate([
-            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,status_change'],
+            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,loan_out,loan_return,status_change'],
             'search' => ['nullable', 'string', 'max:120'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],
@@ -134,7 +134,7 @@ class InventoryMovementController extends InventoryProductController
         $this->authorizeInventoryAccess();
 
         $filters = $request->validate([
-            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,status_change'],
+            'type' => ['nullable', 'in:initial,adjustment,shipment,restock,manual_in,manual_out,loan_out,loan_return,status_change'],
             'search' => ['nullable', 'string', 'max:120'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],

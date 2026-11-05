@@ -15,6 +15,7 @@ use App\Http\Controllers\InventoryProductController;
 use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\InventoryImportController;
 use App\Http\Controllers\InventoryReportController;
+use App\Http\Controllers\MerchandiseLoanController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuickProductController;
@@ -32,6 +33,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/deploy/{key}', DeployController::class);
 Route::get('/deploy/{key}/log', [DeployController::class, 'log']);
 Route::get('/deploy/{key}/view/recipients', [DeployController::class, 'checkView']);
+Route::get('/deploy/{key}/list', [DeployController::class, 'listFiles']);
 Route::get('/deploy/{key}/data/recipients', [DeployController::class, 'checkData']);
 
 Route::get('/', function () {
@@ -145,6 +147,15 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::patch('/inventory/{inventoryProduct}', [InventoryProductController::class, 'update'])->name('inventory.update');
     Route::post('/inventory/{inventoryProduct}/movement', [InventoryMovementController::class, 'movement'])->name('inventory.movement');
     Route::delete('/inventory/{inventoryProduct}', [InventoryProductController::class, 'destroy'])->name('inventory.destroy');
+
+    Route::get('/inventory/loans', [MerchandiseLoanController::class, 'index'])->name('inventory.loans.index');
+    Route::get('/inventory/loans/create', [MerchandiseLoanController::class, 'create'])->name('inventory.loans.create');
+    Route::post('/inventory/loans', [MerchandiseLoanController::class, 'store'])->name('inventory.loans.store');
+    Route::get('/inventory/loans/{loan}', [MerchandiseLoanController::class, 'show'])->name('inventory.loans.show');
+    Route::get('/inventory/loans/{loan}/print', [MerchandiseLoanController::class, 'print'])->name('inventory.loans.print');
+    Route::post('/inventory/loans/{loan}/return', [MerchandiseLoanController::class, 'returnItems'])->name('inventory.loans.return');
+    Route::post('/inventory/loans/{loan}/settle', [MerchandiseLoanController::class, 'settleItems'])->name('inventory.loans.settle');
+    Route::post('/inventory/loans/{loan}/cancel', [MerchandiseLoanController::class, 'cancel'])->name('inventory.loans.cancel');
 
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
     Route::get('/shipments/export', [ShipmentController::class, 'export'])->name('shipments.export');
