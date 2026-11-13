@@ -171,7 +171,7 @@ class Shipment extends Model
 
     public function canBeEdited(): bool
     {
-        return in_array($this->status, ['created', 'printed'], true);
+        return ! in_array($this->status, ['delivered', 'returned', 'cancelled'], true);
     }
 
     public function canBeCancelled(): bool
