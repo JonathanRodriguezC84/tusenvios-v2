@@ -41,7 +41,7 @@
         </x-page-header>
     </x-slot>
 
-    <div class="flex h-full flex-col p-3 sm:p-4 lg:p-4">
+    <div class="flex min-h-full flex-col p-3 sm:p-4 lg:mx-auto lg:w-full lg:max-w-7xl lg:justify-center lg:px-10 lg:py-7">
         @if ($operationHealth['stale'] > 0)
             <div class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
                 <p class="text-sm font-semibold text-amber-800">
@@ -236,7 +236,7 @@
             </div>
         </section>
 
-        <div class="mt-5 mb-2 flex items-center gap-2">
+        <div class="mt-5 lg:mt-3 mb-2 flex items-center gap-2">
             <h2 class="text-sm font-bold uppercase tracking-wider text-gray-900">Resumen de logistica</h2>
         </div>
 
@@ -484,7 +484,7 @@
             </section>
         @endif
 
-        <div class="mt-4 mb-2 flex items-center gap-2">
+        <div class="mt-4 lg:mt-3 mb-2 flex items-center gap-2">
             <h2 class="text-sm font-bold uppercase tracking-wider text-gray-900">Resumen operacion mensual</h2>
         </div>
 
