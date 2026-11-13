@@ -1115,6 +1115,7 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
         ['presets' => $senderPresets, 'companyDefaults' => $companySenderPresetKeys] = $this->senderPresetData($tenant, $companies);
         $shipment->load('inventoryMovements.product');
         $usesInventory = $shipment->inventoryMovements->where('type', 'shipment')->isNotEmpty();
+        $quickProducts = $usesInventory ? collect() : $this->quickProductsForUser();
 
         $senderPresets = array_merge([
             'current' => [
@@ -1128,7 +1129,7 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
             ],
         ], $senderPresets);
 
-        return view('shipments.edit', compact('shipment', 'companies', 'deliveryZones', 'deliveryZoneSuggestions', 'senderPresets', 'companySenderPresetKeys', 'usesInventory'));
+        return view('shipments.edit', compact('shipment', 'companies', 'deliveryZones', 'deliveryZoneSuggestions', 'senderPresets', 'companySenderPresetKeys', 'usesInventory', 'quickProducts'));
     }
 
     public function update(UpdateShipmentRequest $request, Shipment $shipment): \Illuminate\Http\RedirectResponse

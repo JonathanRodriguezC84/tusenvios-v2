@@ -124,9 +124,27 @@
                                 <option value="cod" @selected(old('payment_method', $shipment->payment_method) === 'cod')>Contraentrega</option>
                             </select>
                         </label>
+                        @if (! $usesInventory && isset($quickProducts) && $quickProducts->isNotEmpty())
+                            <label class="grid gap-1 text-sm font-semibold text-gray-700 sm:col-span-2">
+                                Cambiar producto (Productos rapidos)
+                                <select id="edit_quick_product_select" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
+                                    <option value="">-- Mantener contenido actual --</option>
+                                    @foreach ($quickProducts as $qp)
+                                        <option
+                                            value="{{ $qp->id ?? $qp->name }}"
+                                            data-name="{{ $qp->name }}"
+                                            data-package-type="{{ $qp->package_type ?? 'merchandise' }}"
+                                            data-price="{{ (int) ($qp->price ?? 0) }}"
+                                        >
+                                            {{ $qp->name }}@if (($qp->price ?? 0) > 0) - ${{ number_format((float) $qp->price, 0, ',', '.') }}@endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        @endif
                         <label class="grid gap-1 text-sm font-semibold text-gray-700 sm:col-span-2">
                             Descripcion del contenido
-                            <input name="content_description" value="{{ old('content_description', $shipment->content_description) }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
+                            <input id="edit_content_description" name="content_description" value="{{ old('content_description', $shipment->content_description) }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
                         </label>
                         <label class="grid gap-1 text-sm font-semibold text-gray-700">
                             Valor declarado
@@ -567,6 +585,35 @@ document.addEventListener('DOMContentLoaded', function () {
     localityText.addEventListener('change', syncHidden);
 
     applyMode();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const qpSelect = document.getElementById('edit_quick_product_select');
+    if (!qpSelect) return;
+
+    qpSelect.addEventListener('change', function () {
+        const option = qpSelect.options[qpSelect.selectedIndex];
+        if (!option || !option.value) return;
+
+        const name = option.dataset.name || '';
+        const packageType = option.dataset.packageType || '';
+        const price = parseInt(option.dataset.price || '0', 10);
+
+        const contentInput = document.getElementById('edit_content_description');
+        const packageSelect = document.querySelector('select[name="package_type"]');
+        const collectionInput = document.querySelector('input[name="collection_value"]');
+
+        if (contentInput && name) {
+            contentInput.value = name;
+        }
+        if (packageSelect && packageType && !packageSelect.disabled) {
+            packageSelect.value = packageType;
+        }
+        if (collectionInput && price > 0) {
+            collectionInput.value = price;
+        }
+    });
 });
 </script>
 </x-app-layout>
