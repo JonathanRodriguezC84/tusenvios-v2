@@ -7,7 +7,7 @@
 
     $loanItemsState = $loan->items->mapWithKeys(fn ($i) => [
         $i->id => [
-            'action' => 'none',
+            'checked' => false,
             'quantity' => $i->pendingUnits(),
             'pending' => $i->pendingUnits(),
             'unit_price' => (float) $i->unit_price,
@@ -23,7 +23,7 @@
     </style>
 
     <x-slot name="header">
-        <x-page-header eyebrow="Productos / Préstamos" title="Préstamo {{ $loan->loan_number }}" description="Gestiona devoluciones a bodega o liquida productos como venta.">
+        <x-page-header eyebrow="Productos / Préstamos" title="Préstamo {{ $loan->loan_number }}" description="Preselecciona los productos de la lista y elige si se devuelven a bodega o se liquidan como venta.">
             <x-slot name="actions">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                     <a href="{{ route('inventory.loans.index') }}" class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
@@ -43,7 +43,7 @@
     </x-slot>
 
     <div class="qp-page p-3 lg:p-5 h-full flex flex-col gap-3"
-         x-data="loanInlineManager({{ $loanItemsState->toJson() }})"
+         x-data="loanSelectionManager({{ $loanItemsState->toJson() }})"
          @loan-modal.window="if ($event.detail === 'cancel') showCancelModal = true">
 
         @if (session('status'))
@@ -124,7 +124,7 @@
 
         {{-- Tabla principal estilo Administrar productos --}}
         <section class="flex-1 min-h-0 flex flex-col">
-            <form method="POST" action="{{ route('inventory.loans.process', $loan) }}" @submit="validateSubmit($event)" class="rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col min-h-0 flex-1">
+            <form id="loan-process-form" method="POST" action="{{ route('inventory.loans.process', $loan) }}" class="rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col min-h-0 flex-1">
                 @csrf
 
                 <div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
@@ -133,7 +133,7 @@
                         <p class="text-xs text-gray-500">
                             {{ $loan->items->count() }} producto(s) ·
                             @if ($loan->isActive())
-                                Selecciona en cada producto si se devuelve a bodega o se liquida como venta.
+                                Marca los cuadros a la izquierda para habilitar Devolución o Venta.
                             @else
                                 Este préstamo ya se encuentra cerrado.
                             @endif
@@ -142,14 +142,18 @@
 
                     @if ($loan->isActive())
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" @click="setAllAction('return')" class="qp-btn qp-btn-secondary cursor-pointer">
-                                ↩ Todos Devueltos
+                            <span class="text-xs font-bold text-gray-600 mr-1" x-show="selectedCount() > 0" x-text="selectedUnits() + ' und(s) · ' + formatMoney(selectedAmount())"></span>
+                            <button type="button"
+                                    @click="submitAction('return')"
+                                    :disabled="selectedUnits() <= 0"
+                                    class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-opacity">
+                                <span>↩</span> Devolución
                             </button>
-                            <button type="button" @click="setAllAction('sell')" class="qp-btn qp-btn-primary cursor-pointer">
-                                💰 Todos Vendidos
-                            </button>
-                            <button type="button" @click="setAllAction('none')" class="qp-btn border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 cursor-pointer">
-                                Limpiar
+                            <button type="button"
+                                    @click="submitAction('sell')"
+                                    :disabled="selectedUnits() <= 0"
+                                    class="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-opacity">
+                                <span>💰</span> Venta
                             </button>
                         </div>
                     @endif
@@ -160,29 +164,48 @@
                         <table class="w-full text-left text-sm text-gray-700">
                             <thead class="border-b border-gray-200 bg-gray-50 text-xs font-bold uppercase text-gray-500">
                                 <tr>
-                                    <th class="px-5 py-2.5">Nombre de producto</th>
+                                    @if ($loan->isActive())
+                                        <th class="pl-5 pr-2 py-2.5 w-10">
+                                            <input type="checkbox"
+                                                   :checked="allSelected()"
+                                                   @change="toggleAll($event.target.checked)"
+                                                   title="Seleccionar todos los pendientes"
+                                                   class="h-4 w-4 rounded border-gray-300 text-blue-700 focus:ring-blue-600 cursor-pointer">
+                                        </th>
+                                    @endif
+                                    <th class="px-4 py-2.5">Nombre de producto</th>
                                     <th class="px-3 py-2.5 text-center">Prestado</th>
                                     <th class="px-3 py-2.5 text-center">Devuelto</th>
                                     <th class="px-3 py-2.5 text-center">Vendido</th>
                                     <th class="px-3 py-2.5 text-center">Pendiente</th>
-                                    <th class="px-3 py-2.5 text-right">Precio unit.</th>
-                                    <th class="px-3 py-2.5 text-right">Subtotal</th>
                                     @if ($loan->isActive())
-                                        <th class="px-4 py-2.5">Decisión</th>
-                                        <th class="px-4 py-2.5 text-center">UND</th>
+                                        <th class="px-3 py-2.5 text-center">Cant.</th>
                                     @endif
+                                    <th class="px-3 py-2.5 text-right">Precio unit.</th>
+                                    <th class="px-5 py-2.5 text-right">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 bg-white">
                                 @foreach ($loan->items as $idx => $item)
                                     <tr class="transition-colors"
                                         @if ($loan->isActive() && $item->pendingUnits() > 0)
-                                            :class="{
-                                                'bg-emerald-50/40': state[{{ $item->id }}].action === 'return',
-                                                'bg-blue-50/40': state[{{ $item->id }}].action === 'sell'
-                                            }"
+                                            :class="state[{{ $item->id }}].checked ? 'bg-blue-50/50' : 'hover:bg-gray-50'"
                                         @endif>
-                                        <td class="px-5 py-3">
+                                        @if ($loan->isActive())
+                                            <td class="pl-5 pr-2 py-3 w-10">
+                                                @if ($item->pendingUnits() > 0)
+                                                    <input type="hidden" name="actions[{{ $idx }}][item_id]" value="{{ $item->id }}">
+                                                    <input type="hidden" name="actions[{{ $idx }}][action]" :value="state[{{ $item->id }}].checked ? bulkAction : 'none'">
+                                                    <input type="checkbox"
+                                                           x-model="state[{{ $item->id }}].checked"
+                                                           @change="onCheckChange({{ $item->id }})"
+                                                           class="h-4 w-4 rounded border-gray-300 text-blue-700 focus:ring-blue-600 cursor-pointer">
+                                                @else
+                                                    <span class="text-xs text-gray-300">—</span>
+                                                @endif
+                                            </td>
+                                        @endif
+                                        <td class="px-4 py-3 cursor-pointer" @if($loan->isActive() && $item->pendingUnits() > 0) @click="toggleRow({{ $item->id }})" @endif>
                                             <div class="font-bold text-gray-900">{{ $item->displayName() }}</div>
                                             <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
                                                 @if ($item->displaySku())
@@ -197,40 +220,24 @@
                                         <td class="px-3 py-3 text-center font-semibold text-emerald-700">{{ $item->quantity_returned }}</td>
                                         <td class="px-3 py-3 text-center font-semibold text-blue-700">{{ $item->quantity_sold }}</td>
                                         <td class="px-3 py-3 text-center font-black text-amber-800">{{ $item->pendingUnits() }}</td>
-                                        <td class="px-3 py-3 text-right text-xs font-semibold text-gray-700">${{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                                        <td class="px-3 py-3 text-right font-bold text-gray-900">${{ number_format($item->quantity_lent * $item->unit_price, 0, ',', '.') }}</td>
-
                                         @if ($loan->isActive())
-                                            <td class="px-4 py-2.5 min-w-[190px]">
-                                                @if ($item->pendingUnits() > 0)
-                                                    <input type="hidden" name="actions[{{ $idx }}][item_id]" value="{{ $item->id }}">
-                                                    <select name="actions[{{ $idx }}][action]"
-                                                            x-model="state[{{ $item->id }}].action"
-                                                            @change="onActionChange({{ $item->id }})"
-                                                            class="qp-field font-semibold">
-                                                        <option value="none">Mantener pendiente</option>
-                                                        <option value="return">↩ Devolver a bodega</option>
-                                                        <option value="sell">💰 Vender / Liquidar</option>
-                                                    </select>
-                                                @else
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Completado</span>
-                                                @endif
-                                            </td>
-                                            <td class="px-4 py-2.5 text-center w-24">
+                                            <td class="px-3 py-2.5 text-center w-24">
                                                 @if ($item->pendingUnits() > 0)
                                                     <input type="number"
                                                            name="actions[{{ $idx }}][quantity]"
                                                            x-model.number="state[{{ $item->id }}].quantity"
-                                                           :readonly="state[{{ $item->id }}].action === 'none'"
-                                                           min="0"
+                                                           :readonly="!state[{{ $item->id }}].checked"
+                                                           min="1"
                                                            max="{{ $item->pendingUnits() }}"
                                                            class="qp-field text-center font-bold"
-                                                           :class="state[{{ $item->id }}].action === 'none' ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'">
+                                                           :class="!state[{{ $item->id }}].checked ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-900'">
                                                 @else
-                                                    <span class="text-xs text-gray-300">—</span>
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">Listo</span>
                                                 @endif
                                             </td>
                                         @endif
+                                        <td class="px-3 py-3 text-right text-xs font-semibold text-gray-700">${{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                                        <td class="px-5 py-3 text-right font-bold text-gray-900">${{ number_format($item->quantity_lent * $item->unit_price, 0, ',', '.') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -239,25 +246,25 @@
 
                     @if ($loan->isActive())
                         <div class="border-t border-gray-200 bg-gray-50 px-5 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
-                            <div class="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-                                <div class="flex flex-wrap items-center gap-2 text-xs shrink-0">
-                                    <span class="rounded-md bg-emerald-100 px-2.5 py-1 font-bold text-emerald-800" x-show="returnUnits() > 0" x-text="'↩ ' + returnUnits() + ' a devolver'"></span>
-                                    <span class="rounded-md bg-blue-100 px-2.5 py-1 font-bold text-blue-800" x-show="sellUnits() > 0" x-text="'💰 ' + sellUnits() + ' a vender (' + formatMoney(sellAmount()) + ')'"></span>
-                                    <span class="font-semibold text-gray-500" x-show="returnUnits() === 0 && sellUnits() === 0">
-                                        Elige una decisión en los productos para continuar.
-                                    </span>
-                                </div>
-                                <input type="text"
-                                       name="process_notes"
-                                       placeholder="Nota opcional (ej: Pago Nequi / Devuelto en buen estado)..."
-                                       class="qp-field sm:max-w-sm">
-                            </div>
+                            <input type="text"
+                                   name="process_notes"
+                                   placeholder="Nota opcional (ej: Pago Nequi / Devuelto en buen estado)..."
+                                   class="qp-field sm:max-w-md">
 
-                            <button type="submit"
-                                    :disabled="returnUnits() === 0 && sellUnits() === 0"
-                                    class="qp-btn qp-btn-lg qp-btn-primary disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
-                                Guardar decisiones
-                            </button>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button"
+                                        @click="submitAction('return')"
+                                        :disabled="selectedUnits() <= 0"
+                                        class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-opacity">
+                                    <span>↩</span> Registrar Devolución
+                                </button>
+                                <button type="button"
+                                        @click="submitAction('sell')"
+                                        :disabled="selectedUnits() <= 0"
+                                        class="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-opacity">
+                                    <span>💰</span> Registrar Venta
+                                </button>
+                            </div>
                         </div>
                     @endif
                 </div>
@@ -282,50 +289,65 @@
     </div>
 
     <script>
-        function loanInlineManager(initialState) {
+        function loanSelectionManager(initialState) {
             return {
                 showCancelModal: false,
+                bulkAction: 'none',
                 state: initialState || {},
-                onActionChange(id) {
+                toggleRow(id) {
+                    const row = this.state[id];
+                    if (!row || row.pending <= 0) return;
+                    row.checked = !row.checked;
+                    this.onCheckChange(id);
+                },
+                onCheckChange(id) {
                     const row = this.state[id];
                     if (!row) return;
-                    if (row.action === 'none') {
-                        row.quantity = row.pending;
-                    } else if (!row.quantity || row.quantity <= 0 || row.quantity > row.pending) {
+                    if (row.checked && (!row.quantity || row.quantity <= 0 || row.quantity > row.pending)) {
                         row.quantity = row.pending;
                     }
                 },
-                setAllAction(action) {
-                    Object.keys(this.state).forEach(id => {
-                        if (this.state[id].pending > 0) {
-                            this.state[id].action = action;
-                            this.state[id].quantity = this.state[id].pending;
+                allSelected() {
+                    const pendingRows = Object.values(this.state).filter(r => r.pending > 0);
+                    return pendingRows.length > 0 && pendingRows.every(r => r.checked);
+                },
+                toggleAll(checked) {
+                    Object.values(this.state).forEach(r => {
+                        if (r.pending > 0) {
+                            r.checked = checked;
+                            if (checked && (!r.quantity || r.quantity <= 0 || r.quantity > r.pending)) {
+                                r.quantity = r.pending;
+                            }
                         }
                     });
                 },
-                returnUnits() {
+                selectedCount() {
+                    return Object.values(this.state).filter(r => r.checked && r.pending > 0).length;
+                },
+                selectedUnits() {
                     return Object.values(this.state).reduce((sum, r) => {
-                        return sum + (r.action === 'return' ? Math.max(0, Math.min(r.pending, Number(r.quantity) || 0)) : 0);
+                        if (!r.checked || r.pending <= 0) return sum;
+                        return sum + Math.max(0, Math.min(r.pending, Number(r.quantity) || 0));
                     }, 0);
                 },
-                sellUnits() {
+                selectedAmount() {
                     return Object.values(this.state).reduce((sum, r) => {
-                        return sum + (r.action === 'sell' ? Math.max(0, Math.min(r.pending, Number(r.quantity) || 0)) : 0);
-                    }, 0);
-                },
-                sellAmount() {
-                    return Object.values(this.state).reduce((sum, r) => {
-                        return sum + (r.action === 'sell' ? (Math.max(0, Math.min(r.pending, Number(r.quantity) || 0)) * (Number(r.unit_price) || 0)) : 0);
+                        if (!r.checked || r.pending <= 0) return sum;
+                        return sum + (Math.max(0, Math.min(r.pending, Number(r.quantity) || 0)) * (Number(r.unit_price) || 0));
                     }, 0);
                 },
                 formatMoney(amount) {
                     return '$' + new Intl.NumberFormat('es-CO').format(amount || 0);
                 },
-                validateSubmit(e) {
-                    if (this.returnUnits() === 0 && this.sellUnits() === 0) {
-                        e.preventDefault();
-                        alert('Selecciona al menos un producto para devolver o vender.');
+                submitAction(action) {
+                    if (this.selectedUnits() <= 0) {
+                        alert('Selecciona al menos un producto con el cuadro de la izquierda.');
+                        return;
                     }
+                    this.bulkAction = action;
+                    this.$nextTick(() => {
+                        document.getElementById('loan-process-form').submit();
+                    });
                 }
             };
         }
