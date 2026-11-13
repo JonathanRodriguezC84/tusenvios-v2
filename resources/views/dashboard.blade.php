@@ -45,10 +45,49 @@
         @media (min-width: 1024px) {
             .te-dashboard-shell {
                 width: 100%;
-                height: auto !important;
-                min-height: 0 !important;
-                padding: 2cm 1cm 2cm 1cm !important;
-                justify-content: flex-start;
+                height: 100% !important;
+                padding: 1cm !important;
+                justify-content: center;
+                overflow: hidden;
+            }
+            .te-dashboard-shell > div.flex.items-center {
+                margin-top: 0.55rem !important;
+                margin-bottom: 0.35rem !important;
+            }
+            .te-dashboard-shell > div.flex.items-center:first-of-type {
+                margin-top: 0 !important;
+            }
+            .te-dashboard-shell > section {
+                margin-top: 0 !important;
+                gap: 0.75rem !important;
+            }
+            .te-dashboard-shell > section > a,
+            .te-dashboard-shell > section > div {
+                padding: 0.7rem 0.9rem !important;
+            }
+            .te-dashboard-shell > section .sm\:h-9 {
+                height: 1.85rem !important;
+                width: 1.85rem !important;
+            }
+            .te-dashboard-shell > section .sm\:text-3xl {
+                font-size: 1.5rem !important;
+                line-height: 1.8rem !important;
+            }
+            .te-dashboard-shell > section .mt-2\.5 {
+                margin-top: 0.35rem !important;
+            }
+            .te-dashboard-shell > section .mt-3 {
+                margin-top: 0.4rem !important;
+            }
+            .te-dashboard-shell > section .h-8.shrink-0,
+            .te-dashboard-shell > section .h-9.shrink-0 {
+                height: 1.45rem !important;
+            }
+            .te-dashboard-shell > section .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 0.25rem !important;
+            }
+            .te-dashboard-shell > section .border-t.pt-2 {
+                padding-top: 0.35rem !important;
             }
         }
     </style>
