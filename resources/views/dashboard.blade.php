@@ -46,7 +46,7 @@
             .te-dashboard-shell {
                 width: 100%;
                 min-height: 100%;
-                padding: 1cm !important;
+                padding: 1cm 1cm 2cm 1cm !important;
                 justify-content: center;
             }
         }
