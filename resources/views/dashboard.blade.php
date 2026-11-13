@@ -41,7 +41,21 @@
         </x-page-header>
     </x-slot>
 
-    <div class="flex min-h-full flex-col p-3 sm:p-4 lg:mx-auto lg:w-full lg:max-w-7xl lg:justify-center lg:px-10 lg:py-7">
+    <style>
+        @media (min-width: 1024px) {
+            .te-dashboard-shell {
+                width: 100%;
+                max-width: 1160px;
+                min-height: 100%;
+                margin-left: auto;
+                margin-right: auto;
+                padding: 2.25rem 3rem !important;
+                justify-content: center;
+            }
+        }
+    </style>
+
+    <div class="te-dashboard-shell flex h-full flex-col p-3 sm:p-4">
         @if ($operationHealth['stale'] > 0)
             <div class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
                 <p class="text-sm font-semibold text-amber-800">
