@@ -46,7 +46,7 @@
             .te-dashboard-shell {
                 width: 100%;
                 height: 100% !important;
-                padding: 0.5cm 1cm !important;
+                padding: 1.5rem !important;
                 justify-content: center;
                 overflow: hidden;
             }

@@ -42,9 +42,9 @@
         <style>
             @media (min-width: 1024px) {
                 .app-content-frame { padding-left: 12rem !important; }
-                .app-content-frame > header > div { max-width: none; padding: 0.75rem 1rem; }
-                .app-content-frame main > div > div.mx-auto { max-width: none; padding-left: 1rem; padding-right: 1rem; }
-                .app-content-frame main [class~="py-8"], .app-content-frame main [class~="py-6"] { padding-top: 1rem; padding-bottom: 1rem; }
+                .app-content-frame > header > div { max-width: none; padding: 0.75rem 1.5rem; }
+                .app-content-frame main > div:first-of-type { padding: 1.5rem !important; }
+                .app-content-frame main > div:first-of-type > div.mx-auto { max-width: none; padding-left: 0 !important; padding-right: 0 !important; }
                 .app-content-frame [class~="p-5"] { padding: 1rem; }
             }
         </style>
