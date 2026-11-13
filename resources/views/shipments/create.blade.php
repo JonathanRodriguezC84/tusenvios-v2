@@ -221,16 +221,43 @@
 
                             $isFunda = (bool) preg_match('/\b(funda|estuche|case|cover)\b/iu', $working);
 
+                            $colorList = [
+                                'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
+                                'SIERRA BLUE', 'SPACE GRAY', 'ROSE GOLD', 'ROSA GOLD',
+                                'PLATA', 'SILVER', 'NEGRO', 'BLACK', 'BLANCO', 'WHITE',
+                                'AZUL REY', 'AZUL MARINO', 'AZUL CIELO', 'AZUL', 'BLUE',
+                                'ROJO', 'RED', 'VERDE MILITAR', 'VERDE MENTA', 'VERDE', 'GREEN',
+                                'ROSADO', 'ROSA', 'PINK', 'MORADO', 'PURPURA', 'PURPLE', 'VIOLETA', 'LAVANDA',
+                                'AMARILLO', 'YELLOW', 'NARANJA', 'ORANGE', 'GRIS', 'GRAY', 'GREY',
+                                'DORADO', 'ORO', 'GOLD', 'CELESTE', 'TORNASOL', 'ARCOIRIS', 'MULTICOLOR',
+                                'CAFE', 'MARRON', 'BEIGE', 'GRAFITO', 'BORGONA', 'BORGOÑA'
+                            ];
+
+                            $color = '';
+                            if (!$variant) {
+                                $upperWorking = mb_strtoupper($working, 'UTF-8');
+                                foreach ($colorList as $c) {
+                                    if (preg_match('/\b' . preg_quote($c, '/') . '\b/iu', $upperWorking)) {
+                                        $color = $c;
+                                        $working = preg_replace('/\b' . preg_quote($c, '/') . '\b/iu', ' ', $working, 1);
+                                        break;
+                                    }
+                                }
+                            }
+
                             $formattedModel = '';
                             $modelMatchedText = '';
                             $modelNum = '';
                             $suffix = '';
 
-                            if (preg_match('/\b(?:iphone|ip)\s*(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i', $working, $m)) {
+                            if (preg_match('/\bpara\s+(.+)$/iu', $working, $m)) {
                                 $modelMatchedText = $m[0];
-                                $modelNum = strtoupper($m[1]);
-                                $suffix = $m[2] ?? '';
-                            } elseif (preg_match('/\bpara\s+(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i', $working, $m)) {
+                                $formattedModel = mb_strtoupper(trim($m[1]), 'UTF-8');
+                                $formattedModel = preg_replace('/\bIP\b/u', 'IPHONE', $formattedModel);
+                                $formattedModel = preg_replace('/\bPROMAX\b/u', 'PRO MAX', $formattedModel);
+                                $formattedModel = preg_replace('/\s*\/\s*/u', ' / ', $formattedModel);
+                                $formattedModel = trim(preg_replace('/\s+/', ' ', $formattedModel));
+                            } elseif (preg_match('/\b(?:iphone|ip)\s*(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i', $working, $m)) {
                                 $modelMatchedText = $m[0];
                                 $modelNum = strtoupper($m[1]);
                                 $suffix = $m[2] ?? '';
@@ -249,7 +276,7 @@
                                 }
                             }
 
-                            if ($modelNum) {
+                            if (!$formattedModel && $modelNum) {
                                 $cleanSuffix = strtoupper(str_replace(' ', '', $suffix));
                                 $modelSuffix = match ($cleanSuffix) {
                                     'PM', 'PROMAX', 'PRO MAX' => 'PRO MAX',
@@ -260,33 +287,6 @@
                                     default => ''
                                 };
                                 $formattedModel = 'IPHONE ' . $modelNum . ($modelSuffix ? ' ' . $modelSuffix : '');
-                            } elseif (preg_match('/\bpara\s+(.+)$/iu', $working, $m)) {
-                                $modelMatchedText = $m[0];
-                                $formattedModel = mb_strtoupper(trim($m[1]), 'UTF-8');
-                            }
-
-                            $colorList = [
-                                'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
-                                'SIERRA BLUE', 'SPACE GRAY', 'ROSE GOLD', 'ROSA GOLD',
-                                'PLATA', 'SILVER', 'NEGRO', 'BLACK', 'BLANCO', 'WHITE',
-                                'AZUL REY', 'AZUL MARINO', 'AZUL CIELO', 'AZUL', 'BLUE',
-                                'ROJO', 'RED', 'VERDE MILITAR', 'VERDE MENTA', 'VERDE', 'GREEN',
-                                'ROSADO', 'ROSA', 'PINK', 'MORADO', 'PURPURA', 'PURPLE', 'VIOLETA', 'LAVANDA',
-                                'AMARILLO', 'YELLOW', 'NARANJA', 'ORANGE', 'GRIS', 'GRAY', 'GREY',
-                                'DORADO', 'ORO', 'GOLD', 'CELESTE', 'TORNASOL', 'ARCOIRIS', 'MULTICOLOR',
-                                'CAFE', 'MARRON', 'BEIGE', 'GRAFITO'
-                            ];
-
-                            $color = '';
-                            if (!$variant) {
-                                $upperWorking = mb_strtoupper($working, 'UTF-8');
-                                foreach ($colorList as $c) {
-                                    if (preg_match('/\b' . preg_quote($c, '/') . '\b/i', $upperWorking)) {
-                                        $color = $c;
-                                        $working = preg_replace('/\b' . preg_quote($c, '/') . '\b/i', ' ', $working, 1);
-                                        break;
-                                    }
-                                }
                             }
 
                             if ($modelMatchedText) {
@@ -375,52 +375,78 @@
 
                                 const isFunda = /\b(funda|estuche|case|cover)\b/i.test(working);
 
+                                const colorList = [
+                                    'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
+                                    'SIERRA BLUE', 'SPACE GRAY', 'ROSE GOLD', 'ROSA GOLD',
+                                    'PLATA', 'SILVER', 'NEGRO', 'BLACK', 'BLANCO', 'WHITE',
+                                    'AZUL REY', 'AZUL MARINO', 'AZUL CIELO', 'AZUL', 'BLUE',
+                                    'ROJO', 'RED', 'VERDE MILITAR', 'VERDE MENTA', 'VERDE', 'GREEN',
+                                    'ROSADO', 'ROSA', 'PINK', 'MORADO', 'PURPURA', 'PURPLE', 'VIOLETA', 'LAVANDA',
+                                    'AMARILLO', 'YELLOW', 'NARANJA', 'ORANGE', 'GRIS', 'GRAY', 'GREY',
+                                    'DORADO', 'ORO', 'GOLD', 'CELESTE', 'TORNASOL', 'ARCOIRIS', 'MULTICOLOR',
+                                    'CAFE', 'MARRON', 'BEIGE', 'GRAFITO', 'BORGONA', 'BORGOÑA'
+                                ];
+
+                                let color = '';
+                                if (!variant) {
+                                    const upperWorking = working.toUpperCase();
+                                    for (const c of colorList) {
+                                        const cRegex = new RegExp(`\\b${c}\\b`, 'i');
+                                        if (cRegex.test(upperWorking)) {
+                                            color = c;
+                                            working = working.replace(cRegex, ' ');
+                                            break;
+                                        }
+                                    }
+                                }
+
                                 let formattedModel = '';
                                 let modelNum = '';
                                 let suffix = '';
                                 let modelMatchedText = '';
 
-                                const explicitIpRegex = /\b(?:iphone|ip)\s*(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i;
-                                let m = working.match(explicitIpRegex);
-
-                                if (m) {
-                                    modelMatchedText = m[0];
-                                    modelNum = m[1].toUpperCase();
-                                    suffix = m[2] || '';
+                                const genericPara = working.match(/\bpara\s+(.+)$/i);
+                                if (genericPara) {
+                                    modelMatchedText = genericPara[0];
+                                    formattedModel = genericPara[1].trim().toUpperCase()
+                                        .replace(/\bIP\b/g, 'IPHONE')
+                                        .replace(/\bPROMAX\b/g, 'PRO MAX')
+                                        .replace(/\s*\/\s*/g, ' / ')
+                                        .replace(/\s+/g, ' ')
+                                        .trim();
                                 } else {
-                                    const paraRegex = /\bpara\s+(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i;
-                                    m = working.match(paraRegex);
+                                    const explicitIpRegex = /\b(?:iphone|ip)\s*(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i;
+                                    let m = working.match(explicitIpRegex);
+
                                     if (m) {
                                         modelMatchedText = m[0];
                                         modelNum = m[1].toUpperCase();
                                         suffix = m[2] || '';
                                     } else {
-                                        const compactRegex = /\b(?:para\s+)?(\d{1,2})(pm|promax|p|pro|plus|\+|mini|max)\b/i;
+                                        const compactRegex = /\b(\d{1,2})(pm|promax|p|pro|plus|\+|mini|max)\b/i;
                                         m = working.match(compactRegex);
                                         if (m) {
                                             modelMatchedText = m[0];
                                             modelNum = m[1].toUpperCase();
                                             suffix = m[2] || '';
-                                        }
-                                    }
-                                }
-
-                                if (!modelNum) {
-                                    const xRegex = /\b(?:para\s+)?(xr|xs\s*max|xsmax|xsm|xs|x|se)\b/i;
-                                    m = working.match(xRegex);
-                                    if (m) {
-                                        modelMatchedText = m[0];
-                                        const rawModel = m[1].toUpperCase().replace(/\s+/g, '');
-                                        if (rawModel === 'XSMAX' || rawModel === 'XSM') {
-                                            modelNum = 'XS';
-                                            suffix = 'PRO MAX';
                                         } else {
-                                            modelNum = rawModel;
+                                            const xRegex = /\b(xr|xs\s*max|xsmax|xsm|xs|x|se)\b/i;
+                                            m = working.match(xRegex);
+                                            if (m) {
+                                                modelMatchedText = m[0];
+                                                const rawModel = m[1].toUpperCase().replace(/\s+/g, '');
+                                                if (rawModel === 'XSMAX' || rawModel === 'XSM') {
+                                                    modelNum = 'XS';
+                                                    suffix = 'PRO MAX';
+                                                } else {
+                                                    modelNum = rawModel;
+                                                }
+                                            }
                                         }
                                     }
                                 }
 
-                                if (modelNum) {
+                                if (!formattedModel && modelNum) {
                                     const cleanSuffix = suffix.toUpperCase().replace(/\s+/g, '');
                                     let modelSuffix = '';
                                     if (cleanSuffix === 'PM' || cleanSuffix === 'PROMAX' || cleanSuffix === 'PRO MAX') {
@@ -435,37 +461,6 @@
                                         modelSuffix = 'MAX';
                                     }
                                     formattedModel = `IPHONE ${modelNum}${modelSuffix ? ' ' + modelSuffix : ''}`;
-                                } else {
-                                    const genericPara = working.match(/\bpara\s+(.+)$/i);
-                                    if (genericPara) {
-                                        modelMatchedText = genericPara[0];
-                                        formattedModel = genericPara[1].trim().toUpperCase();
-                                    }
-                                }
-
-                                const colorList = [
-                                    'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
-                                    'SIERRA BLUE', 'SPACE GRAY', 'ROSE GOLD', 'ROSA GOLD',
-                                    'PLATA', 'SILVER', 'NEGRO', 'BLACK', 'BLANCO', 'WHITE',
-                                    'AZUL REY', 'AZUL MARINO', 'AZUL CIELO', 'AZUL', 'BLUE',
-                                    'ROJO', 'RED', 'VERDE MILITAR', 'VERDE MENTA', 'VERDE', 'GREEN',
-                                    'ROSADO', 'ROSA', 'PINK', 'MORADO', 'PURPURA', 'PURPLE', 'VIOLETA', 'LAVANDA',
-                                    'AMARILLO', 'YELLOW', 'NARANJA', 'ORANGE', 'GRIS', 'GRAY', 'GREY',
-                                    'DORADO', 'ORO', 'GOLD', 'CELESTE', 'TORNASOL', 'ARCOIRIS', 'MULTICOLOR',
-                                    'CAFE', 'MARRON', 'BEIGE', 'GRAFITO'
-                                ];
-
-                                let color = '';
-                                if (!variant) {
-                                    const upperWorking = working.toUpperCase();
-                                    for (const c of colorList) {
-                                        const cRegex = new RegExp(`\\b${c}\\b`, 'i');
-                                        if (cRegex.test(upperWorking)) {
-                                            color = c;
-                                            working = working.replace(cRegex, ' ');
-                                            break;
-                                        }
-                                    }
                                 }
 
                                 if (modelMatchedText) {

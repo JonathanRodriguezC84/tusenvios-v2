@@ -663,8 +663,12 @@ Audit::log('shipment.created', $shipment, "Guia {$shipment->guide_number} creada
                 fn ($query) => $query->where('affiliated_company_id', $user->affiliated_company_id),
                 fn ($query) => $query->where('tenant_id', $tenantId)->whereNull('affiliated_company_id')
             )
+            ->orderByDesc('stock')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->unique(fn ($p) => $p->sku ? 'sku:' . strtoupper(trim($p->sku)) : 'name:' . mb_strtoupper(trim($p->name), 'UTF-8'))
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
 
         if ($products->isNotEmpty()) {
             return $products;
