@@ -391,7 +391,7 @@ $prefillRecipient = null;
 
         [$prefillName, $prefillLastname] = $prefillRecipient?->normalizedNameParts() ?? [null, null];
 
-        $prefillLocality = $prefillRecipient?->city ?? $prefillRecipient?->locality;
+        $prefillLocality = $prefillRecipient?->locality ?: $prefillRecipient?->city;
         $prefillDepartmentId = null;
         if ($prefillLocality) {
             $normalized = static function (string $value): string {

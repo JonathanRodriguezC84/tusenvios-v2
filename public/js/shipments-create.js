@@ -542,21 +542,24 @@
             }
             if (match) {
                 citySelect.value = match.value;
-                citySelect.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            var cityToSelect = D.oldRecipientCity || '';
-            if (!cityToSelect && D.prefillRecipientCity) cityToSelect = D.prefillRecipientCity;
-            if (cityToSelect) {
+                citySelect.dispatchEvent(new Event('input', { bubbles: true }));
                 await loadLocalities(citySelect.value);
-                var locSelect = document.getElementById('recipient_city');
-                if (locSelect) {
-                    var locOptions = Array.from(locSelect.options);
-                    var targetCity = norm(cityToSelect);
-                    var locMatch = locOptions.find(function (opt) { return norm(opt.value) === targetCity; });
-                    if (!locMatch && targetCity) {
-                        locMatch = locOptions.find(function (opt) { return opt.value && norm(opt.value).indexOf(targetCity) === 0; });
+                var cityToSelect = D.oldRecipientCity || '';
+                if (!cityToSelect && D.prefillRecipientCity) cityToSelect = D.prefillRecipientCity;
+                if (cityToSelect) {
+                    var locSelect = document.getElementById('recipient_city');
+                    if (locSelect) {
+                        var locOptions = Array.from(locSelect.options);
+                        var targetCity = norm(cityToSelect);
+                        var locMatch = locOptions.find(function (opt) { return norm(opt.value) === targetCity; });
+                        if (!locMatch && targetCity) {
+                            locMatch = locOptions.find(function (opt) { return opt.value && norm(opt.value).indexOf(targetCity) === 0; });
+                        }
+                        if (locMatch) {
+                            locSelect.value = locMatch.value;
+                            locSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
                     }
-                    if (locMatch) locSelect.value = locMatch.value;
                 }
             }
         });
