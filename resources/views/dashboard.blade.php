@@ -62,14 +62,17 @@
                 margin-top: 0 !important;
                 gap: 0.85rem !important;
             }
-            .te-dashboard-shell > section.xl\:grid-cols-4,
+            .te-dashboard-shell > section.xl\:grid-cols-4 {
+                flex: 1 1 auto;
+                min-height: 0;
+            }
             .te-dashboard-shell > section.lg\:grid-cols-3 {
-                flex: 1 1 0%;
+                flex: 1.15 1 auto;
                 min-height: 0;
             }
             .te-dashboard-shell > section > a,
             .te-dashboard-shell > section > div {
-                padding: 0.95rem 1.05rem !important;
+                padding: 0.9rem 1.05rem !important;
                 height: 100%;
             }
             .te-dashboard-shell > section .sm\:h-9 {
@@ -77,21 +80,23 @@
                 width: 2.15rem !important;
             }
             .te-dashboard-shell > section .sm\:text-3xl {
-                font-size: 1.75rem !important;
-                line-height: 2rem !important;
+                font-size: 1.7rem !important;
+                line-height: 1.95rem !important;
             }
             .te-dashboard-shell > section .mt-2\.5 {
-                margin-top: 0.5rem !important;
+                margin-top: 0.45rem !important;
             }
             .te-dashboard-shell > section .mt-3 {
-                margin-top: 0.55rem !important;
+                margin-top: 0.5rem !important;
             }
-            .te-dashboard-shell > section .h-8.shrink-0,
+            .te-dashboard-shell > section .h-8.shrink-0 {
+                height: 1.9rem !important;
+            }
             .te-dashboard-shell > section .h-9.shrink-0 {
-                height: 2rem !important;
+                height: 2.35rem !important;
             }
             .te-dashboard-shell > section .space-y-2 > :not([hidden]) ~ :not([hidden]) {
-                margin-top: 0.25rem !important;
+                margin-top: 0.4rem !important;
             }
             .te-dashboard-shell > section .border-t.pt-2 {
                 padding-top: 0.35rem !important;
