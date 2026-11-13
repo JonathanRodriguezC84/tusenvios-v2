@@ -155,6 +155,7 @@ Route::middleware(['auth', 'active.user'])->group(function () {
     Route::get('/inventory/loans/{loan}/print', [MerchandiseLoanController::class, 'print'])->name('inventory.loans.print');
     Route::post('/inventory/loans/{loan}/return', [MerchandiseLoanController::class, 'returnItems'])->name('inventory.loans.return');
     Route::post('/inventory/loans/{loan}/settle', [MerchandiseLoanController::class, 'settleItems'])->name('inventory.loans.settle');
+    Route::post('/inventory/loans/{loan}/process', [MerchandiseLoanController::class, 'processItems'])->name('inventory.loans.process');
     Route::post('/inventory/loans/{loan}/cancel', [MerchandiseLoanController::class, 'cancel'])->name('inventory.loans.cancel');
 
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');

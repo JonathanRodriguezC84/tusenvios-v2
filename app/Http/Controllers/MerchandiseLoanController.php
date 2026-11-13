@@ -733,6 +733,125 @@ class MerchandiseLoanController extends InventoryProductController
             ->with('status', 'Mercancía liquidada como venta exitosamente.');
     }
 
+    public function processItems(Request $request, MerchandiseLoan $loan): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorizeLoan($loan);
+
+        if (!$loan->isActive()) {
+            throw ValidationException::withMessages([
+                'actions' => 'Este préstamo ya no se encuentra activo.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'actions' => ['required', 'array', 'min:1'],
+            'actions.*.item_id' => ['required', 'integer'],
+            'actions.*.action' => ['required', 'in:none,return,sell'],
+            'actions.*.quantity' => ['nullable', 'integer', 'min:0'],
+            'process_notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $owner = $this->ownerKeys();
+        $returnedTotal = 0;
+        $soldTotal = 0;
+
+        DB::transaction(function () use ($loan, $validated, $owner, &$returnedTotal, &$soldTotal) {
+            foreach ($validated['actions'] as $input) {
+                $action = $input['action'] ?? 'none';
+                $qty = (int) ($input['quantity'] ?? 0);
+
+                if ($action === 'none' || $qty <= 0) {
+                    continue;
+                }
+
+                $item = $loan->items()->where('id', $input['item_id'])->firstOrFail();
+                $pending = $item->pendingUnits();
+
+                if ($qty > $pending) {
+                    throw ValidationException::withMessages([
+                        'actions' => "No puedes procesar {$qty} unidades de {$item->displayName()}. Pendientes: {$pending}.",
+                    ]);
+                }
+
+                if ($action === 'return') {
+                    if ($item->product_type === 'quick' || $item->quick_product_id) {
+                        $quickProduct = QuickProduct::query()
+                            ->when(
+                                $owner['affiliated_company_id'],
+                                fn ($q) => $q->where('affiliated_company_id', $owner['affiliated_company_id']),
+                                fn ($q) => $q->where('tenant_id', $owner['tenant_id'])->whereNull('affiliated_company_id')
+                            )
+                            ->whereKey($item->quick_product_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($quickProduct) {
+                            $quickProduct->increment('stock', $qty);
+                        }
+                    } else {
+                        $product = $this->queryForOwner()
+                            ->whereKey($item->inventory_product_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($product) {
+                            $product->increment('stock', $qty);
+                            $product->refresh();
+
+                            $note = "Devolución préstamo {$loan->loan_number} de {$loan->borrower_name}";
+                            if (!empty($validated['process_notes'])) {
+                                $note .= " (" . trim($validated['process_notes']) . ")";
+                            }
+
+                            $product->movements()->create(array_merge($owner, [
+                                'type' => 'loan_return',
+                                'quantity_delta' => $qty,
+                                'stock_after' => $product->stock,
+                                'notes' => $note,
+                            ]));
+                        }
+                    }
+
+                    $item->increment('quantity_returned', $qty);
+                    $returnedTotal += $qty;
+                } elseif ($action === 'sell') {
+                    $item->increment('quantity_sold', $qty);
+                    $soldTotal += $qty;
+                }
+            }
+
+            if ($returnedTotal === 0 && $soldTotal === 0) {
+                throw ValidationException::withMessages([
+                    'actions' => 'Selecciona al menos un producto para devolver o vender con cantidad mayor a cero.',
+                ]);
+            }
+
+            if (!empty($validated['process_notes'])) {
+                $tag = $soldTotal > 0 && $returnedTotal > 0
+                    ? 'Gestión mixta'
+                    : ($soldTotal > 0 ? 'Liquidado' : 'Devolución');
+                $loan->notes = trim(($loan->notes ? $loan->notes . "\n" : '') . "[{$tag}: " . now()->format('d/m/Y H:i') . '] ' . trim($validated['process_notes']));
+                $loan->save();
+            }
+
+            $this->recalculateLoanStatus($loan);
+        });
+
+        Audit::log('merchandise_loan.processed', $loan, "Gestión aplicada en préstamo {$loan->loan_number}: {$returnedTotal} devuelta(s), {$soldTotal} vendida(s).");
+
+        $parts = [];
+        if ($returnedTotal > 0) {
+            $parts[] = "{$returnedTotal} unidad(es) devuelta(s) a bodega";
+        }
+        if ($soldTotal > 0) {
+            $parts[] = "{$soldTotal} unidad(es) liquidada(s) como venta";
+        }
+
+        return redirect()
+            ->route('inventory.loans.show', $loan)
+            ->with('status', 'Cambios guardados: ' . implode(' y ', $parts) . '.');
+    }
+
     public function cancel(MerchandiseLoan $loan): \Illuminate\Http\RedirectResponse
     {
         $this->authorizeLoan($loan);
