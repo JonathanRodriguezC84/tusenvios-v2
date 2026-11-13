@@ -45,9 +45,10 @@
         @media (min-width: 1024px) {
             .te-dashboard-shell {
                 width: 100%;
-                min-height: 100%;
-                padding: 1cm 1cm 2cm 1cm !important;
-                justify-content: center;
+                height: auto !important;
+                min-height: 0 !important;
+                padding: 2cm 1cm 2cm 1cm !important;
+                justify-content: flex-start;
             }
         }
     </style>
