@@ -71,6 +71,11 @@
             </div>
 
             <div class="grid grid-cols-2 gap-2 sm:flex">
+                @can('update', $shipment)
+                    <a href="{{ route('shipments.edit', $shipment) }}" class="inline-flex items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm hover:bg-blue-100">
+                        Editar guía
+                    </a>
+                @endcan
                 <a href="{{ route('shipments.print', $shipment) }}" onclick="event.preventDefault(); window.open(this.href, 'print{{ $shipment->id }}', 'width=800,height=600,scrollbars=yes,resizable=yes')" class="inline-flex items-center justify-center rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-800">
                     Imprimir
                 </a>
@@ -113,11 +118,11 @@
                             </div>
                         </div>
 
-                        @if (Auth::user()->canEditShipments() && $shipment->canBeEdited())
+                        @can('update', $shipment)
                             <a href="{{ route('shipments.edit', $shipment) }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
                                 Editar datos
                             </a>
-                        @endif
+                        @endcan
                     </div>
                 </section>
 

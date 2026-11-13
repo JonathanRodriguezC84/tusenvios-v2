@@ -1153,9 +1153,6 @@ $nextStatuses = Shipment::STATUS_FLOW[$shipment->status] ?? [];
         if ($shipment->inventoryMovements()->where('type', 'shipment')->exists()) {
             $validated['package_type'] = $shipment->package_type;
             $validated['pieces'] = $shipment->pieces;
-            $validated['content_description'] = $shipment->content_description;
-            $validated['declared_value'] = $shipment->declared_value;
-            $validated['collection_value'] = $shipment->collection_value;
         }
 
         $shipment->update($validated);

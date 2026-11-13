@@ -24,7 +24,9 @@ class ShipmentPolicy
 
     public function update(User $user, Shipment $shipment): bool
     {
-        return $user->canEditShipments() && $shipment->isVisibleTo($user) && $shipment->canBeEdited();
+        return ($user->canEditShipments() || $user->canCreateShipments())
+            && $shipment->isVisibleTo($user)
+            && $shipment->canBeEdited();
     }
 
     public function cancel(User $user, Shipment $shipment): bool

@@ -22,7 +22,7 @@
 
                 @if ($usesInventory)
                     <div class="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                        Esta guia desconto inventario. Puedes editar datos de entrega, remitente y tarifa, pero los productos, piezas y recaudo quedan protegidos para mantener el stock correcto.
+                        Esta guia desconto inventario. Puedes editar datos de entrega, remitente, tarifa, contenido y valor a recaudar; el tipo de paquete y las piezas quedan protegidos para mantener el stock correcto.
                     </div>
                 @endif
 
@@ -126,11 +126,11 @@
                         </label>
                         <label class="grid gap-1 text-sm font-semibold text-gray-700 sm:col-span-2">
                             Descripcion del contenido
-                            <input name="content_description" value="{{ old('content_description', $shipment->content_description) }}" @readonly($usesInventory) class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600 read-only:bg-gray-100 read-only:text-gray-500">
+                            <input name="content_description" value="{{ old('content_description', $shipment->content_description) }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
                         </label>
                         <label class="grid gap-1 text-sm font-semibold text-gray-700">
                             Valor declarado
-                            <input name="declared_value" type="number" min="0" step="100" value="{{ old('declared_value', $shipment->declared_value) }}" @readonly($usesInventory) class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600 read-only:bg-gray-100 read-only:text-gray-500">
+                            <input name="declared_value" type="number" min="0" step="100" value="{{ old('declared_value', $shipment->declared_value) }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
                         </label>
                         <select id="delivery_zone_id" name="delivery_zone_id" class="hidden">
                             <option value="">Manual</option>
@@ -150,7 +150,7 @@
                         </label>
                         <label class="grid gap-1 text-sm font-semibold text-gray-700">
                             Valor a recaudar
-                            <input name="collection_value" type="number" min="0" step="100" value="{{ old('collection_value', $shipment->collection_value) }}" @readonly($usesInventory) class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600 read-only:bg-gray-100 read-only:text-gray-500">
+                            <input name="collection_value" type="number" min="0" step="100" value="{{ old('collection_value', $shipment->collection_value) }}" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-600 focus:ring-blue-600">
                         </label>
                     </div>
                 </section>
