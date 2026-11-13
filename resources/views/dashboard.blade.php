@@ -45,11 +45,8 @@
         @media (min-width: 1024px) {
             .te-dashboard-shell {
                 width: 100%;
-                max-width: 1160px;
                 min-height: 100%;
-                margin-left: auto;
-                margin-right: auto;
-                padding: 2.25rem 3rem !important;
+                padding: 1cm !important;
                 justify-content: center;
             }
         }
