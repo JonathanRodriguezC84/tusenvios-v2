@@ -139,24 +139,6 @@
                             @endif
                         </p>
                     </div>
-
-                    @if ($loan->isActive())
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="text-xs font-bold text-gray-600 mr-1" x-show="selectedCount() > 0" x-text="selectedUnits() + ' und(s) · ' + formatMoney(selectedAmount())"></span>
-                            <button type="button"
-                                    @click="submitAction('return')"
-                                    :disabled="selectedUnits() <= 0"
-                                    class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-opacity">
-                                <span>↩</span> Devolución
-                            </button>
-                            <button type="button"
-                                    @click="submitAction('sell')"
-                                    :disabled="selectedUnits() <= 0"
-                                    class="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-opacity">
-                                <span>💰</span> Venta
-                            </button>
-                        </div>
-                    @endif
                 </div>
 
                 <div class="border-t border-gray-200 flex flex-col min-h-0 flex-1">
