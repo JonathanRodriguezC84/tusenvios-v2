@@ -165,7 +165,7 @@
                             <thead class="border-b border-gray-200 bg-gray-50 text-xs font-bold uppercase text-gray-500">
                                 <tr>
                                     @if ($loan->isActive())
-                                        <th class="pl-5 pr-2 py-2.5 w-10">
+                                        <th class="px-4 py-2.5 text-center" style="width: 54px; padding-left: 1.25rem; padding-right: 0.75rem;">
                                             <input type="checkbox"
                                                    :checked="allSelected()"
                                                    @change="toggleAll($event.target.checked)"
@@ -192,7 +192,7 @@
                                             :class="state[{{ $item->id }}].checked ? 'bg-blue-50/50' : 'hover:bg-gray-50'"
                                         @endif>
                                         @if ($loan->isActive())
-                                            <td class="pl-5 pr-2 py-3 w-10">
+                                            <td class="px-4 py-3 text-center" style="width: 54px; padding-left: 1.25rem; padding-right: 0.75rem;">
                                                 @if ($item->pendingUnits() > 0)
                                                     <input type="hidden" name="actions[{{ $idx }}][item_id]" value="{{ $item->id }}">
                                                     <input type="hidden" name="actions[{{ $idx }}][action]" :value="state[{{ $item->id }}].checked ? bulkAction : 'none'">
