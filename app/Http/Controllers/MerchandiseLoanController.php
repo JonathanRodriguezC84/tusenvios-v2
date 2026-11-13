@@ -138,7 +138,7 @@ class MerchandiseLoanController extends InventoryProductController
             'products' => $products,
             'theme' => $this->inventoryService->themeVariables(),
             'defaultLoanDate' => now()->toDateString(),
-            'defaultDueDate' => now()->addDays(7)->toDateString(),
+            'defaultDueDate' => now()->addDays(30)->toDateString(),
         ]);
     }
 
@@ -530,7 +530,7 @@ class MerchandiseLoanController extends InventoryProductController
                 'borrower_document' => null,
                 'borrower_address' => $fullAddress ?: null,
                 'loan_date' => now()->toDateString(),
-                'due_date' => now()->addDays(7)->toDateString(),
+                'due_date' => now()->addDays(30)->toDateString(),
                 'status' => 'active',
                 'total_items' => $totalItems,
                 'total_value' => $totalValue,
