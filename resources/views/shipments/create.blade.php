@@ -215,13 +215,16 @@
                             $variant = '';
                             $working = $raw;
                             if (preg_match('/\(([^)]+)\)/', $raw, $parenMatch)) {
-                                $variant = trim($parenMatch[1]);
+                                $variant = mb_strtoupper(trim($parenMatch[1]), 'UTF-8');
                                 $working = str_replace($parenMatch[0], ' ', $working);
                             }
 
+                            $isFunda = (bool) preg_match('/\b(funda|estuche|case|cover)\b/iu', $working);
+
+                            $formattedModel = '';
+                            $modelMatchedText = '';
                             $modelNum = '';
                             $suffix = '';
-                            $modelMatchedText = '';
 
                             if (preg_match('/\b(?:iphone|ip)\s*(\d{1,2}|x[rs]?|se)\s*(pro\s*max|promax|pm|pro|p|plus|\+|mini|max)?\b/i', $working, $m)) {
                                 $modelMatchedText = $m[0];
@@ -240,25 +243,27 @@
                                 $rawModel = strtoupper(str_replace(' ', '', $m[1]));
                                 if ($rawModel === 'XSMAX' || $rawModel === 'XSM') {
                                     $modelNum = 'XS';
-                                    $suffix = 'ProMax';
+                                    $suffix = 'PRO MAX';
                                 } else {
                                     $modelNum = $rawModel;
                                 }
                             }
 
-                            if (!$modelNum) return $raw;
-
-                            $cleanSuffix = strtoupper(str_replace(' ', '', $suffix));
-                            $modelSuffix = match ($cleanSuffix) {
-                                'PM', 'PROMAX', 'PRO MAX' => 'ProMax',
-                                'P', 'PRO' => 'Pro',
-                                'PLUS', '+' => 'Plus',
-                                'MINI' => 'Mini',
-                                'MAX' => 'Max',
-                                default => ''
-                            };
-
-                            $formattedModel = 'IP ' . $modelNum . ($modelSuffix ? ' ' . $modelSuffix : '');
+                            if ($modelNum) {
+                                $cleanSuffix = strtoupper(str_replace(' ', '', $suffix));
+                                $modelSuffix = match ($cleanSuffix) {
+                                    'PM', 'PROMAX', 'PRO MAX' => 'PRO MAX',
+                                    'P', 'PRO' => 'PRO',
+                                    'PLUS', '+' => 'PLUS',
+                                    'MINI' => 'MINI',
+                                    'MAX' => 'MAX',
+                                    default => ''
+                                };
+                                $formattedModel = 'IPHONE ' . $modelNum . ($modelSuffix ? ' ' . $modelSuffix : '');
+                            } elseif (preg_match('/\bpara\s+(.+)$/iu', $working, $m)) {
+                                $modelMatchedText = $m[0];
+                                $formattedModel = mb_strtoupper(trim($m[1]), 'UTF-8');
+                            }
 
                             $colorList = [
                                 'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
@@ -273,13 +278,11 @@
                             ];
 
                             $color = '';
-                            if ($variant) {
-                                $variant = mb_convert_case(mb_strtolower($variant, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
-                            } else {
+                            if (!$variant) {
                                 $upperWorking = mb_strtoupper($working, 'UTF-8');
                                 foreach ($colorList as $c) {
                                     if (preg_match('/\b' . preg_quote($c, '/') . '\b/i', $upperWorking)) {
-                                        $color = mb_convert_case(mb_strtolower($c, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+                                        $color = $c;
                                         $working = preg_replace('/\b' . preg_quote($c, '/') . '\b/i', ' ', $working, 1);
                                         break;
                                     }
@@ -294,22 +297,20 @@
                             $working = trim(preg_replace('/[(),.\-_\/]/', ' ', $working));
                             $working = trim(preg_replace('/\s+/', ' ', $working));
 
-                            $remainder = '';
-                            if ($working) {
-                                $words = explode(' ', $working);
-                                $formattedWords = array_map(function($w) {
-                                    if (preg_match('/^(3d|tpu|pc|led)$/i', $w)) return strtoupper($w);
-                                    return mb_convert_case(mb_strtolower($w, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
-                                }, $words);
-                                $remainder = implode(' ', $formattedWords);
+                            $design = $working ? mb_strtoupper($working, 'UTF-8') : '';
+                            $finalColor = $variant ?: $color;
+
+                            if (!$formattedModel && !$isFunda && !$finalColor) {
+                                return mb_strtoupper($raw, 'UTF-8');
                             }
 
-                            $parts = [$formattedModel];
-                            $middle = $variant ?: $color;
-                            if ($middle) $parts[] = $middle;
-                            if ($remainder) $parts[] = $remainder;
+                            $parts = [];
+                            if ($isFunda) $parts[] = 'FUNDA';
+                            if ($design) $parts[] = $design;
+                            if ($formattedModel) $parts[] = $formattedModel;
+                            if ($finalColor) $parts[] = $finalColor;
 
-                            return implode(' ', $parts);
+                            return implode(' ', $parts) ?: mb_strtoupper($raw, 'UTF-8');
                         };
 
                         $serializedProducts = $quickProducts->map(fn($p) => [
@@ -368,10 +369,13 @@
                                 const parenMatch = raw.match(/\(([^)]+)\)/);
                                 let working = raw;
                                 if (parenMatch) {
-                                    variant = parenMatch[1].trim();
+                                    variant = parenMatch[1].trim().toUpperCase();
                                     working = working.replace(parenMatch[0], ' ');
                                 }
 
+                                const isFunda = /\b(funda|estuche|case|cover)\b/i.test(working);
+
+                                let formattedModel = '';
                                 let modelNum = '';
                                 let suffix = '';
                                 let modelMatchedText = '';
@@ -409,32 +413,35 @@
                                         const rawModel = m[1].toUpperCase().replace(/\s+/g, '');
                                         if (rawModel === 'XSMAX' || rawModel === 'XSM') {
                                             modelNum = 'XS';
-                                            suffix = 'ProMax';
+                                            suffix = 'PRO MAX';
                                         } else {
                                             modelNum = rawModel;
                                         }
                                     }
                                 }
 
-                                if (!modelNum) {
-                                    return raw;
+                                if (modelNum) {
+                                    const cleanSuffix = suffix.toUpperCase().replace(/\s+/g, '');
+                                    let modelSuffix = '';
+                                    if (cleanSuffix === 'PM' || cleanSuffix === 'PROMAX' || cleanSuffix === 'PRO MAX') {
+                                        modelSuffix = 'PRO MAX';
+                                    } else if (cleanSuffix === 'P' || cleanSuffix === 'PRO') {
+                                        modelSuffix = 'PRO';
+                                    } else if (cleanSuffix === 'PLUS' || cleanSuffix === '+') {
+                                        modelSuffix = 'PLUS';
+                                    } else if (cleanSuffix === 'MINI') {
+                                        modelSuffix = 'MINI';
+                                    } else if (cleanSuffix === 'MAX') {
+                                        modelSuffix = 'MAX';
+                                    }
+                                    formattedModel = `IPHONE ${modelNum}${modelSuffix ? ' ' + modelSuffix : ''}`;
+                                } else {
+                                    const genericPara = working.match(/\bpara\s+(.+)$/i);
+                                    if (genericPara) {
+                                        modelMatchedText = genericPara[0];
+                                        formattedModel = genericPara[1].trim().toUpperCase();
+                                    }
                                 }
-
-                                const cleanSuffix = suffix.toUpperCase().replace(/\s+/g, '');
-                                let modelSuffix = '';
-                                if (cleanSuffix === 'PM' || cleanSuffix === 'PROMAX' || cleanSuffix === 'PRO MAX') {
-                                    modelSuffix = 'ProMax';
-                                } else if (cleanSuffix === 'P' || cleanSuffix === 'PRO') {
-                                    modelSuffix = 'Pro';
-                                } else if (cleanSuffix === 'PLUS' || cleanSuffix === '+') {
-                                    modelSuffix = 'Plus';
-                                } else if (cleanSuffix === 'MINI') {
-                                    modelSuffix = 'Mini';
-                                } else if (cleanSuffix === 'MAX') {
-                                    modelSuffix = 'Max';
-                                }
-
-                                const formattedModel = `IP ${modelNum}${modelSuffix ? ' ' + modelSuffix : ''}`;
 
                                 const colorList = [
                                     'TRANSPARENTE', 'TITANIO NATURAL', 'TITANIO NEGRO', 'TITANIO BLANCO', 'TITANIO AZUL', 'TITANIO',
@@ -449,14 +456,12 @@
                                 ];
 
                                 let color = '';
-                                if (variant) {
-                                    variant = variant.toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                                } else {
+                                if (!variant) {
                                     const upperWorking = working.toUpperCase();
                                     for (const c of colorList) {
                                         const cRegex = new RegExp(`\\b${c}\\b`, 'i');
                                         if (cRegex.test(upperWorking)) {
-                                            color = c.toLowerCase().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                            color = c;
                                             working = working.replace(cRegex, ' ');
                                             break;
                                         }
@@ -470,30 +475,31 @@
                                 working = working.replace(/\b(funda|estuche|case|cover|protector|para|de|del|con|el|la|los|las)\b/gi, ' ');
                                 working = working.replace(/[(),.\-_/]/g, ' ').replace(/\s+/g, ' ').trim();
 
-                                let remainder = '';
-                                if (working) {
-                                    remainder = working.split(/\s+/).map(w => {
-                                        if (/^(3d|tpu|pc|led)$/i.test(w)) return w.toUpperCase();
-                                        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-                                    }).join(' ');
+                                const design = working ? working.toUpperCase() : '';
+                                const finalColor = variant || color;
+
+                                if (!formattedModel && !isFunda && !finalColor) {
+                                    return raw.toUpperCase();
                                 }
 
-                                const parts = [formattedModel];
-                                const middle = variant || color;
-                                if (middle) parts.push(middle);
-                                if (remainder) parts.push(remainder);
+                                const parts = [];
+                                if (isFunda) parts.push('FUNDA');
+                                if (design) parts.push(design);
+                                if (formattedModel) parts.push(formattedModel);
+                                if (finalColor) parts.push(finalColor);
 
-                                return parts.join(' ');
+                                return parts.join(' ') || raw.toUpperCase();
                             },
                             selectProduct(product) {
-                                this.search = product.display_name || this.displayName(product.name);
+                                const formatted = product.display_name || this.displayName(product.name);
+                                this.search = formatted;
                                 this.open = false;
                                 
                                 const select = document.getElementById('quick_product_select');
                                 if (select) {
-                                    select.value = product.name;
+                                    select.value = formatted;
                                     for (let i = 0; i < select.options.length; i++) {
-                                        if (select.options[i].value === product.name) {
+                                        if (select.options[i].dataset.id == product.id) {
                                             select.selectedIndex = i;
                                             break;
                                         }
@@ -524,7 +530,7 @@
                             <select id="quick_product_select" class="hidden">
                                 <option value="">Producto frecuente...</option>
                                 @foreach ($quickProducts as $product)
-                                    <option value="{{ $product->name }}" data-id="{{ $product->id }}" data-sku="{{ $product->sku }}" data-package-type="{{ $product->package_type }}" data-price="{{ (int) $product->price }}" data-stock="{{ (int) $product->stock }}">{{ $product->name }} ({{ $product->stock ?? 0 }} UND)</option>
+                                    <option value="{{ $formatQuickProductDisplay($product->name) }}" data-id="{{ $product->id }}" data-sku="{{ $product->sku }}" data-package-type="{{ $product->package_type }}" data-price="{{ (int) $product->price }}" data-stock="{{ (int) $product->stock }}">{{ $formatQuickProductDisplay($product->name) }} ({{ $product->stock ?? 0 }} UND)</option>
                                 @endforeach
                             </select>
 
