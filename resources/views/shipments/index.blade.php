@@ -164,6 +164,7 @@
                     transition: background 0.1s;
                 }
                 .sh-list-row:hover { background: #f9fafb; }
+                .dark .sh-list-row { border-bottom-color: #334155; }
                 .dark .sh-list-row:hover { background: #1e293b; }
                 .sh-list-cell {
                     display: flex;

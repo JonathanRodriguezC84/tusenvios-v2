@@ -49,7 +49,7 @@
                     <span class="text-center">Crear</span>
                 </div>
 
-                <div class="divide-y divide-gray-100">
+                <div class="divide-y divide-gray-100 dark:divide-gray-700">
                     @foreach ($recipients as $recipient)
                         @php
                             $fullName = trim($recipient->name.' '.$recipient->lastname);
