@@ -115,8 +115,9 @@ class AdminClientController extends Controller
         ]);
 
         // --- INICIO DE AUTOCREADO DE INVENTARIO DESDE OMS ---
-        try {
-            $omsEnvPath = '/home/rcicomco/public_html/oms.rci.com.co/.env';
+        if (in_array($tenant->subdomain, ['rci-shop', 'naticase'], true)) {
+            try {
+                $omsEnvPath = env('OMS_ENV_PATH', '/home/rcicomco/public_html/oms.rci.com.co/.env');
             if (file_exists($omsEnvPath)) {
                 $omsDbHost = '127.0.0.1';
                 $omsDbPort = '3306';
@@ -183,8 +184,9 @@ class AdminClientController extends Controller
                     }
                 }
             }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Error auto-seeding products from OMS for Tenant {$tenant->id}: " . $e->getMessage());
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Error auto-seeding products from OMS for Tenant {$tenant->id}: " . $e->getMessage());
+            }
         }
         // --- FIN DE AUTOCREADO DE INVENTARIO DESDE OMS ---
 
