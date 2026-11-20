@@ -24,10 +24,22 @@ public function index(Request $request): \Illuminate\View\View|\Illuminate\Http\
             return redirect()->route('inventory.index');
         }
 
+        $search = trim((string) $request->input('q', ''));
+        $terms = $search !== '' ? preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) : [];
+
         $products = $this->queryForOwner()
             ->when(
-                $request->filled('q'),
-                fn ($query) => $query->where('name', 'like', '%'.$request->input('q').'%')
+                !empty($terms),
+                function ($query) use ($terms) {
+                    foreach ($terms as $term) {
+                        $escaped = addcslashes($term, '%_\\');
+                        $like = "%{$escaped}%";
+                        $query->where(function ($sub) use ($like) {
+                            $sub->where('name', 'like', $like)
+                                ->orWhere('sku', 'like', $like);
+                        });
+                    }
+                }
             )
             ->latest()
             ->paginate(10)
@@ -356,7 +368,7 @@ public function index(Request $request): \Illuminate\View\View|\Illuminate\Http\
             return $user->affiliatedCompany;
         }
 
-        return $user->tenant ?: Tenant::query()->where('subdomain', 'demo-tus-envios')->first();
+        return $user->tenant ?: (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->first() ?: Tenant::query()->orderBy('id')->first());
     }
 
     private function ownerKeys(): array
@@ -370,7 +382,7 @@ public function index(Request $request): \Illuminate\View\View|\Illuminate\Http\
             ];
         }
 
-        $tenantId = $user->tenant_id ?: Tenant::query()->where('subdomain', 'demo-tus-envios')->value('id');
+        $tenantId = $user->tenant_id ?: (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->value('id') ?: Tenant::query()->orderBy('id')->value('id'));
 
         return [
             'tenant_id' => $tenantId,

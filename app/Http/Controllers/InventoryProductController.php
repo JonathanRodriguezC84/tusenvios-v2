@@ -406,7 +406,7 @@ class InventoryProductController extends Controller
             ];
         }
 
-        $tenantId = $user->tenant_id ?: Tenant::query()->where('subdomain', 'demo-tus-envios')->value('id');
+        $tenantId = $user->tenant_id ?: (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->value('id') ?: Tenant::query()->orderBy('id')->value('id'));
 
         return [
             'tenant_id' => $tenantId,

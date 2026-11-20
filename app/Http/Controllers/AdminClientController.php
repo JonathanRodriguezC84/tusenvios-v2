@@ -117,7 +117,10 @@ class AdminClientController extends Controller
         // --- INICIO DE AUTOCREADO DE INVENTARIO DESDE OMS ---
         if (in_array($tenant->subdomain, ['rci-shop', 'naticase'], true)) {
             try {
-                $omsEnvPath = env('OMS_ENV_PATH', '/home/rcicomco/public_html/oms.rci.com.co/.env');
+                $omsEnvPath = env('OMS_ENV_PATH', base_path('../oms.tusenvios.com.co/.env'));
+                if (!file_exists($omsEnvPath)) {
+                    $omsEnvPath = '/home/tusenvio/oms.tusenvios.com.co/.env';
+                }
             if (file_exists($omsEnvPath)) {
                 $omsDbHost = '127.0.0.1';
                 $omsDbPort = '3306';

@@ -26,17 +26,17 @@ class ShipmentStatusController extends Controller
 
         $shipment->update(['status' => $validated['status']]);
 
-        if ($validated['status'] === 'cancelled') {
+        if (in_array($validated['status'], ['cancelled', 'returned'])) {
             app(ShipmentController::class)->restoreInventoryForShipment($shipment);
 
             // Notificar al OMS en tiempo real para devolución inmediata de stock
             dispatch(function () {
                 try {
-                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.rci.com.co/cron/sync-tusenvios');
+                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.tusenvios.com.co/cron/sync-tusenvios');
                     $omsToken = env('OMS_CRON_TOKEN', 'te_cron_secret_rci_2026');
                     \Illuminate\Support\Facades\Http::timeout(5)->get($omsUrl, ['token' => $omsToken]);
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning("Real-time OMS cancel notification failed: " . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::warning("Real-time OMS cancel/return notification failed: " . $e->getMessage());
                 }
             })->afterResponse();
         }
@@ -101,7 +101,7 @@ class ShipmentStatusController extends Controller
             // Notificar al OMS en tiempo real para devolución inmediata de stock
             dispatch(function () {
                 try {
-                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.rci.com.co/cron/sync-tusenvios');
+                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.tusenvios.com.co/cron/sync-tusenvios');
                     $omsToken = env('OMS_CRON_TOKEN', 'te_cron_secret_rci_2026');
                     \Illuminate\Support\Facades\Http::timeout(5)->get($omsUrl, ['token' => $omsToken]);
                 } catch (\Throwable $e) {
@@ -145,7 +145,7 @@ class ShipmentStatusController extends Controller
 
             $shipment->update(['status' => $validated['status']]);
 
-            if ($validated['status'] === 'cancelled') {
+            if (in_array($validated['status'], ['cancelled', 'returned'])) {
                 app(ShipmentController::class)->restoreInventoryForShipment($shipment);
             }
 

@@ -88,7 +88,7 @@ class CategoryController extends Controller
             ];
         }
 
-        $tenantId = $user->tenant_id ?: \App\Models\Tenant::query()->where('subdomain', 'demo-tus-envios')->value('id');
+        $tenantId = $user->tenant_id ?: (\App\Models\Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->value('id') ?: \App\Models\Tenant::query()->orderBy('id')->value('id'));
 
         return [
             'tenant_id' => $tenantId,

@@ -358,7 +358,7 @@ return collect($shortcuts)
 
         $tenant = Auth::user()->tenant_id
             ? Tenant::query()->find(Auth::user()->tenant_id)
-            : Tenant::query()->where('subdomain', 'demo-tus-envios')->first();
+            : (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->first() ?: Tenant::query()->orderBy('id')->first());
 
         $companies = AffiliatedCompany::query()
             ->when($tenant, fn ($query) => $query->where('tenant_id', $tenant->id))
@@ -463,7 +463,7 @@ $useInventory = Auth::user()->canUseInventory();
 
         $tenant = Auth::user()->tenant_id
             ? Tenant::query()->findOrFail(Auth::user()->tenant_id)
-            : Tenant::query()->where('subdomain', 'demo-tus-envios')->firstOrFail();
+            : (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->first() ?: Tenant::query()->orderBy('id')->firstOrFail());
 
         $subscription = $tenant->currentSubscription;
         if ($subscription && $subscription->isTrial() && ! $subscription->canCreateTrialGuide()) {
@@ -539,7 +539,7 @@ Audit::log('shipment.created', $shipment, "Guia {$shipment->guide_number} creada
             // Sincronización en tiempo real inmediata con el OMS RCI / NatiCase
             dispatch(function () {
                 try {
-                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.rci.com.co/cron/sync-tusenvios');
+                    $omsUrl = env('OMS_SYNC_URL', 'https://oms.tusenvios.com.co/cron/sync-tusenvios');
                     $omsToken = env('OMS_CRON_TOKEN', 'te_cron_secret_rci_2026');
                     \Illuminate\Support\Facades\Http::timeout(5)->get($omsUrl, ['token' => $omsToken]);
                 } catch (\Throwable $e) {
@@ -654,7 +654,7 @@ Audit::log('shipment.created', $shipment, "Guia {$shipment->guide_number} creada
     private function quickProductsForUser()
     {
         $user = Auth::user();
-        $tenantId = $user->tenant_id ?: Tenant::query()->where('subdomain', 'demo-tus-envios')->value('id');
+        $tenantId = $user->tenant_id ?: (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->value('id') ?: Tenant::query()->orderBy('id')->value('id'));
 
         $products = QuickProduct::query()
             ->where('status', 'active')
@@ -745,7 +745,7 @@ return $this->inventoryQueryForUser()
 
             if ($type === 'quick') {
                 $user = Auth::user();
-                $tenantId = $user->tenant_id ?: Tenant::query()->where('subdomain', 'demo-tus-envios')->value('id');
+                $tenantId = $user->tenant_id ?: (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->value('id') ?: Tenant::query()->orderBy('id')->value('id'));
 
                 $product = QuickProduct::query()
                     ->where('id', $item['id'])
@@ -890,7 +890,7 @@ return $this->inventoryQueryForUser()
     private function inventoryQueryForUser()
     {
         $user = Auth::user();
-        $tenantId = $user->tenant_id ?: Tenant::query()->where('subdomain', 'demo-tus-envios')->value('id');
+        $tenantId = $user->tenant_id ?: (Tenant::query()->whereIn('subdomain', ['tus-envios', 'demo-tus-envios'])->value('id') ?: Tenant::query()->orderBy('id')->value('id'));
 
         return InventoryProduct::query()
             ->when(
