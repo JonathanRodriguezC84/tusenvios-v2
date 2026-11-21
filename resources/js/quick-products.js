@@ -15,6 +15,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const searchForm = document.querySelector('[data-qp-search-form]');
+    const searchInput = document.querySelector('[data-qp-search-input]');
+    if (searchForm && searchInput) {
+        let searchTimer = null;
+        let lastSubmitted = searchInput.value.trim();
+
+        const submitSearch = () => {
+            const current = searchInput.value.trim();
+            if (current === lastSubmitted) return;
+            lastSubmitted = current;
+            searchForm.submit();
+        };
+
+        searchInput.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(submitSearch, 450);
+        });
+
+        searchInput.addEventListener('search', () => {
+            window.clearTimeout(searchTimer);
+            submitSearch();
+        });
+    }
+
     document.querySelectorAll('.qp-row-editable').forEach((row) => {
         const editBtn = row.querySelector('.qp-row-edit-btn');
         const saveBtn = row.querySelector('.qp-row-save-btn');

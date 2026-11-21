@@ -308,8 +308,8 @@
             font-weight: 700;
         }
         .mobile-bottom-link svg { width: 19px; height: 19px; flex: 0 0 auto; }
-        .mobile-bottom-link.is-active { color: #022a8c; background: #eef4ff; }
-        .mobile-bottom-link.is-featured { color: #ffffff; background: #022a8c; }
+        .mobile-bottom-link.is-active { color: {{ $mobileMenuColor }}; background: {{ $mobileMenuTint }}; }
+        .mobile-bottom-link.is-featured { color: var(--te-button-text, #ffffff); background: {{ $mobileMenuColor }}; }
         @media (min-width: 1024px) { .te-mobile-side-v21 { width: 12rem !important; } .mobile-bottom-nav { display: none; } }
     </style>
 
@@ -439,13 +439,13 @@
 
 </nav>
 
-    <nav class="mobile-bottom-nav fixed bottom-0 inset-x-0 z-40 border-t border-gray-200 bg-white lg:hidden" style="padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#ffffff;border-top:1px solid #e5e7eb;">
+    <nav class="mobile-bottom-nav te-mobile-bottom-v21 fixed bottom-0 inset-x-0 z-40 border-t border-gray-200 bg-white lg:hidden" style="padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#ffffff;border-top:1px solid #e5e7eb;">
         <div class="mobile-bottom-grid">
             @php $i = 0; @endphp
             @foreach ($bottomItems as $item)
                 @if (!($item['show'] ?? true)) @continue @endif
                 @php $i++; $isCurrent = request()->routeIs($item['active']); @endphp
-                <a href="{{ route($item['route']) }}" class="mobile-bottom-link {{ ($item['featured'] ?? false) ? 'is-featured' : '' }}" data-route-current="{{ $isCurrent ? '1' : '0' }}" data-route-create="{{ ($item['featured'] ?? false) ? '1' : '0' }}">
+                <a href="{{ route($item['route']) }}" class="mobile-bottom-link {{ ($item['featured'] ?? false) ? 'is-featured' : ($isCurrent ? 'is-active' : '') }}" data-route-current="{{ $isCurrent ? '1' : '0' }}" data-route-create="{{ ($item['featured'] ?? false) ? '1' : '0' }}">
                     <svg class="w-[19px] h-[19px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">{!! $item['icon'] !!}</svg>
                     <span>{{ $item['label'] }}</span>
                 </a>

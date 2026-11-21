@@ -94,8 +94,9 @@
             <div id="qp-edit-products" class="rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col min-h-0">
                 <div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
                     <h3 class="text-base font-black text-gray-950">Administrar productos</h3>
-                    <form method="GET" action="{{ route('quick-products.index') }}" class="flex items-center gap-2">
-                        <input type="search" name="q" value="{{ request('q') }}" placeholder="Buscar producto..." class="qp-field sm:w-64">
+                    <form method="GET" action="{{ route('quick-products.index') }}" class="flex items-center gap-2" data-qp-search-form>
+                        <input type="search" name="q" value="{{ request('q') }}" placeholder="Buscar por nombre o SKU..." class="qp-field sm:w-64" data-qp-search-input>
+                        <button type="submit" class="qp-btn qp-btn-primary">Buscar</button>
                         @if (request()->filled('q'))
                             <a href="{{ route('quick-products.index') }}" class="whitespace-nowrap text-sm font-semibold text-gray-500 hover:text-gray-700">Limpiar</a>
                         @endif

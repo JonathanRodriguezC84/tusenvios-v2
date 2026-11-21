@@ -65,4 +65,19 @@ class MerchandiseLoanItem extends Model
     {
         return max(0, $this->quantity_lent - $this->quantity_returned - $this->quantity_sold);
     }
+
+    public function pendingValue(): float
+    {
+        return $this->pendingUnits() * (float) $this->unit_price;
+    }
+
+    public function returnedValue(): float
+    {
+        return (int) $this->quantity_returned * (float) $this->unit_price;
+    }
+
+    public function soldValue(): float
+    {
+        return (int) $this->quantity_sold * (float) $this->unit_price;
+    }
 }

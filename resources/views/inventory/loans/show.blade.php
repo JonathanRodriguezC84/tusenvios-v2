@@ -98,20 +98,33 @@
                     </span>
                 </div>
                 <div>
-                    <span class="block font-semibold text-gray-600">Prestado / Devuelto / Vendido</span>
-                    <span class="font-bold text-gray-900">
-                        {{ $loan->total_items }} unds ·
-                        <span class="text-emerald-700">{{ $loan->returnedUnits() }} dev.</span> ·
-                        <span class="text-blue-700">{{ $loan->soldUnits() }} vend.</span>
-                    </span>
-                </div>
-                <div>
-                    <span class="block font-semibold text-gray-600">Pendiente actual</span>
-                    <span class="text-sm font-black text-amber-800">{{ $loan->pendingUnits() }} unds</span>
-                </div>
-                <div>
-                    <span class="block font-semibold text-gray-600">Valor total préstamo</span>
+                    <span class="block font-semibold text-gray-600">Total Prestado</span>
                     <span class="text-sm font-black text-gray-950">${{ number_format($loan->total_value, 0, ',', '.') }}</span>
+                    <span class="block text-[11px] text-gray-500">{{ $loan->total_items }} unds iniciales</span>
+                </div>
+                <div>
+                    <span class="block font-semibold text-gray-600">Facturado / Devuelto</span>
+                    <div class="flex flex-col text-xs">
+                        <span class="font-bold text-blue-700">
+                            ${{ number_format($loan->soldValue(), 0, ',', '.') }} <span class="text-[11px] font-normal text-gray-600">({{ $loan->soldUnits() }} vend.)</span>
+                        </span>
+                        <span class="font-semibold text-emerald-700">
+                            ${{ number_format($loan->returnedValue(), 0, ',', '.') }} <span class="text-[11px] font-normal text-gray-600">({{ $loan->returnedUnits() }} dev.)</span>
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <span class="block font-semibold text-gray-600">Saldo Pendiente</span>
+                    @if ($loan->pendingUnits() === 0)
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200 mt-0.5">
+                            ✓ $0 (Al día)
+                        </span>
+                    @else
+                        <span class="text-sm font-black text-amber-800 block">
+                            ${{ number_format($loan->pendingValue(), 0, ',', '.') }}
+                        </span>
+                        <span class="block text-[11px] font-semibold text-amber-700">{{ $loan->pendingUnits() }} unds por retornar</span>
+                    @endif
                 </div>
             </div>
 
@@ -223,6 +236,32 @@
                                     </tr>
                                 @endforeach
                             </tbody>
+                            <tfoot class="bg-gray-50 border-t-2 border-gray-200 text-xs">
+                                <tr>
+                                    @if ($loan->isActive())
+                                        <td></td>
+                                    @endif
+                                    <td class="px-4 py-3 font-black text-gray-900 uppercase">Totales</td>
+                                    <td class="px-3 py-3 text-center font-bold text-gray-900">{{ $loan->total_items }}</td>
+                                    <td class="px-3 py-3 text-center font-bold text-emerald-700">
+                                        {{ $loan->returnedUnits() }}
+                                        <span class="block text-[10px] font-normal text-emerald-800">${{ number_format($loan->returnedValue(), 0, ',', '.') }}</span>
+                                    </td>
+                                    <td class="px-3 py-3 text-center font-bold text-blue-700">
+                                        {{ $loan->soldUnits() }}
+                                        <span class="block text-[10px] font-normal text-blue-800">${{ number_format($loan->soldValue(), 0, ',', '.') }}</span>
+                                    </td>
+                                    <td class="px-3 py-3 text-center font-black text-amber-800">
+                                        {{ $loan->pendingUnits() }}
+                                        <span class="block text-[10px] font-bold text-amber-900">${{ number_format($loan->pendingValue(), 0, ',', '.') }}</span>
+                                    </td>
+                                    @if ($loan->isActive())
+                                        <td></td>
+                                    @endif
+                                    <td class="px-3 py-3 text-right font-bold text-gray-500">Total Inicial:</td>
+                                    <td class="px-5 py-3 text-right font-black text-gray-950 text-sm">${{ number_format($loan->total_value, 0, ',', '.') }}</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
 

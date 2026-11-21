@@ -316,7 +316,7 @@
                         $serializedProducts = $quickProducts->map(fn($p) => [
                             'id' => $p->id,
                             'name' => $p->name,
-                            'display_name' => $formatQuickProductDisplay($p->name),
+                            'display_name' => $p->name,
                             'sku' => $p->sku,
                             'package_type' => $p->package_type,
                             'price' => (int) $p->price,
@@ -525,7 +525,7 @@
                             <select id="quick_product_select" class="hidden">
                                 <option value="">Producto frecuente...</option>
                                 @foreach ($quickProducts as $product)
-                                    <option value="{{ $formatQuickProductDisplay($product->name) }}" data-id="{{ $product->id }}" data-sku="{{ $product->sku }}" data-package-type="{{ $product->package_type }}" data-price="{{ (int) $product->price }}" data-stock="{{ (int) $product->stock }}">{{ $formatQuickProductDisplay($product->name) }} ({{ $product->stock ?? 0 }} UND)</option>
+                                    <option value="{{ $product->name }}" data-id="{{ $product->id }}" data-sku="{{ $product->sku }}" data-package-type="{{ $product->package_type }}" data-price="{{ (int) $product->price }}" data-stock="{{ (int) $product->stock }}">{{ $product->name }} ({{ $product->stock ?? 0 }} UND)</option>
                                 @endforeach
                             </select>
 

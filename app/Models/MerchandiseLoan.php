@@ -77,9 +77,29 @@ class MerchandiseLoan extends Model
         return (int) $this->items->sum('quantity_sold');
     }
 
+    public function pendingValue(): float
+    {
+        return (float) $this->items->sum(fn ($i) => $i->pendingUnits() * (float) $i->unit_price);
+    }
+
+    public function returnedValue(): float
+    {
+        return (float) $this->items->sum(fn ($i) => (int) $i->quantity_returned * (float) $i->unit_price);
+    }
+
+    public function soldValue(): float
+    {
+        return (float) $this->items->sum(fn ($i) => (int) $i->quantity_sold * (float) $i->unit_price);
+    }
+
     public function statusBadgeClass(): string
     {
-        if ($this->status === 'returned') return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        if ($this->status === 'returned') {
+            if ($this->soldUnits() > 0) {
+                return 'bg-blue-100 text-blue-800 border-blue-200';
+            }
+            return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        }
         if ($this->status === 'sold') return 'bg-blue-100 text-blue-800 border-blue-200';
         if ($this->status === 'cancelled') return 'bg-gray-100 text-gray-700 border-gray-200';
         if ($this->isOverdue()) return 'bg-rose-100 text-rose-800 border-rose-200 animate-pulse';
@@ -89,8 +109,15 @@ class MerchandiseLoan extends Model
 
     public function statusLabel(): string
     {
-        if ($this->status === 'returned') return 'Devuelto';
-        if ($this->status === 'sold') return 'Liquidado (Venta)';
+        if ($this->status === 'returned') {
+            if ($this->soldUnits() > 0) {
+                return $this->returnedUnits() > 0 ? 'Liquidado (Mixto)' : 'Liquidado (Venta)';
+            }
+            return 'Devuelto';
+        }
+        if ($this->status === 'sold') {
+            return $this->returnedUnits() > 0 ? 'Liquidado (Mixto)' : 'Liquidado (Venta)';
+        }
         if ($this->status === 'cancelled') return 'Anulado';
         if ($this->isOverdue()) return 'Vencido';
         if ($this->status === 'partial') return 'Parcial';

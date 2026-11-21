@@ -27,6 +27,6 @@ Route::prefix('v1')->middleware('api.tenant')->group(function () {
 
 // ─── Público ───
 
-Route::get('/v1/track/{guideNumber}', [TrackingApiController::class, 'show']);
+Route::get('/v1/track/{guideNumber}', [TrackingApiController::class, 'show'])->middleware('throttle:30,1');
 Route::get('/ping', fn () => response()->json(['status' => 'ok', 'version' => '1.0.0']));
-Route::get('/shipping-rates', ShippingRateApiController::class);
+Route::get('/shipping-rates', ShippingRateApiController::class)->middleware('throttle:30,1');

@@ -35,7 +35,7 @@ class MerchandiseLoanController extends InventoryProductController
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'status' => ['nullable', 'in:active,partial,returned,sold,cancelled,overdue'],
+            'status' => ['nullable', 'in:open,active,partial,returned,sold,cancelled,overdue'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],
         ]);
@@ -50,31 +50,93 @@ class MerchandiseLoanController extends InventoryProductController
 
         $baseOwnerQuery = $this->loanBaseQuery();
 
-        $allActive = (clone $baseOwnerQuery)->whereIn('status', ['active', 'partial'])->with('items')->get();
+        $allNonCancelled = (clone $baseOwnerQuery)
+            ->where('status', '!=', 'cancelled')
+            ->with('items')
+            ->get();
 
         $pendingUnits = 0;
-        $pendingValue = 0;
-        foreach ($allActive as $l) {
+        $pendingValue = 0.0;
+        $soldUnits = 0;
+        $soldValue = 0.0;
+        $returnedUnits = 0;
+        $totalLentValue = 0.0;
+        $borrowerBuckets = [];
+
+        foreach ($allNonCancelled as $l) {
+            $totalLentValue += (float) $l->total_value;
+            $loanPendingUnits = 0;
+            $loanPendingValue = 0.0;
+
             foreach ($l->items as $item) {
                 $rem = $item->pendingUnits();
-                $pendingUnits += $rem;
-                $pendingValue += $rem * (float) $item->unit_price;
+                $unitPrice = (float) $item->unit_price;
+                $sold = (int) $item->quantity_sold;
+                $returned = (int) $item->quantity_returned;
+
+                $soldUnits += $sold;
+                $soldValue += $sold * $unitPrice;
+                $returnedUnits += $returned;
+
+                if (in_array($l->status, ['active', 'partial'], true)) {
+                    $pendingUnits += $rem;
+                    $pendingValue += $rem * $unitPrice;
+                    $loanPendingUnits += $rem;
+                    $loanPendingValue += $rem * $unitPrice;
+                }
+            }
+
+            if (in_array($l->status, ['active', 'partial'], true) && $loanPendingUnits > 0) {
+                $key = mb_strtolower(trim((string) $l->borrower_name)) . '|' . trim((string) ($l->borrower_phone ?? ''));
+                if (!isset($borrowerBuckets[$key])) {
+                    $borrowerBuckets[$key] = [
+                        'borrower_name' => $l->borrower_name,
+                        'borrower_phone' => $l->borrower_phone,
+                        'loans_count' => 0,
+                        'pending_units' => 0,
+                        'pending_value' => 0.0,
+                        'has_overdue' => false,
+                        'next_due_date' => null,
+                    ];
+                }
+                $borrowerBuckets[$key]['loans_count']++;
+                $borrowerBuckets[$key]['pending_units'] += $loanPendingUnits;
+                $borrowerBuckets[$key]['pending_value'] += $loanPendingValue;
+                if ($l->isOverdue()) {
+                    $borrowerBuckets[$key]['has_overdue'] = true;
+                }
+                if ($l->due_date && (!$borrowerBuckets[$key]['next_due_date'] || $l->due_date->lt($borrowerBuckets[$key]['next_due_date']))) {
+                    $borrowerBuckets[$key]['next_due_date'] = $l->due_date;
+                }
             }
         }
 
+        $activeBorrowers = collect($borrowerBuckets)
+            ->sortByDesc('pending_value')
+            ->take(8)
+            ->values();
+
         $metrics = [
             'total' => (clone $baseOwnerQuery)->count(),
+            'active_only' => (clone $baseOwnerQuery)->where('status', 'active')->count(),
+            'partial_only' => (clone $baseOwnerQuery)->where('status', 'partial')->count(),
             'active' => (clone $baseOwnerQuery)->whereIn('status', ['active', 'partial'])->count(),
             'overdue' => (clone $baseOwnerQuery)->whereIn('status', ['active', 'partial'])->whereDate('due_date', '<', now()->toDateString())->count(),
             'returned' => (clone $baseOwnerQuery)->where('status', 'returned')->count(),
             'sold' => (clone $baseOwnerQuery)->where('status', 'sold')->count(),
+            'cancelled' => (clone $baseOwnerQuery)->where('status', 'cancelled')->count(),
             'pending_units' => $pendingUnits,
             'pending_value' => $pendingValue,
+            'sold_units' => $soldUnits,
+            'sold_value' => $soldValue,
+            'returned_units' => $returnedUnits,
+            'total_lent_value' => $totalLentValue,
         ];
 
         return view('inventory.loans.index', [
             'loans' => $loans,
             'metrics' => $metrics,
+            'activeBorrowers' => $activeBorrowers,
             'filters' => $filters,
             'theme' => $this->inventoryService->themeVariables(),
         ]);
@@ -931,7 +993,7 @@ class MerchandiseLoanController extends InventoryProductController
         }
 
         if ($totalPending === 0) {
-            if ($totalSold > 0 && $totalReturned === 0) {
+            if ($totalSold > 0) {
                 $loan->status = 'sold';
             } else {
                 $loan->status = 'returned';
@@ -966,7 +1028,7 @@ class MerchandiseLoanController extends InventoryProductController
                 $query->where(function ($query) use ($search) {
                     $query
                         ->where('loan_number', 'like', "%{$search}%")
-                        ->where('borrower_name', 'like', "%{$search}%")
+                        ->orWhere('borrower_name', 'like', "%{$search}%")
                         ->orWhere('borrower_phone', 'like', "%{$search}%")
                         ->orWhere('borrower_document', 'like', "%{$search}%")
                         ->orWhereHas('items', fn ($q) => $q->where('product_name', 'like', "%{$search}%")->orWhere('product_sku', 'like', "%{$search}%"));
@@ -975,6 +1037,8 @@ class MerchandiseLoanController extends InventoryProductController
             ->when($filters['status'] ?? null, function ($query, $status) {
                 if ($status === 'overdue') {
                     $query->whereIn('status', ['active', 'partial'])->whereDate('due_date', '<', now()->toDateString());
+                } elseif ($status === 'open') {
+                    $query->whereIn('status', ['active', 'partial']);
                 } else {
                     $query->where('status', $status);
                 }

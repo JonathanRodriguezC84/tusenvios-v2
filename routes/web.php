@@ -30,11 +30,13 @@ use App\Http\Controllers\DeployController;
 use App\Http\Controllers\TrackingController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/deploy/{key}', DeployController::class);
-Route::get('/deploy/{key}/log', [DeployController::class, 'log']);
-Route::get('/deploy/{key}/view/recipients', [DeployController::class, 'checkView']);
-Route::get('/deploy/{key}/list', [DeployController::class, 'listFiles']);
-Route::get('/deploy/{key}/data/recipients', [DeployController::class, 'checkData']);
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('/deploy/{key}', DeployController::class);
+    Route::get('/deploy/{key}/log', [DeployController::class, 'log']);
+    Route::get('/deploy/{key}/view/recipients', [DeployController::class, 'checkView']);
+    Route::get('/deploy/{key}/list', [DeployController::class, 'listFiles']);
+    Route::get('/deploy/{key}/data/recipients', [DeployController::class, 'checkData']);
+});
 
 Route::get('/', function () {
     $plans = \App\Models\SubscriptionPlan::query()
@@ -47,8 +49,8 @@ Route::get('/', function () {
 });
 
 Route::get('/track', [TrackingController::class, 'index'])->name('tracking.index');
-Route::post('/track', [TrackingController::class, 'search'])->name('tracking.search');
-Route::get('/track/{guideNumber}', [TrackingController::class, 'show'])->name('tracking.show');
+Route::post('/track', [TrackingController::class, 'search'])->middleware('throttle:30,1')->name('tracking.search');
+Route::get('/track/{guideNumber}', [TrackingController::class, 'show'])->middleware('throttle:30,1')->name('tracking.show');
 
 Route::get('/billing/blocked', fn () => view('billing.blocked'))
     ->middleware('auth')
