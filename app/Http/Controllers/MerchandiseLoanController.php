@@ -1260,8 +1260,9 @@ class MerchandiseLoanController extends InventoryProductController
 
         $borrowerFullName = trim((string) $loan->borrower_name);
         $nameParts = explode(' ', $borrowerFullName, 2);
-        $recipientFirstName = $nameParts[0] ?: 'Cliente';
-        $recipientLastName = $nameParts[1] ?? '';
+        $formatTitle = fn (?string $v) => $v ? (function_exists('mb_convert_case') ? mb_convert_case(trim($v), MB_CASE_TITLE, 'UTF-8') : ucwords(strtolower(trim($v)))) : '';
+        $recipientFirstName = $formatTitle($nameParts[0] ?: 'Cliente');
+        $recipientLastName = $formatTitle($nameParts[1] ?? '');
 
         $shipment = Shipment::query()->create([
             'tenant_id' => $loan->tenant_id,

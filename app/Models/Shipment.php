@@ -164,6 +164,28 @@ class Shipment extends Model
         return $this->belongsTo(DeliveryZone::class);
     }
 
+    public function getRecipientNameAttribute($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        return function_exists('mb_convert_case')
+            ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8')
+            : ucwords(strtolower(trim($value)));
+    }
+
+    public function getRecipientLastnameAttribute($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        return function_exists('mb_convert_case')
+            ? mb_convert_case(trim($value), MB_CASE_TITLE, 'UTF-8')
+            : ucwords(strtolower(trim($value)));
+    }
+
     public function barcodeValue(): string
     {
         return str_replace('-', '', $this->guide_number);
