@@ -220,6 +220,7 @@ class MerchandiseLoanController extends InventoryProductController
             'items.*.product_id' => ['required', 'integer'],
             'items.*.product_type' => ['required', 'in:quick,inventory'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.notes' => ['nullable', 'string', 'max:255'],
         ], [
             'items.required' => 'Debes agregar al menos un producto al préstamo.',
@@ -274,8 +275,12 @@ class MerchandiseLoanController extends InventoryProductController
                     // Descontar stock de producto rápido
                     $product->decrement('stock', $quantity);
 
+                    $rawPrice = isset($itemInput['unit_price']) && is_numeric($itemInput['unit_price']) ? (float) $itemInput['unit_price'] : null;
+                    $catalogPrice = (float) $product->price;
+                    $unitPrice = ($rawPrice !== null && $rawPrice > 0) ? $rawPrice : $catalogPrice;
+
                     $totalItems += $quantity;
-                    $lineTotal = $quantity * (float) $product->price;
+                    $lineTotal = $quantity * $unitPrice;
                     $totalValue += $lineTotal;
 
                     $itemsData[] = [
@@ -287,7 +292,7 @@ class MerchandiseLoanController extends InventoryProductController
                         'quantity_lent' => $quantity,
                         'quantity_returned' => 0,
                         'quantity_sold' => 0,
-                        'unit_price' => $product->price,
+                        'unit_price' => $unitPrice,
                         'unit_cost' => $product->cost,
                         'notes' => $itemInput['notes'] ?? null,
                     ];
@@ -326,8 +331,12 @@ class MerchandiseLoanController extends InventoryProductController
                         'notes' => "Préstamo {$loanNumber} a {$validated['borrower_name']}",
                     ]));
 
+                    $rawPrice = isset($itemInput['unit_price']) && is_numeric($itemInput['unit_price']) ? (float) $itemInput['unit_price'] : null;
+                    $catalogPrice = (float) $product->price;
+                    $unitPrice = ($rawPrice !== null && $rawPrice > 0) ? $rawPrice : $catalogPrice;
+
                     $totalItems += $quantity;
-                    $lineTotal = $quantity * (float) $product->price;
+                    $lineTotal = $quantity * $unitPrice;
                     $totalValue += $lineTotal;
 
                     $itemsData[] = [
@@ -339,7 +348,7 @@ class MerchandiseLoanController extends InventoryProductController
                         'quantity_lent' => $quantity,
                         'quantity_returned' => 0,
                         'quantity_sold' => 0,
-                        'unit_price' => $product->price,
+                        'unit_price' => $unitPrice,
                         'unit_cost' => $product->cost,
                         'notes' => $itemInput['notes'] ?? null,
                     ];
@@ -393,6 +402,8 @@ class MerchandiseLoanController extends InventoryProductController
             'recipient_city' => ['nullable', 'string', 'max:120'],
             'recipient_neighborhood' => ['nullable', 'string', 'max:120'],
             'recipient_notes' => ['nullable', 'string', 'max:1000'],
+            'collection_value' => ['nullable', 'numeric', 'min:0'],
+            'declared_value' => ['nullable', 'numeric', 'min:0'],
             'inventory_items' => ['nullable'],
         ], [
             'recipient_name.required' => 'El nombre del cliente es obligatorio para registrar el préstamo.',
@@ -459,8 +470,13 @@ class MerchandiseLoanController extends InventoryProductController
             // Continuar sin bloquear el préstamo si falla recipient
         }
 
+        $checkoutValue = max(
+            (float) ($request->input('collection_value') ?? 0),
+            (float) ($request->input('declared_value') ?? 0)
+        );
+
         // 3. Crear el préstamo y descontar stock
-        $loan = DB::transaction(function () use ($validated, $fullName, $phone, $rawItems, $owner) {
+        $loan = DB::transaction(function () use ($validated, $fullName, $phone, $rawItems, $owner, $checkoutValue) {
             $loanNumber = $this->generateLoanNumber();
 
             $totalItems = 0;
@@ -497,9 +513,18 @@ class MerchandiseLoanController extends InventoryProductController
 
                     $product->decrement('stock', $quantity);
 
-                    $unitPrice = isset($item['price']) && is_numeric($item['price']) && (float) $item['price'] >= 0
-                        ? (float) $item['price']
-                        : (float) $product->price;
+                    $rawPrice = isset($item['price']) && is_numeric($item['price']) ? (float) $item['price'] : null;
+                    $catalogPrice = (float) $product->price;
+
+                    if ($rawPrice !== null && $rawPrice > 0) {
+                        $unitPrice = $rawPrice;
+                    } elseif ($catalogPrice > 0) {
+                        $unitPrice = $catalogPrice;
+                    } elseif ($checkoutValue > 0 && count($rawItems) === 1) {
+                        $unitPrice = round($checkoutValue / max(1, $quantity), 2);
+                    } else {
+                        $unitPrice = max(0.0, (float) ($rawPrice ?? $catalogPrice));
+                    }
 
                     $totalItems += $quantity;
                     $lineTotal = $quantity * $unitPrice;
@@ -546,9 +571,18 @@ class MerchandiseLoanController extends InventoryProductController
                         'notes' => "Préstamo {$loanNumber} a {$fullName}",
                     ]));
 
-                    $unitPrice = isset($item['price']) && is_numeric($item['price']) && (float) $item['price'] >= 0
-                        ? (float) $item['price']
-                        : (float) $product->price;
+                    $rawPrice = isset($item['price']) && is_numeric($item['price']) ? (float) $item['price'] : null;
+                    $catalogPrice = (float) $product->price;
+
+                    if ($rawPrice !== null && $rawPrice > 0) {
+                        $unitPrice = $rawPrice;
+                    } elseif ($catalogPrice > 0) {
+                        $unitPrice = $catalogPrice;
+                    } elseif ($checkoutValue > 0 && count($rawItems) === 1) {
+                        $unitPrice = round($checkoutValue / max(1, $quantity), 2);
+                    } else {
+                        $unitPrice = max(0.0, (float) ($rawPrice ?? $catalogPrice));
+                    }
 
                     $totalItems += $quantity;
                     $lineTotal = $quantity * $unitPrice;
@@ -568,6 +602,15 @@ class MerchandiseLoanController extends InventoryProductController
                         'notes' => null,
                     ];
                 }
+            }
+
+            if ($totalValue === 0.0 && $checkoutValue > 0 && !empty($itemsData)) {
+                $perItem = round($checkoutValue / count($itemsData), 2);
+                foreach ($itemsData as &$it) {
+                    $it['unit_price'] = $perItem;
+                }
+                unset($it);
+                $totalValue = $checkoutValue;
             }
 
             if (empty($itemsData)) {

@@ -870,6 +870,15 @@
                 btnLoan.setAttribute('aria-pressed', isChecked ? 'true' : 'false');
                 if (loanInput) loanInput.value = isChecked ? '1' : '0';
 
+                var colInput = document.getElementById('collection_value');
+                var rows = document.querySelectorAll('#product_lines .te-product-row');
+                if (isChecked && colInput && Number(colInput.value || 0) > 0 && rows.length === 1) {
+                    var p = rows[0].querySelector('.te-product-price');
+                    if (p && Number(p.value || 0) <= 0) {
+                        p.value = colInput.value;
+                    }
+                }
+
                 if (isChecked) {
                     form.action = '{{ route("shipments.loan") }}';
                     if (deptSelect) deptSelect.removeAttribute('required');
@@ -888,6 +897,10 @@
             form.addEventListener('submit', function () {
                 var rows = document.querySelectorAll('#product_lines .te-product-row');
                 var invField = document.getElementById('inventory_items');
+                var cv = Number(document.getElementById('collection_value') ? document.getElementById('collection_value').value || 0 : 0);
+                var dv = Number(document.getElementById('declared_value') ? document.getElementById('declared_value').value || 0 : 0);
+                var checkoutFallback = Math.max(cv, dv);
+
                 if (rows && invField) {
                     var items = [];
                     rows.forEach(function (row) {
@@ -898,6 +911,10 @@
                         if (!name) return;
                         var pv = Number(p ? p.value || 0 : 0);
                         var qv = Math.max(Number(q ? q.value || 1 : 1), 1);
+                        if (pv <= 0 && checkoutFallback > 0 && rows.length === 1) {
+                            pv = checkoutFallback;
+                            if (p) p.value = pv;
+                        }
                         var invId = row.dataset.inventoryId;
                         var quickId = row.dataset.quickProductId;
                         if (invId) {

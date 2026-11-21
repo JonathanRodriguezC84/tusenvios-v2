@@ -115,9 +115,14 @@
                                         <input type="number" :name="`items[${index}][quantity]`" x-model.number="item.quantity" :max="item.maxStock" min="1" required class="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-bold text-center">
                                     </div>
 
+                                    <div class="w-28">
+                                        <label class="block text-[11px] font-bold text-gray-500 mb-0.5">Precio unit. ($)</label>
+                                        <input type="number" :name="`items[${index}][unit_price]`" x-model.number="item.price" min="0" step="100" class="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-bold text-right" placeholder="0">
+                                    </div>
+
                                     <div class="w-28 text-right hidden sm:block">
                                         <span class="block text-[11px] font-bold text-gray-500 mb-0.5">Subtotal</span>
-                                        <span class="block text-xs font-bold text-gray-800" x-text="formatMoney(item.quantity * item.price)"></span>
+                                        <span class="block text-xs font-bold text-gray-800" x-text="formatMoney(item.quantity * (item.price || 0))"></span>
                                     </div>
 
                                     <div class="pt-4 sm:pt-0">
