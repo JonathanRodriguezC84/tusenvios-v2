@@ -8,6 +8,10 @@ use App\Models\MerchandiseLoan;
 use App\Models\MerchandiseLoanItem;
 use App\Models\QuickProduct;
 use App\Models\FrequentRecipient;
+use App\Models\Shipment;
+use App\Models\ShipmentEvent;
+use App\Models\Tenant;
+use App\Models\AffiliatedCompany;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -797,7 +801,9 @@ class MerchandiseLoanController extends InventoryProductController
             'settle_notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        DB::transaction(function () use ($loan, $validated) {
+        $soldItems = [];
+
+        DB::transaction(function () use ($loan, $validated, &$soldItems) {
             $anyProcessed = false;
 
             foreach ($validated['settle'] as $input) {
@@ -815,6 +821,10 @@ class MerchandiseLoanController extends InventoryProductController
 
                 $item->increment('quantity_sold', $qty);
                 $anyProcessed = true;
+                $soldItems[] = [
+                    'item' => $item,
+                    'quantity' => $qty,
+                ];
             }
 
             if (!$anyProcessed) {
@@ -829,13 +839,17 @@ class MerchandiseLoanController extends InventoryProductController
             }
 
             $this->recalculateLoanStatus($loan);
+
+            if (count($soldItems) > 0) {
+                $this->generateDeliveredShipmentForSoldItems($loan, $soldItems, $validated['settle_notes'] ?? null);
+            }
         });
 
         Audit::log('merchandise_loan.settled', $loan, "Liquidación por venta registrada en préstamo {$loan->loan_number}.");
 
         return redirect()
             ->route('inventory.loans.show', $loan)
-            ->with('status', 'Mercancía liquidada como venta exitosamente.');
+            ->with('status', 'Mercancía liquidada como venta exitosamente y guía generada.');
     }
 
     public function processItems(Request $request, MerchandiseLoan $loan): \Illuminate\Http\RedirectResponse
@@ -859,8 +873,9 @@ class MerchandiseLoanController extends InventoryProductController
         $owner = $this->ownerKeys();
         $returnedTotal = 0;
         $soldTotal = 0;
+        $soldItems = [];
 
-        DB::transaction(function () use ($loan, $validated, $owner, &$returnedTotal, &$soldTotal) {
+        DB::transaction(function () use ($loan, $validated, $owner, &$returnedTotal, &$soldTotal, &$soldItems) {
             foreach ($validated['actions'] as $input) {
                 $action = $input['action'] ?? 'none';
                 $qty = (int) ($input['quantity'] ?? 0);
@@ -922,6 +937,10 @@ class MerchandiseLoanController extends InventoryProductController
                 } elseif ($action === 'sell') {
                     $item->increment('quantity_sold', $qty);
                     $soldTotal += $qty;
+                    $soldItems[] = [
+                        'item' => $item,
+                        'quantity' => $qty,
+                    ];
                 }
             }
 
@@ -940,6 +959,10 @@ class MerchandiseLoanController extends InventoryProductController
             }
 
             $this->recalculateLoanStatus($loan);
+
+            if ($soldTotal > 0 && count($soldItems) > 0) {
+                $this->generateDeliveredShipmentForSoldItems($loan, $soldItems, $validated['process_notes'] ?? null);
+            }
         });
 
         Audit::log('merchandise_loan.processed', $loan, "Gestión aplicada en préstamo {$loan->loan_number}: {$returnedTotal} devuelta(s), {$soldTotal} vendida(s).");
@@ -1146,5 +1169,174 @@ class MerchandiseLoanController extends InventoryProductController
                 : ($loan->tenant_id !== $keys['tenant_id'] || $loan->affiliated_company_id),
             403
         );
+    }
+
+    /**
+     * Genera automáticamente una guía en estado "delivered" por la venta/liquidación de mercancía en préstamo.
+     * Esta guía alimenta el Dashboard (ventas, recaudo, rentabilidad) sin volver a descontar inventario.
+     */
+    protected function generateDeliveredShipmentForSoldItems(MerchandiseLoan $loan, array $soldItems, ?string $notes = null): ?Shipment
+    {
+        if (empty($soldItems)) {
+            return null;
+        }
+
+        $tenant = $loan->tenant ?: Tenant::query()->find($loan->tenant_id);
+        $company = $loan->affiliated_company_id
+            ? ($loan->affiliatedCompany ?: AffiliatedCompany::query()->find($loan->affiliated_company_id))
+            : null;
+
+        $prefix = $this->guidePrefix($loan->affiliated_company_id, $tenant);
+        $year = now()->format('Y');
+        $baseGuide = $prefix . $year;
+        $sequenceLength = 5;
+
+        $lastGuide = Shipment::query()
+            ->where('guide_number', 'like', "{$baseGuide}%")
+            ->orderByDesc('id')
+            ->value('guide_number');
+
+        $lastSequence = $lastGuide && preg_match('/^' . preg_quote($baseGuide, '/') . '(\d{' . $sequenceLength . '})$/', $lastGuide, $matches)
+            ? (int) $matches[1]
+            : 0;
+
+        $nextSeq = $lastSequence + 1;
+        do {
+            $guideNumber = $baseGuide . str_pad((string) $nextSeq, $sequenceLength, '0', STR_PAD_LEFT);
+            $exists = Shipment::query()->where('guide_number', $guideNumber)->exists();
+            if ($exists) {
+                $nextSeq++;
+            }
+        } while ($exists);
+
+        $snapshot = [];
+        $descriptions = [];
+        $totalPieces = 0;
+        $totalAmount = 0.0;
+
+        foreach ($soldItems as $sold) {
+            /** @var MerchandiseLoanItem $item */
+            $item = $sold['item'];
+            $qty = (int) $sold['quantity'];
+            if ($qty <= 0) continue;
+
+            $unitPrice = (float) $item->unit_price;
+            $unitCost = 0.0;
+
+            if ($item->product_type === 'quick' || $item->quick_product_id) {
+                $qp = $item->quickProduct ?: QuickProduct::query()->find($item->quick_product_id);
+                $unitCost = (float) ($qp?->cost ?? 0);
+            } elseif ($item->inventory_product_id) {
+                $ip = $item->product ?: InventoryProduct::query()->find($item->inventory_product_id);
+                $unitCost = (float) ($ip?->cost ?? 0);
+            }
+
+            $subtotal = $qty * $unitPrice;
+            $totalPieces += $qty;
+            $totalAmount += $subtotal;
+
+            $descriptions[] = "{$qty}x {$item->displayName()} ($" . number_format($unitPrice, 0, ',', '.') . ")";
+
+            $snapshot[] = [
+                'id' => $item->quick_product_id ?: $item->inventory_product_id,
+                'name' => $item->displayName(),
+                'sku' => $item->product_sku ?: 'SKU-LOAN',
+                'category' => $item->product_type === 'quick' ? 'quick' : 'inventory',
+                'cost' => $unitCost,
+                'price' => $unitPrice,
+                'quantity' => $qty,
+                'stock_after' => 0,
+                'type' => $item->product_type === 'quick' ? 'quick' : 'inventory',
+            ];
+        }
+
+        if ($totalPieces === 0) {
+            return null;
+        }
+
+        $senderName = $company?->name ?: ($tenant?->name ?: 'Tus Envíos');
+        $senderPhone = $company?->phone ?: ($tenant?->phone ?: '3000000000');
+        $senderAddress = $company?->address ?: ($tenant?->address ?: 'Bodega Principal');
+
+        $borrowerFullName = trim((string) $loan->borrower_name);
+        $nameParts = explode(' ', $borrowerFullName, 2);
+        $recipientFirstName = $nameParts[0] ?: 'Cliente';
+        $recipientLastName = $nameParts[1] ?? '';
+
+        $shipment = Shipment::query()->create([
+            'tenant_id' => $loan->tenant_id,
+            'affiliated_company_id' => $loan->affiliated_company_id,
+            'created_by' => Auth::id() ?? $loan->created_by,
+            'guide_number' => $guideNumber,
+            'status' => 'delivered',
+            'service_type' => 'standard',
+            'estimated_delivery_date' => now()->toDateString(),
+            'sender_name' => $senderName,
+            'sender_phone' => $senderPhone,
+            'sender_address' => $senderAddress,
+            'sender_locality' => 'Bogota',
+            'sender_notes' => "Generada automáticamente por liquidación de préstamo {$loan->loan_number}",
+            'recipient_name' => $recipientFirstName,
+            'recipient_lastname' => $recipientLastName,
+            'recipient_document' => $loan->borrower_document,
+            'recipient_phone' => $loan->borrower_phone ?: '3000000000',
+            'recipient_address' => $loan->borrower_address ?: 'Entrega en bodega / Préstamo presencial',
+            'recipient_locality' => 'Bogota',
+            'recipient_city' => 'Bogotá',
+            'recipient_notes' => "Liquidación venta préstamo {$loan->loan_number}" . ($notes ? " ({$notes})" : ""),
+            'package_type' => 'merchandise',
+            'pieces' => $totalPieces,
+            'content_description' => "Liquidación préstamo {$loan->loan_number}: " . implode(', ', $descriptions),
+            'inventory_snapshot' => $snapshot,
+            'declared_value' => $totalAmount,
+            'shipping_value' => 0.00,
+            'payment_method' => 'cash',
+            'collection_value' => $totalAmount,
+        ]);
+
+        ShipmentEvent::query()->create([
+            'shipment_id' => $shipment->id,
+            'user_id' => Auth::id() ?? $loan->created_by,
+            'status' => 'created',
+            'location' => 'Sistema',
+            'notes' => "Guía generada automáticamente por liquidación de préstamo {$loan->loan_number}.",
+        ]);
+
+        ShipmentEvent::query()->create([
+            'shipment_id' => $shipment->id,
+            'user_id' => Auth::id() ?? $loan->created_by,
+            'status' => 'delivered',
+            'location' => 'Bodega',
+            'notes' => "Venta liquidada y entregada a {$loan->borrower_name}.",
+        ]);
+
+        Audit::log('shipment.created_from_loan', $shipment, "Guía {$shipment->guide_number} generada automáticamente como entregada por liquidación de préstamo {$loan->loan_number}.");
+
+        $guideNote = "[Guía de Venta: {$shipment->guide_number}] Entregada por $" . number_format($totalAmount, 0, ',', '.') . " (" . now()->format('d/m/Y H:i') . ")";
+        $loan->notes = trim(($loan->notes ? $loan->notes . "\n" : "") . $guideNote);
+        $loan->save();
+
+        return $shipment;
+    }
+
+    protected function guidePrefix(?int $affiliatedCompanyId, ?Tenant $tenant): string
+    {
+        $name = $tenant?->name ?? 'TE';
+        $customPrefix = $tenant?->guide_prefix;
+
+        if ($affiliatedCompanyId) {
+            $company = AffiliatedCompany::query()->find($affiliatedCompanyId);
+            $name = $company?->name ?? $name;
+            $customPrefix = $company?->guide_prefix ?: $customPrefix;
+        }
+
+        if ($customPrefix) {
+            return strtoupper($customPrefix);
+        }
+
+        $letters = preg_replace('/[^A-Za-z]/', '', $name);
+        $prefix = strtoupper(substr($letters ?: 'TE', 0, 3));
+
+        return str_pad($prefix, 3, 'X');
     }
 }
